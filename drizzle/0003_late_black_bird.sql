@@ -1,0 +1,1 @@
+ALTER TABLE "line_items" ADD COLUMN "source_contract_line_item_id" uuid;
