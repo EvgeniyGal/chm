@@ -1,0 +1,19 @@
+schema: spec-driven
+context: |
+  Frontend: Next.js/latest (App Router, Server Components, Server Actions, Route Handlers) + TypeScript (strict).
+  UI/UX: Tailwind CSS, shadcn/ui, Radix UI, lucide-react, TanStack Table; Forms: React Hook Form + Zod; Notifications: Sonner.
+  State: React Context for light client state; TanStack Query (optional for client-heavy flows).
+  Backend/Auth: NextAuth.js (Credentials + OAuth, JWT/DB sessions, secure cookies), email confirmation, password reset; docxtemplater for document filling.
+  File storage: Vercel Storage ecosystem; API layer via Next.js Server Actions and Route Handlers (`/app/api` when needed).
+  Database: PostgreSQL 16+ (managed Neon), Drizzle ORM (schema-first, type-safe queries, relations) + Drizzle Migrate (versioned migrations, safe evolution enforced in CI/CD).
+  Core user model fields: id, firstName, lastName, email, role, createdAt, updatedAt, plus additional authentication-related fields.
+
+# Per-artifact rules (optional)
+# Add custom rules for specific artifacts.
+# Example:
+#   rules:
+#     proposal:
+#       - Keep proposals under 500 words
+#       - Always include a "Non-goals" section
+#     tasks:
+#       - Break tasks into chunks of max 2 hours
