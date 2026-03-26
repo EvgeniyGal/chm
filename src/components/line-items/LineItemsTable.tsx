@@ -1,6 +1,8 @@
 "use client";
 
+import { Fragment, useMemo } from "react";
 import { useFieldArray, useFormContext } from "react-hook-form";
+import { flexRender, getCoreRowModel, useReactTable, type ColumnDef } from "@tanstack/react-table";
 
 import { calcTotals, formatMoney } from "@/lib/totals";
 
@@ -25,42 +27,169 @@ export function LineItemsTable({ currency = "₴" }: { currency?: string }) {
     })),
   );
 
+  type RowData = { fieldId: string; idx: number };
+  const data: RowData[] = useMemo(() => fields.map((f, idx) => ({ fieldId: f.id, idx })), [fields]);
+
+  const columns = useMemo<ColumnDef<RowData>[]>(
+    () => [
+      {
+        id: "index",
+        header: "#",
+        cell: ({ row }) => <td className="px-3 py-2 text-zinc-500">{row.original.idx + 1}</td>,
+      },
+      {
+        id: "title",
+        header: "Назва",
+        cell: ({ row }) => (
+          <td className="px-3 py-2">
+            <input className="h-10 w-full rounded-md border px-3" {...register(`items.${row.original.idx}.title`, { required: true })} />
+          </td>
+        ),
+      },
+      {
+        id: "unit",
+        header: "Од.",
+        cell: ({ row }) => (
+          <td className="px-3 py-2">
+            <input className="h-10 w-full rounded-md border px-3" {...register(`items.${row.original.idx}.unit`, { required: true })} />
+          </td>
+        ),
+      },
+      {
+        id: "quantity",
+        header: "К-сть",
+        cell: ({ row }) => (
+          <td className="px-3 py-2">
+            <input
+              type="number"
+              step="0.01"
+              min={0}
+              className="h-10 w-full rounded-md border px-3"
+              {...register(`items.${row.original.idx}.quantity`, { required: true, valueAsNumber: true, min: 0 })}
+            />
+          </td>
+        ),
+      },
+      {
+        id: "price",
+        header: "Ціна",
+        cell: ({ row }) => (
+          <td className="px-3 py-2">
+            <input
+              type="number"
+              step="0.01"
+              min={0}
+              className="h-10 w-full rounded-md border px-3"
+              {...register(`items.${row.original.idx}.price`, { required: true, valueAsNumber: true, min: 0 })}
+            />
+          </td>
+        ),
+      },
+      {
+        id: "sum",
+        header: "Сума",
+        cell: ({ row }) => {
+          const q = Number(items[row.original.idx]?.quantity ?? 0);
+          const p = Number(items[row.original.idx]?.price ?? 0);
+          const rowTotal = q * p;
+          return (
+            <td className="px-3 py-2 text-right tabular-nums">
+              {formatMoney(Number.isFinite(rowTotal) ? rowTotal : 0)} {currency}
+            </td>
+          );
+        },
+      },
+      {
+        id: "actions",
+        header: "",
+        cell: ({ row }) => (
+          <td className="px-3 py-2">
+            <button
+              type="button"
+              className="h-10 w-full rounded-md border px-3 text-sm hover:bg-zinc-50 disabled:opacity-50"
+              onClick={() => remove(row.original.idx)}
+              disabled={fields.length <= 1}
+              title={fields.length <= 1 ? "Не можна видалити останній рядок" : "Видалити рядок"}
+            >
+              Видалити
+            </button>
+          </td>
+        ),
+      },
+    ],
+    [currency, fields.length, items, register, remove],
+  );
+
+  const table = useReactTable({
+    data,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+  });
+
   return (
     <div className="rounded-xl border bg-white">
-      <div className="overflow-x-auto">
+      {/* Desktop/table view */}
+      <div className="hidden overflow-x-auto md:block">
         <table className="w-full text-sm">
           <thead className="bg-[#FFF7E5] text-left text-zinc-700">
-            <tr>
-              <th className="px-3 py-2 w-12">#</th>
-              <th className="px-3 py-2 min-w-64">Назва</th>
-              <th className="px-3 py-2 w-28">Од.</th>
-              <th className="px-3 py-2 w-28">К-сть</th>
-              <th className="px-3 py-2 w-32">Ціна</th>
-              <th className="px-3 py-2 w-32">Сума</th>
-              <th className="px-3 py-2 w-20"></th>
-            </tr>
+            {table.getHeaderGroups().map((hg) => (
+              <tr key={hg.id}>
+                {hg.headers.map((header) => (
+                  <th key={header.id} className="px-3 py-2">
+                    {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                  </th>
+                ))}
+              </tr>
+            ))}
           </thead>
           <tbody>
-            {fields.map((f, idx) => {
-              const q = Number(items[idx]?.quantity ?? 0);
-              const p = Number(items[idx]?.price ?? 0);
-              const rowTotal = q * p;
-              return (
-                <tr key={f.id} className="border-t align-top">
-                  <td className="px-3 py-2 text-zinc-500">{idx + 1}</td>
-                  <td className="px-3 py-2">
-                    <input
-                      className="h-10 w-full rounded-md border px-3"
-                      {...register(`items.${idx}.title`, { required: true })}
-                    />
-                  </td>
-                  <td className="px-3 py-2">
-                    <input
-                      className="h-10 w-full rounded-md border px-3"
-                      {...register(`items.${idx}.unit`, { required: true })}
-                    />
-                  </td>
-                  <td className="px-3 py-2">
+            {table.getRowModel().rows.map((row) => (
+              <tr key={row.original.fieldId} className="border-t align-top">
+                {row.getVisibleCells().map((cell) => (
+                  <Fragment key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</Fragment>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Mobile/card view */}
+      <div className="flex flex-col gap-3 p-3 md:hidden">
+        {table.getRowModel().rows.map((row) => {
+          const idx = row.original.idx;
+          const q = Number(items[idx]?.quantity ?? 0);
+          const p = Number(items[idx]?.price ?? 0);
+          const rowTotal = q * p;
+          return (
+            <div key={row.original.fieldId} className="rounded-xl border bg-white p-3">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <div className="text-sm font-semibold text-zinc-900">Рядок #{idx + 1}</div>
+                <button
+                  type="button"
+                  className="h-10 rounded-md border px-3 text-sm hover:bg-zinc-50 disabled:opacity-50"
+                  onClick={() => remove(idx)}
+                  disabled={fields.length <= 1}
+                  title={fields.length <= 1 ? "Не можна видалити останній рядок" : "Видалити рядок"}
+                >
+                  Видалити
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 gap-2">
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-zinc-700">Назва</span>
+                  <input className="h-10 w-full rounded-md border px-3" {...register(`items.${idx}.title`, { required: true })} />
+                </label>
+
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-zinc-700">Од.</span>
+                  <input className="h-10 w-full rounded-md border px-3" {...register(`items.${idx}.unit`, { required: true })} />
+                </label>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="flex flex-col gap-1 text-sm">
+                    <span className="text-zinc-700">К-сть</span>
                     <input
                       type="number"
                       step="0.01"
@@ -68,8 +197,10 @@ export function LineItemsTable({ currency = "₴" }: { currency?: string }) {
                       className="h-10 w-full rounded-md border px-3"
                       {...register(`items.${idx}.quantity`, { required: true, valueAsNumber: true, min: 0 })}
                     />
-                  </td>
-                  <td className="px-3 py-2">
+                  </label>
+
+                  <label className="flex flex-col gap-1 text-sm">
+                    <span className="text-zinc-700">Ціна</span>
                     <input
                       type="number"
                       step="0.01"
@@ -77,26 +208,16 @@ export function LineItemsTable({ currency = "₴" }: { currency?: string }) {
                       className="h-10 w-full rounded-md border px-3"
                       {...register(`items.${idx}.price`, { required: true, valueAsNumber: true, min: 0 })}
                     />
-                  </td>
-                  <td className="px-3 py-2 text-right tabular-nums">
-                    {formatMoney(Number.isFinite(rowTotal) ? rowTotal : 0)} {currency}
-                  </td>
-                  <td className="px-3 py-2">
-                    <button
-                      type="button"
-                      className="h-10 w-full rounded-md border px-3 text-sm hover:bg-zinc-50 disabled:opacity-50"
-                      onClick={() => remove(idx)}
-                      disabled={fields.length <= 1}
-                      title={fields.length <= 1 ? "Не можна видалити останній рядок" : "Видалити рядок"}
-                    >
-                      Видалити
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                  </label>
+                </div>
+
+                <div className="flex justify-end text-sm tabular-nums text-zinc-900">
+                  {formatMoney(Number.isFinite(rowTotal) ? rowTotal : 0)} {currency}
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       <div className="flex items-center justify-between gap-3 border-t p-3">

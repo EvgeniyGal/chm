@@ -10,6 +10,7 @@ const scopeSchema = z.enum([
   "SIGNER_POSITION_NOM",
   "SIGNER_POSITION_GEN",
   "ACTING_UNDER",
+  "SIGNING_LOCATION",
 ]);
 const bodySchema = z.object({
   scope: scopeSchema,

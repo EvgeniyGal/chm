@@ -2,15 +2,10 @@ import { and, asc, eq, inArray } from "drizzle-orm";
 
 import { db } from "@/db";
 import { dropdownOptions } from "@/db/schema";
+import { DROPDOWN_SCOPE, type DropdownScope } from "./dropdown-scopes";
 
-export const DROPDOWN_SCOPE = {
-  TAX_STATUS: "TAX_STATUS",
-  SIGNER_POSITION_NOM: "SIGNER_POSITION_NOM",
-  SIGNER_POSITION_GEN: "SIGNER_POSITION_GEN",
-  ACTING_UNDER: "ACTING_UNDER",
-} as const;
-
-export type DropdownScope = (typeof DROPDOWN_SCOPE)[keyof typeof DROPDOWN_SCOPE];
+export { DROPDOWN_SCOPE } from "./dropdown-scopes";
+export type { DropdownScope } from "./dropdown-scopes";
 
 function normalizeValues(values: string[]) {
   return [...new Set(values.map((v) => v.trim()).filter(Boolean))];

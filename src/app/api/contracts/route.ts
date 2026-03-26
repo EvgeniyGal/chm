@@ -7,6 +7,7 @@ import { nextDocumentNumber } from "@/db/numbering";
 import { writeAuditEvent } from "@/lib/audit";
 import { requireRole } from "@/lib/authz";
 import { calcTotals } from "@/lib/totals";
+import { DROPDOWN_SCOPE, saveDropdownOption } from "@/lib/dropdown-options";
 
 export const runtime = "nodejs";
 
@@ -17,7 +18,8 @@ const itemSchema = z.object({
   price: z.number().min(0),
 });
 
-const createSchema = z.object({
+const createSchema = z
+  .object({
   date: z.string().min(1),
   signingLocation: z.string().min(1),
   workType: z.enum(["WORKS", "SERVICES"]),
@@ -31,7 +33,11 @@ const createSchema = z.object({
   signerPositionGen: z.string().min(1),
   signerActingUnder: z.string().min(1),
   items: z.array(itemSchema).min(1),
-});
+  })
+  .refine((data) => data.customerCompanyId !== data.contractorCompanyId, {
+    message: "CUSTOMER_AND_CONTRACTOR_SAME",
+    path: ["contractorCompanyId"],
+  });
 
 export async function GET() {
   await requireRole("MANAGER");
@@ -89,6 +95,9 @@ export async function POST(req: Request) {
       updatedAt: now,
     })),
   );
+
+  // Persist "Місце складання" into dropdown options so it becomes selectable later.
+  await saveDropdownOption(DROPDOWN_SCOPE.SIGNING_LOCATION, parsed.data.signingLocation);
 
   await writeAuditEvent({
     entityType: "CONTRACT",

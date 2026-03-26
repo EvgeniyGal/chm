@@ -6,6 +6,7 @@ import { contracts, lineItems } from "@/db/schema";
 import { writeAuditEvent } from "@/lib/audit";
 import { requireRole } from "@/lib/authz";
 import { calcTotals } from "@/lib/totals";
+import { DROPDOWN_SCOPE, saveDropdownOption } from "@/lib/dropdown-options";
 
 export const runtime = "nodejs";
 
@@ -21,6 +22,8 @@ const patchSchema = z
   .object({
     date: z.string().min(1).optional(),
     signingLocation: z.string().min(1).optional(),
+    customerCompanyId: z.string().uuid().optional(),
+    contractorCompanyId: z.string().uuid().optional(),
     projectTimeline: z.string().min(1).optional(),
     contractDuration: z.string().min(1).optional(),
     signerFullNameNom: z.string().min(1).optional(),
@@ -30,6 +33,10 @@ const patchSchema = z
     signerActingUnder: z.string().min(1).optional(),
     items: z.array(itemSchema).min(1).optional(),
   })
+  .refine((v) => {
+    if (!v.customerCompanyId || !v.contractorCompanyId) return true;
+    return v.customerCompanyId !== v.contractorCompanyId;
+  }, { message: "CUSTOMER_AND_CONTRACTOR_SAME" })
   .refine((v) => Object.keys(v).length > 0, { message: "No fields to update" });
 
 export async function GET(_req: Request, ctx: RouteContext<"/api/contracts/[id]">) {
@@ -87,6 +94,11 @@ export async function PATCH(req: Request, ctx: RouteContext<"/api/contracts/[id]
   }
 
   const [after] = await db.update(contracts).set(updates).where(eq(contracts.id, id)).returning();
+
+  if (parsed.data.signingLocation) {
+    // Keep dropdown options in sync with what admins used on the contract.
+    await saveDropdownOption(DROPDOWN_SCOPE.SIGNING_LOCATION, parsed.data.signingLocation);
+  }
 
   await writeAuditEvent({
     entityType: "CONTRACT",

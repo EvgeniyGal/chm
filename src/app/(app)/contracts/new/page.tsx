@@ -4,11 +4,13 @@ import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { companies } from "@/db/schema";
 import { requireRole } from "@/lib/authz";
+import { DROPDOWN_SCOPE, getDropdownOptions } from "@/lib/dropdown-options";
 import { ContractForm } from "./ui";
 
 export default async function NewContractPage() {
   await requireRole("ADMIN");
   const companyRows = await db.select().from(companies).orderBy(desc(companies.createdAt));
+  const signingLocationOptions = await getDropdownOptions(DROPDOWN_SCOPE.SIGNING_LOCATION);
 
   async function create(payload: any) {
     "use server";
@@ -30,7 +32,19 @@ export default async function NewContractPage() {
         <h1 className="text-2xl font-semibold text-zinc-900">Новий договір</h1>
         <p className="text-sm text-zinc-600">Заповніть поля договору.</p>
       </div>
-      <ContractForm companies={companyRows.map((c) => ({ id: c.id, label: c.shortName }))} onSubmit={create} />
+      <ContractForm
+        companies={companyRows.map((c) => ({
+          id: c.id,
+          label: c.shortName,
+          contractSignerFullNameNom: c.contractSignerFullNameNom,
+          contractSignerFullNameGen: c.contractSignerFullNameGen,
+          contractSignerPositionNom: c.contractSignerPositionNom,
+          contractSignerPositionGen: c.contractSignerPositionGen,
+          contractSignerActingUnder: c.contractSignerActingUnder,
+        }))}
+        signingLocationOptions={signingLocationOptions}
+        onSubmit={create}
+      />
     </div>
   );
 }
