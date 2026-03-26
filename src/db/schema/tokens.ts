@@ -8,6 +8,8 @@ export const emailVerificationTokens = pgTable("email_verification_tokens", {
     .references(() => users.id, { onDelete: "cascade" }),
   token: text("token").notNull().unique(),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  /** Set when the link is followed; allows idempotent repeat GETs (reload / prefetch). */
+  usedAt: timestamp("used_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

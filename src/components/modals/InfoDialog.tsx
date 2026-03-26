@@ -5,17 +5,23 @@ import * as Dialog from "@radix-ui/react-dialog";
 export function InfoDialog({
   title,
   triggerLabel = "Info",
+  trigger,
+  triggerAriaLabel,
+  triggerClassName,
   children,
 }: {
   title: string;
   triggerLabel?: string;
+  trigger?: React.ReactNode;
+  triggerAriaLabel?: string;
+  triggerClassName?: string;
   children: React.ReactNode;
 }) {
   return (
     <Dialog.Root>
       <Dialog.Trigger asChild>
-        <button type="button" className="underline">
-          {triggerLabel}
+        <button type="button" className={triggerClassName ?? "underline"} aria-label={triggerAriaLabel}>
+          {trigger ?? triggerLabel}
         </button>
       </Dialog.Trigger>
       <Dialog.Portal>

@@ -1,27 +1,47 @@
+"use client";
+
+import { useState } from "react";
+
 import { Button } from "@/components/ui/button";
 
+const errorMessages: Record<string, string> = {
+  EMAIL_IN_USE: "Цей email уже зареєстрований. Увійдіть або використайте інший email.",
+  VALIDATION_ERROR: "Перевірте правильність заповнення полів.",
+  SIGNUP_FAILED: "Не вдалося зареєструватися. Спробуйте ще раз.",
+};
+
 export default function SignUpPage() {
-  async function action(formData: FormData) {
-    "use server";
+  const [error, setError] = useState<string | null>(null);
+
+  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError(null);
+    const form = e.currentTarget;
     const payload = {
-      firstName: String(formData.get("firstName") ?? ""),
-      lastName: String(formData.get("lastName") ?? ""),
-      email: String(formData.get("email") ?? ""),
-      password: String(formData.get("password") ?? ""),
+      firstName: String(new FormData(form).get("firstName") ?? ""),
+      lastName: String(new FormData(form).get("lastName") ?? ""),
+      email: String(new FormData(form).get("email") ?? ""),
+      password: String(new FormData(form).get("password") ?? ""),
     };
 
-    const res = await fetch(`${process.env.NEXTAUTH_URL ?? "http://localhost:3000"}/api/auth/signup`, {
+    const res = await fetch("/api/auth/signup", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(payload),
       cache: "no-store",
     });
-    const data = (await res.json().catch(() => null)) as any;
+
+    const data = (await res.json().catch(() => null)) as { error?: string; confirmUrl?: string } | null;
     if (!res.ok) {
-      throw new Error(data?.error ?? "SIGNUP_FAILED");
+      const code = data?.error ?? "SIGNUP_FAILED";
+      setError(errorMessages[code] ?? errorMessages.SIGNUP_FAILED);
+      return;
     }
 
-    return data?.confirmUrl ? { confirmUrl: data.confirmUrl as string } : { confirmUrl: "" };
+    if (data?.confirmUrl) {
+      window.location.assign(data.confirmUrl);
+      return;
+    }
   }
 
   return (
@@ -31,18 +51,12 @@ export default function SignUpPage() {
         <p className="text-sm text-zinc-600">Створіть акаунт (потрібне підтвердження email).</p>
       </div>
 
-      <form
-        action={async (fd) => {
-          "use server";
-          const { confirmUrl } = await action(fd);
-          // Basic UX: show confirmation link as a redirect to JSON endpoint.
-          // In production this would be emailed.
-          if (confirmUrl) {
-            return;
-          }
-        }}
-        className="flex flex-col gap-3"
-      >
+      <form onSubmit={onSubmit} className="flex flex-col gap-3">
+        {error ? (
+          <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800" role="alert">
+            {error}
+          </p>
+        ) : null}
         <label className="flex flex-col gap-1 text-sm">
           <span>Імʼя</span>
           <input name="firstName" required className="h-10 rounded-md border px-3" />
@@ -53,7 +67,13 @@ export default function SignUpPage() {
         </label>
         <label className="flex flex-col gap-1 text-sm">
           <span>Email</span>
-          <input name="email" type="email" required className="h-10 rounded-md border px-3" autoComplete="email" />
+          <input
+            name="email"
+            type="email"
+            required
+            className="h-10 rounded-md border px-3"
+            autoComplete="email"
+          />
         </label>
         <label className="flex flex-col gap-1 text-sm">
           <span>Пароль (мін. 8 символів)</span>
@@ -78,9 +98,9 @@ export default function SignUpPage() {
         </a>
       </div>
       <p className="text-xs text-zinc-500">
-        Після реєстрації API повертає `confirmUrl` (поки що без відправки email).
+        Після реєстрації ви будете перенаправлені на підтвердження email, далі — на вхід (лист поки не
+        відправляється).
       </p>
     </div>
   );
 }
-

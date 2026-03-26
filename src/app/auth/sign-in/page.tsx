@@ -1,14 +1,16 @@
 "use client";
 
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 
-export default function SignInPage() {
+function SignInForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
+  const emailConfirmed = searchParams.get("emailConfirmed") === "1";
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -24,7 +26,11 @@ export default function SignInPage() {
     });
 
     if (res?.error) {
-      setError("Невірний email або пароль");
+      setError(
+        res.error === "EMAIL_NOT_VERIFIED"
+          ? "Спочатку підтвердіть email за посиланням після реєстрації (перевірте пошту або відкрийте посилання з екрану реєстрації)."
+          : "Невірний email або пароль",
+      );
       return;
     }
 
@@ -38,6 +44,14 @@ export default function SignInPage() {
         <h1 className="text-xl font-semibold text-zinc-900">Вхід</h1>
         <p className="text-sm text-zinc-600">Увійдіть у CRM.</p>
       </div>
+      {emailConfirmed ? (
+        <p
+          className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900"
+          role="status"
+        >
+          Email підтверджено. Тепер можете увійти.
+        </p>
+      ) : null}
       <form onSubmit={onSubmit} className="flex flex-col gap-3">
         {error ? (
           <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
@@ -82,5 +96,13 @@ export default function SignInPage() {
         </a>
       </div>
     </div>
+  );
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense fallback={<div className="text-sm text-zinc-600">Завантаження…</div>}>
+      <SignInForm />
+    </Suspense>
   );
 }

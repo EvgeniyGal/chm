@@ -29,8 +29,11 @@ export const authOptions: NextAuthOptions = {
 
         if (!user) return null;
         if (user.isDeleted) return null;
-        if (!user.emailVerified) return null;
         if (!user.passwordHash) return null;
+
+        if (!user.emailVerified) {
+          throw new Error("EMAIL_NOT_VERIFIED");
+        }
 
         const ok = await compare(password, user.passwordHash);
         if (!ok) return null;
