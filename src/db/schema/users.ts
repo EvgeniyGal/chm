@@ -10,6 +10,7 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   role: userRoleEnum("role").notNull().default("MANAGER"),
   emailVerified: timestamp("email_verified", { withTimezone: true }),
+  approvedAt: timestamp("approved_at", { withTimezone: true }),
 
   passwordHash: text("password_hash"),
 

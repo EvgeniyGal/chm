@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { companies } from "@/db/schema";
 import { ActingUnderField } from "@/components/forms/ActingUnderField";
 import { ContactsField } from "@/components/forms/ContactsField";
+import { GuardedForm } from "@/components/forms/GuardedForm";
 import { SignerPositionField } from "@/components/forms/SignerPositionField";
 import { TaxStatusField } from "@/components/forms/TaxStatusField";
 import { writeAuditEvent } from "@/lib/audit";
@@ -187,7 +188,7 @@ export default async function NewCompanyPage() {
       diff: { after: created },
     });
 
-    redirect(`/companies/${created!.id}`);
+    redirect("/companies");
   }
 
   return (
@@ -196,7 +197,7 @@ export default async function NewCompanyPage() {
         <h1 className="text-2xl font-semibold text-zinc-900">Нова компанія</h1>
       </div>
 
-      <form action={create} className="grid grid-cols-1 gap-4 rounded-xl border bg-white p-4">
+      <GuardedForm action={create} className="grid grid-cols-1 gap-4 rounded-xl border bg-white p-4">
         <Field name="fullName" label="Повна назва" />
         <Field name="shortName" label="Скорочена назва" />
         <Field name="address" label="Адреса" />
@@ -277,7 +278,7 @@ export default async function NewCompanyPage() {
             Скасувати
           </a>
         </div>
-      </form>
+      </GuardedForm>
     </div>
   );
 }

@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 
 import { db } from "@/db";
 import { companies } from "@/db/schema";
-import { writeAuditEvent } from "@/lib/audit";
+import { DeleteCompanyTextButton } from "@/components/companies/DeleteCompanyTextButton";
 import { requireRole } from "@/lib/authz";
 
 export default async function CompanyInfoPage({ params }: { params: Promise<{ id: string }> }) {
@@ -12,21 +12,6 @@ export default async function CompanyInfoPage({ params }: { params: Promise<{ id
 
   const row = await db.query.companies.findFirst({ where: eq(companies.id, id) });
   if (!row) redirect("/companies");
-
-  async function remove() {
-    "use server";
-    const { userId } = await requireRole("ADMIN");
-    const before = await db.query.companies.findFirst({ where: eq(companies.id, id) });
-    await db.delete(companies).where(eq(companies.id, id));
-    await writeAuditEvent({
-      entityType: "COMPANY",
-      entityId: id,
-      action: "DELETE",
-      actorUserId: userId,
-      diff: { before },
-    });
-    redirect("/companies");
-  }
 
   return (
     <div className="flex max-w-3xl flex-col gap-4">
@@ -39,14 +24,7 @@ export default async function CompanyInfoPage({ params }: { params: Promise<{ id
           <a className="inline-flex h-10 items-center rounded-md border px-4 text-sm" href={`/companies/${id}/edit`}>
             Редагувати
           </a>
-          <form action={remove}>
-            <button
-              type="submit"
-              className="inline-flex h-10 items-center rounded-md border border-red-300 px-4 text-sm text-red-700 hover:bg-red-50"
-            >
-              Видалити
-            </button>
-          </form>
+          <DeleteCompanyTextButton companyId={id} companyName={row.shortName} />
         </div>
       </div>
 

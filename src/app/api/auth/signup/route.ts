@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { db } from "@/db";
 import { emailVerificationTokens, users } from "@/db/schema";
+import { appBaseUrl, sendAuthEmail } from "@/lib/email";
 
 export const runtime = "nodejs";
 
@@ -51,11 +52,29 @@ export async function POST(req: Request) {
     expiresAt,
   });
 
+  const confirmUrl = `${appBaseUrl()}/api/auth/confirm-email?token=${encodeURIComponent(token)}`;
+  try {
+    await sendAuthEmail({
+      to: created!.email,
+      subject: "Підтвердження email для CRM",
+      text: `Підтвердіть email, перейшовши за посиланням: ${confirmUrl}`,
+      html: `<p>Підтвердіть email для CRM:</p><p><a href="${confirmUrl}">${confirmUrl}</a></p>`,
+    });
+  } catch (error) {
+    console.error("MAIL_SEND_SIGNUP_FAILED", error);
+    // Keep signup atomic from user's perspective: if email didn't send,
+    // remove just-created records so user can safely retry registration.
+    await db.transaction(async (tx) => {
+      await tx.delete(emailVerificationTokens).where(eq(emailVerificationTokens.userId, created!.id));
+      await tx.delete(users).where(eq(users.id, created!.id));
+    });
+    return Response.json({ error: "EMAIL_SEND_FAILED" }, { status: 500 });
+  }
+
   return Response.json({
     ok: true,
     userId: created!.id,
-    // For now we return a link instead of sending email.
-    confirmUrl: `/api/auth/confirm-email?token=${encodeURIComponent(token)}`,
+    confirmUrl,
   });
 }
 

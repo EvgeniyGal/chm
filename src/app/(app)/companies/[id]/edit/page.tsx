@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { companies } from "@/db/schema";
 import { ActingUnderField } from "@/components/forms/ActingUnderField";
 import { ContactsField } from "@/components/forms/ContactsField";
+import { GuardedForm } from "@/components/forms/GuardedForm";
 import { SignerPositionField } from "@/components/forms/SignerPositionField";
 import { TaxStatusField } from "@/components/forms/TaxStatusField";
 import { writeAuditEvent } from "@/lib/audit";
@@ -191,7 +192,7 @@ export default async function EditCompanyPage({ params }: { params: Promise<{ id
       diff: { before, after },
     });
 
-    redirect(`/companies/${id}`);
+    redirect("/companies");
   }
 
   return (
@@ -201,7 +202,7 @@ export default async function EditCompanyPage({ params }: { params: Promise<{ id
         <p className="text-sm text-zinc-600">{row.shortName}</p>
       </div>
 
-      <form action={update} className="grid grid-cols-1 gap-4 rounded-xl border bg-white p-4">
+      <GuardedForm action={update} className="grid grid-cols-1 gap-4 rounded-xl border bg-white p-4">
         <Field name="fullName" label="Повна назва" defaultValue={row.fullName} />
         <Field name="shortName" label="Скорочена назва" defaultValue={row.shortName} />
         <Field name="address" label="Адреса" defaultValue={row.address} />
@@ -286,7 +287,7 @@ export default async function EditCompanyPage({ params }: { params: Promise<{ id
             Скасувати
           </a>
         </div>
-      </form>
+      </GuardedForm>
     </div>
   );
 }

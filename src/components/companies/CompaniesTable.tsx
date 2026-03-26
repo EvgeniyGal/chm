@@ -182,11 +182,18 @@ export function CompaniesTable({
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
-                  <th key={header.id} className="px-4 py-3">
+                  <th
+                    key={header.id}
+                    className={`px-4 py-3 ${
+                      header.column.id === "actions" ? "w-[148px] whitespace-nowrap text-center" : ""
+                    }`}
+                  >
                     {header.isPlaceholder ? null : (
                       <button
                         type="button"
-                        className="inline-flex items-center gap-1"
+                        className={`inline-flex items-center gap-1 ${
+                          header.column.id === "actions" ? "w-full justify-center" : ""
+                        }`}
                         onClick={() => {
                           if (header.column.id === "actions") return;
                           toggleSort(header.column.id as SortBy);
@@ -205,7 +212,12 @@ export function CompaniesTable({
             {table.getRowModel().rows.map((row) => (
               <tr key={row.id} className="border-t">
                 {row.getVisibleCells().map((cell) => (
-                  <td key={cell.id} className="px-4 py-3 align-top">
+                  <td
+                    key={cell.id}
+                    className={`px-4 py-3 align-top ${
+                      cell.column.id === "actions" ? "w-[148px] whitespace-nowrap" : ""
+                    }`}
+                  >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </td>
                 ))}

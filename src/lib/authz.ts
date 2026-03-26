@@ -1,11 +1,18 @@
+import { eq } from "drizzle-orm";
+
 import { auth } from "@/auth";
+import { db } from "@/db";
+import { users } from "@/db/schema";
 import type { UserRole } from "@/db/schema";
 
 export async function requireAuth() {
   const session = await auth();
   const user = session?.user as any;
   if (!user?.id) throw new Error("UNAUTHORIZED");
-  return { session, userId: String(user.id), role: user.role as UserRole | undefined };
+  const dbUser = await db.query.users.findFirst({ where: eq(users.id, String(user.id)) });
+  if (!dbUser || dbUser.isDeleted) throw new Error("UNAUTHORIZED");
+  if (dbUser.role !== "OWNER" && !dbUser.approvedAt) throw new Error("UNAPPROVED");
+  return { session, userId: String(user.id), role: dbUser.role as UserRole | undefined };
 }
 
 const roleRank: Record<UserRole, number> = {

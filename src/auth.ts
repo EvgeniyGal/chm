@@ -34,6 +34,9 @@ export const authOptions: NextAuthOptions = {
         if (!user.emailVerified) {
           throw new Error("EMAIL_NOT_VERIFIED");
         }
+        if (user.role !== "OWNER" && !user.approvedAt) {
+          throw new Error("USER_NOT_APPROVED");
+        }
 
         const ok = await compare(password, user.passwordHash);
         if (!ok) return null;

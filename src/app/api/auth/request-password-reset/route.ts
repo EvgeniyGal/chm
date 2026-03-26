@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { db } from "@/db";
 import { passwordResetTokens, users } from "@/db/schema";
+import { appBaseUrl, sendAuthEmail } from "@/lib/email";
 
 export const runtime = "nodejs";
 
@@ -31,10 +32,21 @@ export async function POST(req: Request) {
   const token = crypto.randomUUID();
   const expiresAt = new Date(Date.now() + 1000 * 60 * 30); // 30m
   await db.insert(passwordResetTokens).values({ userId: user.id, token, expiresAt });
+  const resetUrl = `${appBaseUrl()}/auth/reset-password?token=${encodeURIComponent(token)}`;
+  try {
+    await sendAuthEmail({
+      to: user.email,
+      subject: "Скидання паролю CRM",
+      text: `Щоб скинути пароль, відкрийте посилання: ${resetUrl}`,
+      html: `<p>Щоб скинути пароль CRM, відкрийте посилання:</p><p><a href="${resetUrl}">${resetUrl}</a></p>`,
+    });
+  } catch {
+    return Response.json({ error: "EMAIL_SEND_FAILED" }, { status: 500 });
+  }
 
   return Response.json({
     ok: true,
-    resetUrl: `/api/auth/reset-password?token=${encodeURIComponent(token)}`,
+    resetUrl,
   });
 }
 

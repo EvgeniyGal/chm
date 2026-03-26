@@ -7,15 +7,18 @@ import { Button } from "@/components/ui/button";
 const errorMessages: Record<string, string> = {
   EMAIL_IN_USE: "Цей email уже зареєстрований. Увійдіть або використайте інший email.",
   VALIDATION_ERROR: "Перевірте правильність заповнення полів.",
+  EMAIL_SEND_FAILED: "Не вдалося надіслати лист підтвердження. Перевірте налаштування Mailgun.",
   SIGNUP_FAILED: "Не вдалося зареєструватися. Спробуйте ще раз.",
 };
 
 export default function SignUpPage() {
   const [error, setError] = useState<string | null>(null);
+  const [successEmail, setSuccessEmail] = useState<string | null>(null);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+    setSuccessEmail(null);
     const form = e.currentTarget;
     const payload = {
       firstName: String(new FormData(form).get("firstName") ?? ""),
@@ -38,10 +41,8 @@ export default function SignUpPage() {
       return;
     }
 
-    if (data?.confirmUrl) {
-      window.location.assign(data.confirmUrl);
-      return;
-    }
+    setSuccessEmail(payload.email);
+    form.reset();
   }
 
   return (
@@ -52,6 +53,11 @@ export default function SignUpPage() {
       </div>
 
       <form onSubmit={onSubmit} className="flex flex-col gap-3">
+        {successEmail ? (
+          <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900" role="status">
+            Лист для підтвердження надіслано на {successEmail}. Перейдіть за посиланням у листі, щоб активувати акаунт.
+          </p>
+        ) : null}
         {error ? (
           <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800" role="alert">
             {error}
@@ -98,8 +104,7 @@ export default function SignUpPage() {
         </a>
       </div>
       <p className="text-xs text-zinc-500">
-        Після реєстрації ви будете перенаправлені на підтвердження email, далі — на вхід (лист поки не
-        відправляється).
+        Після реєстрації відкрийте лист і підтвердіть email.
       </p>
     </div>
   );

@@ -2,7 +2,7 @@
 
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 
@@ -10,14 +10,24 @@ function SignInForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const emailConfirmed = searchParams.get("emailConfirmed") === "1";
+
+  useEffect(() => {
+    const hasSensitiveQuery = searchParams.has("email") || searchParams.has("password");
+    if (!hasSensitiveQuery) return;
+    const safe = new URLSearchParams();
+    if (searchParams.get("emailConfirmed") === "1") {
+      safe.set("emailConfirmed", "1");
+    }
+    const qs = safe.toString();
+    router.replace(qs ? `/auth/sign-in?${qs}` : "/auth/sign-in");
+  }, [searchParams, router]);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
-    const form = e.currentTarget;
-    const email = String(new FormData(form).get("email") ?? "");
-    const password = String(new FormData(form).get("password") ?? "");
 
     const res = await signIn("credentials", {
       email,
@@ -29,6 +39,8 @@ function SignInForm() {
       setError(
         res.error === "EMAIL_NOT_VERIFIED"
           ? "Спочатку підтвердіть email за посиланням після реєстрації (перевірте пошту або відкрийте посилання з екрану реєстрації)."
+          : res.error === "USER_NOT_APPROVED"
+            ? "Ваш акаунт ще не схвалено власником CRM."
           : "Невірний email або пароль",
       );
       return;
@@ -61,9 +73,10 @@ function SignInForm() {
         <label className="flex flex-col gap-1 text-sm">
           <span>Email</span>
           <input
-            name="email"
             type="email"
             required
+            value={email}
+            onChange={(e) => setEmail(e.currentTarget.value)}
             className="h-10 rounded-md border px-3"
             autoComplete="email"
           />
@@ -71,9 +84,10 @@ function SignInForm() {
         <label className="flex flex-col gap-1 text-sm">
           <span>Пароль</span>
           <input
-            name="password"
             type="password"
             required
+            value={password}
+            onChange={(e) => setPassword(e.currentTarget.value)}
             className="h-10 rounded-md border px-3"
             autoComplete="current-password"
           />
