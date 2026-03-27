@@ -3,6 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Controller, FormProvider, useForm } from "react-hook-form";
 import { Plus } from "lucide-react";
+import { toast } from "sonner";
+
+import { getServerActionErrorMessage } from "@/lib/server-action-error-message";
+import { isNextNavigationError } from "@/lib/is-next-navigation-error";
 
 import { LineItemsTable } from "@/components/line-items/LineItemsTable";
 import { useUnsavedChangesGuard } from "@/components/forms/useUnsavedChangesGuard";
@@ -44,23 +48,74 @@ function toDecimal(value: number | string): number {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
 }
 
+async function downloadTreatyDocx(
+  variant: "full" | "short",
+  values: ContractFormValues,
+  contractNumber?: string,
+) {
+  const items = values.items.map((item) => ({
+    title: item.title,
+    unit: item.unit,
+    quantity: toDecimal(item.quantity),
+    price: toDecimal(item.price),
+  }));
+  const res = await fetch("/api/contracts/generate-treaty", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      variant,
+      contractNumber,
+      date: values.date,
+      signingLocation: values.signingLocation,
+      workType: values.workType,
+      customerCompanyId: values.customerCompanyId,
+      contractorCompanyId: values.contractorCompanyId,
+      projectTimeline: values.projectTimeline,
+      contractDuration: values.contractDuration,
+      signerFullNameNom: values.signerFullNameNom,
+      signerFullNameGen: values.signerFullNameGen,
+      signerPositionNom: values.signerPositionNom,
+      signerPositionGen: values.signerPositionGen,
+      signerActingUnder: values.signerActingUnder,
+      items,
+    }),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(err?.error ?? "GENERATE_FAILED");
+  }
+  const blob = await res.blob();
+  const cd = res.headers.get("content-disposition");
+  const fn = cd?.match(/filename="([^"]+)"/)?.[1] ?? `treaty-${variant}.docx`;
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fn;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export function ContractForm({
   companies,
   signingLocationOptions,
+  taxStatusOptions,
   signerPositionNomOptions,
   signerPositionGenOptions,
   actingUnderOptions,
   projectTimelineOptions,
   contractDurationOptions,
+  lineItemUnitOptions,
   onSubmit,
 }: {
   companies: CompanyOpt[];
   signingLocationOptions: string[];
+  taxStatusOptions: string[];
   signerPositionNomOptions: string[];
   signerPositionGenOptions: string[];
   actingUnderOptions: string[];
   projectTimelineOptions: string[];
   contractDurationOptions: string[];
+  lineItemUnitOptions: string[];
   onSubmit: (payload: ContractFormValues) => Promise<void>;
 }) {
   const form = useForm<ContractFormValues>({
@@ -96,6 +151,8 @@ export function ContractForm({
   const [customerSignerPositionNom, setCustomerSignerPositionNom] = useState("");
   const [customerSignerPositionGen, setCustomerSignerPositionGen] = useState("");
   const [customerSignerActingUnder, setCustomerSignerActingUnder] = useState("");
+  const [treatyLoading, setTreatyLoading] = useState<null | "full" | "short">(null);
+  const [treatyError, setTreatyError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!selectedContractorCompany) {
@@ -153,14 +210,19 @@ export function ContractForm({
       <form
         className="flex flex-col gap-4 rounded-xl border bg-white p-4"
         onSubmit={form.handleSubmit(async (values) => {
-          await onSubmit({
-            ...values,
-            items: values.items.map((item) => ({
-              ...item,
-              quantity: toDecimal(item.quantity),
-              price: toDecimal(item.price),
-            })),
-          });
+          try {
+            await onSubmit({
+              ...values,
+              items: values.items.map((item) => ({
+                ...item,
+                quantity: toDecimal(item.quantity),
+                price: toDecimal(item.price),
+              })),
+            });
+          } catch (e) {
+            if (isNextNavigationError(e)) throw e;
+            toast.error(getServerActionErrorMessage(e));
+          }
         })}
       >
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -398,10 +460,16 @@ export function ContractForm({
 
         <div className="flex flex-col gap-2">
           <div className="text-sm font-semibold text-zinc-900">{workType === "WORKS" ? "Перелік робіт" : "Перелік послуг"}</div>
-          <LineItemsTable />
+          <LineItemsTable unitOptionsFromBackend={lineItemUnitOptions} />
         </div>
 
-        <div className="mt-2 flex gap-3">
+        {treatyError ? (
+          <p className="text-sm text-red-600" role="alert">
+            {treatyError}
+          </p>
+        ) : null}
+
+        <div className="mt-2 flex flex-wrap items-center gap-3">
           <button
             type="submit"
             className="inline-flex h-10 items-center rounded-md bg-[#FFAA00] px-4 text-sm font-medium text-[#241800] hover:bg-[#FFBB33]"
@@ -411,6 +479,78 @@ export function ContractForm({
           <a className="inline-flex h-10 items-center rounded-md border px-4 text-sm" href="/contracts">
             Скасувати
           </a>
+          <button
+            type="button"
+            disabled={!!treatyLoading}
+            className="inline-flex h-10 items-center rounded-md border border-zinc-300 bg-zinc-50 px-4 text-sm text-zinc-800 hover:bg-zinc-100 disabled:opacity-50"
+            onClick={async () => {
+              setTreatyError(null);
+              const ok = await form.trigger();
+              if (!ok) {
+                const msg = "Заповніть усі обов’язкові поля перед формуванням договору.";
+                setTreatyError(msg);
+                toast.error(msg);
+                return;
+              }
+              setTreatyLoading("full");
+              try {
+                const v = form.getValues();
+                await downloadTreatyDocx("full", {
+                  ...v,
+                  items: v.items.map((item) => ({
+                    ...item,
+                    quantity: toDecimal(item.quantity),
+                    price: toDecimal(item.price),
+                  })),
+                });
+                toast.success("Документ завантажено.");
+              } catch (e) {
+                const msg = e instanceof Error ? e.message : "Не вдалося сформувати файл.";
+                setTreatyError(msg);
+                toast.error(msg);
+              } finally {
+                setTreatyLoading(null);
+              }
+            }}
+          >
+            {treatyLoading === "full" ? "…" : "Повний договір"}
+          </button>
+          <button
+            type="button"
+            disabled={!!treatyLoading}
+            className="inline-flex h-10 items-center rounded-md border border-zinc-300 bg-zinc-50 px-4 text-sm text-zinc-800 hover:bg-zinc-100 disabled:opacity-50"
+            onClick={async () => {
+              setTreatyError(null);
+              const ok = await form.trigger();
+              if (!ok) {
+                const msg = "Заповніть усі обов’язкові поля перед формуванням договору.";
+                setTreatyError(msg);
+                toast.error(msg);
+                return;
+              }
+              setTreatyLoading("short");
+              try {
+                const v = form.getValues();
+                await downloadTreatyDocx("short", {
+                  ...v,
+                  items: v.items.map((item) => ({
+                    ...item,
+                    quantity: toDecimal(item.quantity),
+                    price: toDecimal(item.price),
+                  })),
+                });
+                toast.success("Документ завантажено.");
+              } catch (e) {
+                const msg = e instanceof Error ? e.message : "Не вдалося сформувати файл.";
+                setTreatyError(msg);
+                toast.error(msg);
+              } finally {
+                setTreatyLoading(null);
+              }
+            }}
+          >
+            {treatyLoading === "short" ? "…" : "Скорочений договір"}
+          </button>
         </div>
       </form>
       <UnsavedChangesNavigationDialog
@@ -422,6 +562,10 @@ export function ContractForm({
         onOpenChange={(next) => {
           if (!next) setCompanyModalFor(null);
         }}
+        taxStatusOptions={taxStatusOptions}
+        signerPositionNomOptions={signerPositionNomOptions}
+        signerPositionGenOptions={signerPositionGenOptions}
+        actingUnderOptions={actingUnderOptions}
         onCreated={(company) => {
           setCompaniesState((prev) => [company, ...prev.filter((c) => c.id !== company.id)]);
           if (companyModalFor === "customer") {

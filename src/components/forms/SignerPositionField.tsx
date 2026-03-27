@@ -10,6 +10,8 @@ export function SignerPositionField({
   defaultValue = "",
   optionsFromBackend = [],
   deletedName = "signerPositionDeletedJson",
+  value: controlledValue,
+  onChange: controlledOnChange,
 }: {
   name: string;
   label: string;
@@ -17,8 +19,12 @@ export function SignerPositionField({
   defaultValue?: string;
   optionsFromBackend?: string[];
   deletedName?: string;
+  value?: string;
+  onChange?: (next: string) => void;
 }) {
-  const [value, setValue] = useState(defaultValue.trim());
+  const [uncontrolled, setUncontrolled] = useState(defaultValue.trim());
+  const value = controlledValue !== undefined ? controlledValue : uncontrolled;
+  const setValue = controlledOnChange ?? setUncontrolled;
 
   return (
     <div className="flex flex-col gap-1 text-sm">

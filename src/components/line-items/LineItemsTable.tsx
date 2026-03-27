@@ -2,10 +2,13 @@
 
 import { Fragment, useEffect, useMemo, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { useFieldArray, useFormContext } from "react-hook-form";
+import { Settings2 } from "lucide-react";
+import { Controller, useFieldArray, useFormContext } from "react-hook-form";
 import { flexRender, getCoreRowModel, useReactTable, type ColumnDef } from "@tanstack/react-table";
 import { FiTrash2 } from "react-icons/fi";
 
+import { SearchableDropdownOptionField } from "@/components/forms/SearchableDropdownOptionField";
+import { ManageLineItemUnitsDialog } from "@/components/line-items/ManageLineItemUnitsDialog";
 import { calcTotals, formatMoney } from "@/lib/totals";
 
 function formatPriceTwoDecimals(raw: string) {
@@ -23,10 +26,11 @@ type LineItemForm = {
   }>;
 };
 
-export function LineItemsTable() {
-  const { register, watch, setValue } = useFormContext<LineItemForm>();
+export function LineItemsTable({ unitOptionsFromBackend = [] }: { unitOptionsFromBackend?: string[] }) {
+  const { register, watch, setValue, control } = useFormContext<LineItemForm>();
   const { fields, append, remove } = useFieldArray({ name: "items" });
   const [pendingDeleteIdx, setPendingDeleteIdx] = useState<number | null>(null);
+  const [unitManageOpen, setUnitManageOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(false);
 
   useEffect(() => {
@@ -72,10 +76,40 @@ export function LineItemsTable() {
       },
       {
         id: "unit",
-        header: "Од. вим.",
+        header: () => (
+          <div className="flex items-center gap-1.5">
+            <span>Од. вим.</span>
+            <button
+              type="button"
+              className="inline-flex shrink-0 items-center justify-center rounded-md border border-zinc-200 bg-white p-1 text-zinc-600 hover:bg-zinc-50"
+              onClick={() => setUnitManageOpen(true)}
+              title="Керувати одиницями виміру"
+              aria-label="Керувати одиницями виміру"
+            >
+              <Settings2 className="size-4" aria-hidden />
+            </button>
+          </div>
+        ),
         cell: ({ row }) => (
-          <td className="align-middle px-3 py-2">
-            <input className="h-10 w-full rounded-md border px-3" {...register(`items.${row.original.idx}.unit`, { required: true })} />
+          <td className="align-middle px-3 py-2 min-w-[280px]">
+            <Controller
+              name={`items.${row.original.idx}.unit`}
+              control={control}
+              rules={{ required: true }}
+              render={({ field }) => (
+                <SearchableDropdownOptionField
+                  label="Одиниця виміру"
+                  hideLabel
+                  scope="LINE_ITEM_UNIT"
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                  optionsFromBackend={unitOptionsFromBackend}
+                  placeholder="Оберіть або введіть одиницю"
+                  inputClassName="bg-white"
+                  showManageButtons={false}
+                />
+              )}
+            />
           </td>
         ),
       },
@@ -151,7 +185,7 @@ export function LineItemsTable() {
         ),
       },
     ],
-    [fields.length, items, register, remove, setValue],
+    [control, fields.length, items, register, remove, setValue, unitOptionsFromBackend],
   );
 
   const table = useReactTable({
@@ -170,7 +204,16 @@ export function LineItemsTable() {
               {table.getHeaderGroups().map((hg) => (
                 <tr key={hg.id}>
                   {hg.headers.map((header) => (
-                    <th key={header.id} className={header.id === "title" ? "w-[38%] min-w-[320px] px-3 py-2" : "px-3 py-2"}>
+                    <th
+                      key={header.id}
+                      className={
+                        header.id === "title"
+                          ? "w-[38%] min-w-[320px] px-3 py-2"
+                          : header.id === "unit"
+                            ? "min-w-[280px] px-3 py-2"
+                            : "px-3 py-2"
+                      }
+                    >
                       {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                     </th>
                   ))}
@@ -224,10 +267,38 @@ export function LineItemsTable() {
                     />
                   </label>
 
-                  <label className="flex flex-col gap-1 text-sm">
-                    <span className="text-zinc-700">Од. вим.</span>
-                    <input className="h-10 w-full rounded-md border px-3" {...register(`items.${idx}.unit`, { required: true })} />
-                  </label>
+                  <div>
+                    <div className="mb-1 flex items-center justify-between gap-2">
+                      <span className="text-zinc-700">Од. вим.</span>
+                      <button
+                        type="button"
+                        className="inline-flex shrink-0 items-center justify-center rounded-md border border-zinc-200 bg-white p-1 text-zinc-600 hover:bg-zinc-50"
+                        onClick={() => setUnitManageOpen(true)}
+                        title="Керувати одиницями виміру"
+                        aria-label="Керувати одиницями виміру"
+                      >
+                        <Settings2 className="size-4" aria-hidden />
+                      </button>
+                    </div>
+                    <Controller
+                      name={`items.${idx}.unit`}
+                      control={control}
+                      rules={{ required: true }}
+                      render={({ field }) => (
+                        <SearchableDropdownOptionField
+                          label="Од. вим."
+                          hideLabel
+                          scope="LINE_ITEM_UNIT"
+                          value={field.value ?? ""}
+                          onChange={field.onChange}
+                          optionsFromBackend={unitOptionsFromBackend}
+                          placeholder="Оберіть або введіть одиницю"
+                          inputClassName="bg-white"
+                          showManageButtons={false}
+                        />
+                      )}
+                    />
+                  </div>
 
                   <div className="grid grid-cols-2 gap-2">
                     <label className="flex flex-col gap-1 text-sm">
@@ -301,6 +372,12 @@ export function LineItemsTable() {
           </div>
         </div>
       </div>
+
+      <ManageLineItemUnitsDialog
+        open={unitManageOpen}
+        onOpenChange={setUnitManageOpen}
+        optionsFromBackend={unitOptionsFromBackend}
+      />
 
       <Dialog.Root open={pendingDeleteIdx !== null} onOpenChange={(next) => !next && setPendingDeleteIdx(null)}>
         <Dialog.Portal>

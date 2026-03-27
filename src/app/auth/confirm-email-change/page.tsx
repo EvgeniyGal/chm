@@ -2,6 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
+import { toast } from "sonner";
 
 function ConfirmEmailChangeContent() {
   const searchParams = useSearchParams();
@@ -15,7 +16,9 @@ function ConfirmEmailChangeContent() {
     async function run() {
       if (!token) {
         setState("error");
-        setMessage("Відсутній токен підтвердження.");
+        const m = "Відсутній токен підтвердження.";
+        setMessage(m);
+        toast.error(m);
         return;
       }
 
@@ -28,23 +31,31 @@ function ConfirmEmailChangeContent() {
 
       if (res.ok) {
         setState("ok");
-        setMessage("Email успішно змінено. Увійдіть повторно, щоб оновити сесію.");
+        const m = "Email успішно змінено. Увійдіть повторно, щоб оновити сесію.";
+        setMessage(m);
+        toast.success(m);
         return;
       }
 
       if (data?.error === "INVALID_OR_EXPIRED_TOKEN") {
         setState("error");
-        setMessage("Посилання недійсне або прострочене.");
+        const m = "Посилання недійсне або прострочене.";
+        setMessage(m);
+        toast.error(m);
         return;
       }
       if (data?.error === "EMAIL_IN_USE") {
         setState("error");
-        setMessage("Цей email уже використовується іншим акаунтом.");
+        const m = "Цей email уже використовується іншим акаунтом.";
+        setMessage(m);
+        toast.error(m);
         return;
       }
 
       setState("error");
-      setMessage("Не вдалося підтвердити зміну email.");
+      const m = "Не вдалося підтвердити зміну email.";
+      setMessage(m);
+      toast.error(m);
     }
 
     void run();

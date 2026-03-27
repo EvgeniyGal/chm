@@ -5,6 +5,8 @@ import { db } from "@/db";
 import { companies } from "@/db/schema";
 import { writeAuditEvent } from "@/lib/audit";
 import { requireRole } from "@/lib/authz";
+import { parseContactsJsonForDb } from "@/lib/company-contacts";
+import { DROPDOWN_SCOPE, saveDropdownOptions } from "@/lib/dropdown-options";
 
 export const runtime = "nodejs";
 
@@ -12,7 +14,8 @@ const companyInput = z.object({
   fullName: z.string().min(1),
   shortName: z.string().min(1),
   address: z.string().min(1),
-  contacts: z.array(z.object({ type: z.string().min(1), value: z.string().min(1) })).default([]),
+  contactsJson: z.string().optional(),
+  contacts: z.array(z.object({ type: z.string().min(1), value: z.string().min(1) })).optional(),
   edrpouCode: z.string().min(1),
   vatIdTin: z.string().optional().nullable(),
   taxStatus: z.string().min(1),
@@ -48,17 +51,53 @@ export async function POST(req: Request) {
     return Response.json({ error: "VALIDATION_ERROR", details: parsed.error.flatten() }, { status: 400 });
   }
 
+  const contactsStored =
+    typeof parsed.data.contactsJson === "string"
+      ? parseContactsJsonForDb(parsed.data.contactsJson)
+      : parseContactsJsonForDb(JSON.stringify(parsed.data.contacts ?? []));
+
   const now = new Date();
   const [created] = await db
     .insert(companies)
     .values({
-      ...parsed.data,
-      contacts: JSON.stringify(parsed.data.contacts),
+      fullName: parsed.data.fullName,
+      shortName: parsed.data.shortName,
+      address: parsed.data.address,
+      contacts: contactsStored,
+      edrpouCode: parsed.data.edrpouCode,
       vatIdTin: parsed.data.vatIdTin ?? null,
+      taxStatus: parsed.data.taxStatus,
+      iban: parsed.data.iban,
+      bank: parsed.data.bank,
+      contractSignerFullNameNom: parsed.data.contractSignerFullNameNom,
+      contractSignerFullNameGen: parsed.data.contractSignerFullNameGen,
+      contractSignerPositionNom: parsed.data.contractSignerPositionNom,
+      contractSignerPositionGen: parsed.data.contractSignerPositionGen,
+      contractSignerActingUnder: parsed.data.contractSignerActingUnder,
+      actSignerFullNameNom: parsed.data.actSignerFullNameNom,
+      actSignerFullNameGen: parsed.data.actSignerFullNameGen,
+      actSignerPositionNom: parsed.data.actSignerPositionNom,
+      actSignerPositionGen: parsed.data.actSignerPositionGen,
+      invoiceSignerFullNameNom: parsed.data.invoiceSignerFullNameNom,
+      invoiceSignerPositionNom: parsed.data.invoiceSignerPositionNom,
       createdAt: now,
       updatedAt: now,
     })
     .returning();
+
+  await Promise.all([
+    saveDropdownOptions(DROPDOWN_SCOPE.TAX_STATUS, [parsed.data.taxStatus]),
+    saveDropdownOptions(DROPDOWN_SCOPE.SIGNER_POSITION_NOM, [
+      parsed.data.contractSignerPositionNom,
+      parsed.data.actSignerPositionNom,
+      parsed.data.invoiceSignerPositionNom,
+    ]),
+    saveDropdownOptions(DROPDOWN_SCOPE.SIGNER_POSITION_GEN, [
+      parsed.data.contractSignerPositionGen,
+      parsed.data.actSignerPositionGen,
+    ]),
+    saveDropdownOptions(DROPDOWN_SCOPE.ACTING_UNDER, [parsed.data.contractSignerActingUnder]),
+  ]);
 
   await writeAuditEvent({
     entityType: "COMPANY",

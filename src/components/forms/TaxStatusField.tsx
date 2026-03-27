@@ -6,11 +6,17 @@ import { SearchableDropdownOptionField } from "@/components/forms/SearchableDrop
 export function TaxStatusField({
   defaultValue = "",
   optionsFromBackend = [],
+  value: controlledValue,
+  onChange: controlledOnChange,
 }: {
   defaultValue?: string;
   optionsFromBackend?: string[];
+  value?: string;
+  onChange?: (next: string) => void;
 }) {
-  const [value, setValue] = useState(defaultValue.trim());
+  const [uncontrolled, setUncontrolled] = useState(defaultValue.trim());
+  const value = controlledValue !== undefined ? controlledValue : uncontrolled;
+  const setValue = controlledOnChange ?? setUncontrolled;
 
   return (
     <div className="flex flex-col gap-2 text-sm">

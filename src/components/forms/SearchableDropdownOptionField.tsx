@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Plus } from "lucide-react";
+import { toast } from "sonner";
 import { DeleteOptionButton } from "./DeleteOptionButton";
 
 function sortUa(values: string[]) {
@@ -15,7 +17,8 @@ type Scope =
   | "ACTING_UNDER"
   | "SIGNING_LOCATION"
   | "PROJECT_TIMELINE"
-  | "CONTRACT_DURATION";
+  | "CONTRACT_DURATION"
+  | "LINE_ITEM_UNIT";
 
 export function SearchableDropdownOptionField({
   label,
@@ -29,6 +32,8 @@ export function SearchableDropdownOptionField({
   multiline = false,
   rows = 3,
   listFirstLineOnly = false,
+  hideLabel = false,
+  showManageButtons = true,
 }: {
   label: string;
   scope: Scope;
@@ -41,9 +46,22 @@ export function SearchableDropdownOptionField({
   multiline?: boolean;
   rows?: number;
   listFirstLineOnly?: boolean;
+  /** Use in table cells: keep label for screen readers only. */
+  hideLabel?: boolean;
+  /** When false, hides add-to-list and delete-from-list controls (e.g. line items: manage units elsewhere). */
+  showManageButtons?: boolean;
 }) {
   const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const anchorRef = useRef<HTMLDivElement | null>(null);
+  const portalRef = useRef<HTMLDivElement | null>(null);
   const normalizedValue = value.trim();
+
+  const [panelStyle, setPanelStyle] = useState<{
+    top: number;
+    left: number;
+    width: number;
+    maxHeight: number;
+  } | null>(null);
 
   const initialOptions = useMemo(() => {
     const seeded = normalizedValue ? [...optionsFromBackend, normalizedValue] : [...optionsFromBackend];
@@ -72,15 +90,64 @@ export function SearchableDropdownOptionField({
     return () => window.removeEventListener("dropdown-options:changed", onChanged);
   }, [scope]);
 
-  useEffect(() => {
-    const onDocMouseDown = (e: MouseEvent) => {
-      const el = wrapperRef.current;
+  useLayoutEffect(() => {
+    if (!open) {
+      setPanelStyle(null);
+      return;
+    }
+
+    function updatePanelPosition() {
+      const el = anchorRef.current;
       if (!el) return;
-      if (e.target instanceof Node && !el.contains(e.target)) setOpen(false);
+      const r = el.getBoundingClientRect();
+      const gap = 4;
+      const viewportH = window.innerHeight;
+      const viewportW = window.innerWidth;
+      const spaceBelow = viewportH - r.bottom - gap;
+      const spaceAbove = r.top - gap;
+      const preferredMax = 240;
+      const preferBelow = spaceBelow >= 100 || spaceBelow >= spaceAbove;
+
+      let top: number;
+      let maxHeight: number;
+
+      if (preferBelow) {
+        top = r.bottom + gap;
+        maxHeight = Math.min(preferredMax, Math.max(80, spaceBelow - 8));
+      } else {
+        maxHeight = Math.min(preferredMax, Math.max(80, spaceAbove - 8));
+        top = r.top - gap - maxHeight;
+      }
+
+      let left = r.left;
+      const width = Math.max(r.width, 160);
+      if (left + width > viewportW - 8) left = Math.max(8, viewportW - width - 8);
+      if (left < 8) left = 8;
+
+      setPanelStyle({ top, left, width, maxHeight });
+    }
+
+    updatePanelPosition();
+    window.addEventListener("scroll", updatePanelPosition, true);
+    window.addEventListener("resize", updatePanelPosition);
+    return () => {
+      window.removeEventListener("scroll", updatePanelPosition, true);
+      window.removeEventListener("resize", updatePanelPosition);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDocMouseDown = (e: MouseEvent) => {
+      const t = e.target;
+      if (!(t instanceof Node)) return;
+      if (wrapperRef.current?.contains(t)) return;
+      if (portalRef.current?.contains(t)) return;
+      setOpen(false);
     };
     document.addEventListener("mousedown", onDocMouseDown);
     return () => document.removeEventListener("mousedown", onDocMouseDown);
-  }, []);
+  }, [open]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -90,10 +157,10 @@ export function SearchableDropdownOptionField({
 
   return (
     <label className="flex flex-col gap-1 text-sm min-w-0">
-      <span className="text-zinc-700">{label}</span>
+      <span className={hideLabel ? "sr-only" : "text-zinc-700"}>{label}</span>
 
       <div ref={wrapperRef} className="flex w-full flex-nowrap items-center gap-2 min-w-0">
-        <div className="relative min-w-0 flex-1">
+        <div ref={anchorRef} className="relative min-w-0 flex-1">
           {multiline ? (
             <textarea
               required={required}
@@ -145,87 +212,114 @@ export function SearchableDropdownOptionField({
             />
           )}
 
-          {open ? (
-            <div className="absolute left-0 right-0 z-10 mt-1 overflow-hidden rounded-md border bg-white shadow-sm">
-              <div className="max-h-60 overflow-auto">
-                {filtered.length === 0 ? (
-                  <div className="px-3 py-2 text-sm text-zinc-500">Немає варіантів</div>
-                ) : (
-                  filtered.map((opt) => {
-                    const preview = listFirstLineOnly ? opt.split(/\r?\n/)[0] : opt;
-                    return (
-                    <button
-                      key={opt}
-                      type="button"
-                      className="flex w-full cursor-pointer items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-zinc-50"
-                      onClick={() => {
-                        setQuery(opt);
-                        onChange(opt);
-                        setOpen(false);
-                      }}
-                    >
-                      <span className={listFirstLineOnly ? "truncate" : ""} title={opt}>
-                        {preview}
-                      </span>
-                    </button>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-          ) : null}
+          {open && panelStyle && typeof document !== "undefined"
+            ? createPortal(
+                <div
+                  ref={portalRef}
+                  className="overflow-hidden rounded-md border bg-white shadow-lg"
+                  style={{
+                    position: "fixed",
+                    top: panelStyle.top,
+                    left: panelStyle.left,
+                    width: panelStyle.width,
+                    maxHeight: panelStyle.maxHeight,
+                    zIndex: 9999,
+                  }}
+                >
+                  <div className="min-h-0 overflow-y-auto overscroll-contain" style={{ maxHeight: panelStyle.maxHeight }}>
+                    {filtered.length === 0 ? (
+                      <div className="px-3 py-2 text-sm text-zinc-500">Немає варіантів</div>
+                    ) : (
+                      filtered.map((opt) => {
+                        const preview = listFirstLineOnly ? opt.split(/\r?\n/)[0] : opt;
+                        return (
+                          <button
+                            key={opt}
+                            type="button"
+                            className="flex w-full cursor-pointer items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-zinc-50"
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => {
+                              setQuery(opt);
+                              onChange(opt);
+                              setOpen(false);
+                            }}
+                          >
+                            <span className={listFirstLineOnly ? "truncate" : ""} title={opt}>
+                              {preview}
+                            </span>
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>,
+                document.body,
+              )
+            : null}
         </div>
 
-        <button
-          type="button"
-          className="inline-flex h-10 w-10 items-center justify-center rounded-md border text-zinc-700 hover:bg-zinc-50"
-          aria-label="Додати варіант"
-          title="Додати варіант"
-          onClick={() => {
-            const next = query.trim();
-            if (!next) return;
-            fetch("/api/dropdown-options", {
-              method: "POST",
-              headers: { "content-type": "application/json" },
-              body: JSON.stringify({ scope, value: next }),
-            }).then((res) => {
-              if (!res.ok) return;
-              window.dispatchEvent(
-                new CustomEvent("dropdown-options:changed", {
-                  detail: { scope, action: "add", value: next },
-                }),
-              );
-              setOpen(false);
-            });
-          }}
-        >
-          <Plus className="size-4" aria-hidden="true" />
-        </button>
+        {showManageButtons ? (
+          <>
+            <button
+              type="button"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-md border text-zinc-700 hover:bg-zinc-50"
+              aria-label="Додати варіант"
+              title="Додати варіант"
+              onClick={() => {
+                const next = query.trim();
+                if (!next) return;
+                fetch("/api/dropdown-options", {
+                  method: "POST",
+                  headers: { "content-type": "application/json" },
+                  body: JSON.stringify({ scope, value: next }),
+                }).then((res) => {
+                  if (!res.ok) {
+                    toast.error("Не вдалося зберегти варіант.");
+                    return;
+                  }
+                  toast.success("Варіант додано.");
+                  window.dispatchEvent(
+                    new CustomEvent("dropdown-options:changed", {
+                      detail: { scope, action: "add", value: next },
+                    }),
+                  );
+                  setOpen(false);
+                });
+              }}
+            >
+              <Plus className="size-4" aria-hidden="true" />
+            </button>
 
-        <DeleteOptionButton
-          disabled={!normalizedValue || !options.includes(normalizedValue)}
-          optionLabel={normalizedValue}
-          onConfirm={() => {
-            const selected = normalizedValue;
-            if (!selected || !options.includes(selected)) return;
-            fetch("/api/dropdown-options", {
-              method: "DELETE",
-              headers: { "content-type": "application/json" },
-              body: JSON.stringify({ scope, value: selected }),
-            }).then((res) => {
-              if (!res.ok) return;
-              setOptions((prev) => prev.filter((v) => v !== selected));
-              onChange("");
-              setQuery("");
-              setOpen(false);
-              window.dispatchEvent(
-                new CustomEvent("dropdown-options:changed", {
-                  detail: { scope, action: "delete", value: selected },
-                }),
-              );
-            });
-          }}
-        />
+            <DeleteOptionButton
+              disabled={!normalizedValue || !options.includes(normalizedValue)}
+              optionLabel={normalizedValue}
+              onConfirm={() => {
+                const selected = normalizedValue;
+                if (!selected || !options.includes(selected)) return;
+                fetch("/api/dropdown-options", {
+                  method: "DELETE",
+                  headers: { "content-type": "application/json" },
+                  body: JSON.stringify({ scope, value: selected }),
+                }).then((res) => {
+                  if (!res.ok) {
+                    toast.error("Не вдалося видалити варіант.");
+                    return;
+                  }
+                  toast.success("Варіант видалено зі списку.");
+                  setOptions((prev) => prev.filter((v) => v !== selected));
+                  onChange("");
+                  setQuery("");
+                  setOpen(false);
+                  window.dispatchEvent(
+                    new CustomEvent("dropdown-options:changed", {
+                      detail: { scope, action: "delete", value: selected },
+                    }),
+                  );
+                });
+              }}
+            />
+          </>
+        ) : null}
       </div>
     </label>
   );

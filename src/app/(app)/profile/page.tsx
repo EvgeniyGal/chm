@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { auth } from "@/auth";
+import { FormWithToastAction } from "@/components/forms/FormWithToastAction";
 import { db } from "@/db";
 import { emailChangeTokens, users } from "@/db/schema";
 import { requireRole } from "@/lib/authz";
@@ -81,7 +82,7 @@ export default async function ProfilePage({
 
       <div className="mt-4 rounded-xl border bg-white p-4 text-sm">
         <div className="font-semibold text-zinc-900">Редагувати ім'я</div>
-        <form action={updateName} className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
+        <FormWithToastAction action={updateName} className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
           <label className="flex flex-col gap-1">
             <span className="text-zinc-700">First Name</span>
             <input
@@ -110,7 +111,7 @@ export default async function ProfilePage({
               Зберегти ім'я
             </button>
           </div>
-        </form>
+        </FormWithToastAction>
       </div>
 
       <div className="mt-4 rounded-xl border bg-white p-4 text-sm">
@@ -134,7 +135,7 @@ export default async function ProfilePage({
 
       <div className="mt-4 rounded-xl border bg-white p-4 text-sm">
         <div className="font-semibold text-zinc-900">Зміна email</div>
-        <form className="mt-3 flex flex-col gap-3" action={requestEmailChange}>
+        <FormWithToastAction className="mt-3 flex flex-col gap-3" action={requestEmailChange}>
           <input name="newEmail" type="email" required className="h-10 rounded-md border px-3" placeholder="new@email.com" />
           <button className="inline-flex h-10 items-center justify-center rounded-md border px-4 text-sm hover:bg-zinc-50" type="submit">
             Запросити підтвердження
@@ -151,7 +152,7 @@ export default async function ProfilePage({
           {emailChangeStatus === "send-failed" ? (
             <p className="text-xs text-red-700">Не вдалося надіслати лист. Перевірте налаштування пошти.</p>
           ) : null}
-        </form>
+        </FormWithToastAction>
       </div>
     </div>
   );

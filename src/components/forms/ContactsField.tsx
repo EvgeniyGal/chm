@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type ContactType = "tel" | "email";
 
@@ -33,7 +33,14 @@ function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
-export function ContactsField({ defaultValue = "[]" }: { defaultValue?: string }) {
+export function ContactsField({
+  defaultValue = "[]",
+  onContactsJsonChange,
+}: {
+  defaultValue?: string;
+  /** Fired when the serialized contacts JSON changes (for quick-create modal / external state). */
+  onContactsJsonChange?: (contactsJson: string) => void;
+}) {
   const initialRows = useMemo(() => {
     try {
       const parsed = JSON.parse(defaultValue) as Array<{ type?: string; value?: string }>;
@@ -68,6 +75,10 @@ export function ContactsField({ defaultValue = "[]" }: { defaultValue?: string }
       })
       .filter((row) => row.value.length > 0),
   );
+
+  useEffect(() => {
+    onContactsJsonChange?.(jsonValue);
+  }, [jsonValue, onContactsJsonChange]);
 
   return (
     <div className="flex flex-col gap-2 text-sm">

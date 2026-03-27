@@ -1,21 +1,91 @@
-import { desc } from "drizzle-orm";
+import { asc, count, desc, ilike, inArray, or } from "drizzle-orm";
 
+import { ContractsTable } from "@/components/contracts/ContractsTable";
 import { db } from "@/db";
-import { contracts } from "@/db/schema";
-import { InfoDialog } from "@/components/modals/InfoDialog";
+import { contracts, lineItems } from "@/db/schema";
 import { requireRole } from "@/lib/authz";
 
-export default async function ContractsPage() {
+const pageSizeOptions = new Set([25, 50, 100]);
+type SortBy = "number" | "date" | "workType" | "totalWithVat";
+type SortDir = "asc" | "desc";
+
+function getSortColumn(sortBy: SortBy, sortDir: SortDir) {
+  const dir = sortDir === "asc" ? asc : desc;
+  if (sortBy === "number") return dir(contracts.number);
+  if (sortBy === "date") return dir(contracts.date);
+  if (sortBy === "workType") return dir(contracts.workType);
+  return dir(contracts.totalWithVat);
+}
+
+function formatLineItemsPreview(titles: string[]): string {
+  if (titles.length === 0) return "—";
+  const maxShow = 3;
+  const slice = titles.slice(0, maxShow);
+  const joined = slice.join(" · ");
+  if (titles.length > maxShow) return `${joined}… (+${titles.length - maxShow})`;
+  return joined;
+}
+
+export default async function ContractsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   await requireRole("MANAGER");
-  const rows = await db.select().from(contracts).orderBy(desc(contracts.date));
+  const sp = await searchParams;
+  const q = String(sp.q ?? "").trim();
+  const sortByRaw = String(sp.sortBy ?? "date");
+  const sortDirRaw = String(sp.sortDir ?? "desc");
+  const pageRaw = Number(String(sp.page ?? "1"));
+  const pageSizeRaw = Number(String(sp.pageSize ?? "25"));
+
+  const sortBy: SortBy =
+    sortByRaw === "number" ||
+    sortByRaw === "date" ||
+    sortByRaw === "workType" ||
+    sortByRaw === "totalWithVat"
+      ? sortByRaw
+      : "date";
+  const sortDir: SortDir = sortDirRaw === "asc" || sortDirRaw === "desc" ? sortDirRaw : "desc";
+  const page = Number.isFinite(pageRaw) && pageRaw > 0 ? Math.floor(pageRaw) : 1;
+  const pageSize = pageSizeOptions.has(pageSizeRaw) ? pageSizeRaw : 25;
+
+  const where = q
+    ? or(ilike(contracts.number, `%${q}%`), ilike(contracts.signingLocation, `%${q}%`))
+    : undefined;
+
+  const [{ total }] = await db.select({ total: count() }).from(contracts).where(where);
+  const offset = (page - 1) * pageSize;
+
+  const rows = await db
+    .select()
+    .from(contracts)
+    .where(where)
+    .orderBy(getSortColumn(sortBy, sortDir), desc(contracts.createdAt))
+    .limit(pageSize)
+    .offset(offset);
+
+  const ids = rows.map((r) => r.id);
+  const lineItemTitlesByContract = new Map<string, string[]>();
+  if (ids.length > 0) {
+    const liRows = await db
+      .select({ contractId: lineItems.contractId, title: lineItems.title })
+      .from(lineItems)
+      .where(inArray(lineItems.contractId, ids))
+      .orderBy(asc(lineItems.contractId), asc(lineItems.id));
+
+    for (const row of liRows) {
+      if (!row.contractId) continue;
+      const list = lineItemTitlesByContract.get(row.contractId) ?? [];
+      list.push(row.title);
+      lineItemTitlesByContract.set(row.contractId, list);
+    }
+  }
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold text-zinc-900">Договори</h1>
-          <p className="text-sm text-zinc-600">Список договорів.</p>
-        </div>
+        <h1 className="text-2xl font-semibold text-zinc-900">Договори</h1>
         <a
           className="inline-flex h-10 items-center rounded-md bg-[#FFAA00] px-4 text-sm font-medium text-[#241800] hover:bg-[#FFBB33]"
           href="/contracts/new"
@@ -24,58 +94,25 @@ export default async function ContractsPage() {
         </a>
       </div>
 
-      <div className="overflow-hidden rounded-xl border bg-white">
-        <table className="w-full text-sm">
-          <thead className="bg-[#FFF7E5] text-left text-zinc-700">
-            <tr>
-              <th className="px-4 py-3">Номер</th>
-              <th className="px-4 py-3">Дата</th>
-              <th className="px-4 py-3">Дії</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((c) => (
-              <tr key={c.id} className="border-t">
-                <td className="px-4 py-3">{c.number}</td>
-                <td className="px-4 py-3">{new Date(c.date).toLocaleDateString("uk-UA")}</td>
-                <td className="px-4 py-3">
-                  <div className="flex flex-wrap gap-2">
-                    <InfoDialog title={`Договір ${c.number}`}>
-                      <div className="grid gap-2">
-                        <Row k="Дата" v={new Date(c.date).toLocaleDateString("uk-UA")} />
-                        <Row k="Місце" v={c.signingLocation} />
-                        <Row k="Разом (без ПДВ)" v={String(c.totalWithoutVat)} />
-                        <Row k="ПДВ 20%" v={String(c.vat20)} />
-                        <Row k="Разом з ПДВ" v={String(c.totalWithVat)} />
-                      </div>
-                    </InfoDialog>
-                    <a className="underline" href={`/contracts/${c.id}/edit`}>
-                      Edit
-                    </a>
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {rows.length === 0 ? (
-              <tr>
-                <td className="px-4 py-8 text-center text-zinc-500" colSpan={3}>
-                  Поки що немає договорів.
-                </td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
-      </div>
+      <ContractsTable
+        total={Number(total)}
+        page={page}
+        pageSize={pageSize}
+        q={q}
+        sortBy={sortBy}
+        sortDir={sortDir}
+        rows={rows.map((c) => ({
+          id: c.id,
+          number: c.number,
+          date: c.date instanceof Date ? c.date.toISOString() : String(c.date),
+          signingLocation: c.signingLocation,
+          workType: c.workType,
+          lineItemsPreview: formatLineItemsPreview(lineItemTitlesByContract.get(c.id) ?? []),
+          totalWithoutVat: String(c.totalWithoutVat),
+          vat20: String(c.vat20),
+          totalWithVat: String(c.totalWithVat),
+        }))}
+      />
     </div>
   );
 }
-
-function Row({ k, v }: { k: string; v: string }) {
-  return (
-    <div className="grid grid-cols-3 gap-3">
-      <div className="text-zinc-500">{k}</div>
-      <div className="col-span-2 text-zinc-900">{v}</div>
-    </div>
-  );
-}
-

@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 const errorMessages: Record<string, string> = {
   EMAIL_IN_USE: "Цей email уже зареєстрований. Увійдіть або використайте інший email.",
@@ -37,10 +38,13 @@ export default function SignUpPage() {
     const data = (await res.json().catch(() => null)) as { error?: string; confirmUrl?: string } | null;
     if (!res.ok) {
       const code = data?.error ?? "SIGNUP_FAILED";
-      setError(errorMessages[code] ?? errorMessages.SIGNUP_FAILED);
+      const msg = errorMessages[code] ?? errorMessages.SIGNUP_FAILED;
+      setError(msg);
+      toast.error(msg);
       return;
     }
 
+    toast.success("Лист для підтвердження надіслано на вказаний email.");
     setSuccessEmail(payload.email);
     form.reset();
   }

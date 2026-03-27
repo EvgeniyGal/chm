@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 function SignInForm() {
   const router = useRouter();
@@ -36,16 +37,18 @@ function SignInForm() {
     });
 
     if (res?.error) {
-      setError(
+      const msg =
         res.error === "EMAIL_NOT_VERIFIED"
           ? "Спочатку підтвердіть email за посиланням після реєстрації (перевірте пошту або відкрийте посилання з екрану реєстрації)."
           : res.error === "USER_NOT_APPROVED"
             ? "Ваш акаунт ще не схвалено власником CRM."
-          : "Невірний email або пароль",
-      );
+            : "Невірний email або пароль";
+      setError(msg);
+      toast.error(msg);
       return;
     }
 
+    toast.success("Ви увійшли в систему.");
     router.push("/companies");
     router.refresh();
   }

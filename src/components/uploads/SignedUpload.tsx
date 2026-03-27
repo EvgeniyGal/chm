@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
+
+import { getServerActionErrorMessage } from "@/lib/server-action-error-message";
 
 export function SignedUpload({
   entityType,
@@ -25,7 +28,9 @@ export function SignedUpload({
           const input = form.elements.namedItem("file") as HTMLInputElement | null;
           const file = input?.files?.[0];
           if (!file) {
-            setMsg("Оберіть файл.");
+            const m = "Оберіть файл.";
+            setMsg(m);
+            toast.error(m);
             return;
           }
           setBusy(true);
@@ -39,8 +44,11 @@ export function SignedUpload({
             const data = (await res.json().catch(() => null)) as any;
             if (!res.ok) throw new Error(data?.error ?? "UPLOAD_FAILED");
             setMsg("Завантажено.");
+            toast.success("Файл завантажено.");
           } catch (err: any) {
-            setMsg(err?.message ?? "Помилка завантаження.");
+            const m = err?.message ?? "Помилка завантаження.";
+            setMsg(m);
+            toast.error(getServerActionErrorMessage(err instanceof Error ? err : new Error(m)));
           } finally {
             setBusy(false);
           }

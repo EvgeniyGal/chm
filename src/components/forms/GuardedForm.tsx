@@ -2,8 +2,11 @@
 
 import * as Dialog from "@radix-ui/react-dialog";
 import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 
 import { useUnsavedChangesGuard } from "@/components/forms/useUnsavedChangesGuard";
+import { getServerActionErrorMessage } from "@/lib/server-action-error-message";
+import { isNextNavigationError } from "@/lib/is-next-navigation-error";
 
 function snapshotForm(form: HTMLFormElement) {
   const entries = Array.from(new FormData(form).entries()).map(([k, v]) => [k, String(v)] as const);
@@ -67,8 +70,13 @@ export function GuardedForm({
       <form
         ref={formRef}
         action={async (formData) => {
-          await action(formData);
-          setIsDirty(false);
+          try {
+            await action(formData);
+            setIsDirty(false);
+          } catch (e) {
+            if (isNextNavigationError(e)) throw e;
+            toast.error(getServerActionErrorMessage(e));
+          }
         }}
         className={className}
         onInputCapture={recalcDirty}

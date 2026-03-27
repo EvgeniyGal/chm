@@ -1,8 +1,11 @@
 "use client";
 
 import { FormProvider, useForm } from "react-hook-form";
+import { toast } from "sonner";
 
 import { useUnsavedChangesGuard } from "@/components/forms/useUnsavedChangesGuard";
+import { getServerActionErrorMessage } from "@/lib/server-action-error-message";
+import { isNextNavigationError } from "@/lib/is-next-navigation-error";
 import { LineItemsTable } from "@/components/line-items/LineItemsTable";
 
 type CompanyOpt = { id: string; label: string };
@@ -29,10 +32,12 @@ type InvoiceFormValues = {
 export function InvoiceForm({
   companies,
   contract,
+  lineItemUnitOptions,
   onSubmit,
 }: {
   companies: CompanyOpt[];
   contract: ContractSeed | null;
+  lineItemUnitOptions: string[];
   onSubmit: (payload: InvoiceFormValues) => Promise<void>;
 }) {
   const form = useForm<InvoiceFormValues>({
@@ -69,7 +74,12 @@ export function InvoiceForm({
       <form
         className="flex flex-col gap-4 rounded-xl border bg-white p-4"
         onSubmit={form.handleSubmit(async (values) => {
-          await onSubmit(values);
+          try {
+            await onSubmit(values);
+          } catch (e) {
+            if (isNextNavigationError(e)) throw e;
+            toast.error(getServerActionErrorMessage(e));
+          }
         })}
       >
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -132,7 +142,7 @@ export function InvoiceForm({
 
         <div className="flex flex-col gap-2">
           <div className="text-sm font-semibold text-zinc-900">Перелік робіт / послуг</div>
-          <LineItemsTable />
+          <LineItemsTable unitOptionsFromBackend={lineItemUnitOptions} />
           {isFromContract ? (
             <p className="text-xs text-zinc-500">
               Рахунок створено з договору: кількості будуть перевірені сервером (залишок по договору).

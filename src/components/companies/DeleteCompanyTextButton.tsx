@@ -3,6 +3,7 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { toast } from "sonner";
 
 export function DeleteCompanyTextButton({ companyId, companyName }: { companyId: string; companyName: string }) {
   const router = useRouter();
@@ -13,7 +14,12 @@ export function DeleteCompanyTextButton({ companyId, companyName }: { companyId:
     setBusy(true);
     try {
       const res = await fetch(`/api/companies/${companyId}`, { method: "DELETE" });
-      if (!res.ok) return;
+      if (!res.ok) {
+        const data = (await res.json().catch(() => null)) as { error?: string } | null;
+        toast.error(data?.error ?? "Не вдалося видалити компанію.");
+        return;
+      }
+      toast.success("Компанію видалено.");
       router.push("/companies");
       router.refresh();
     } finally {

@@ -5,24 +5,36 @@ import { db } from "@/db";
 import { companies } from "@/db/schema";
 import { requireRole } from "@/lib/authz";
 import { DROPDOWN_SCOPE, getDropdownOptions } from "@/lib/dropdown-options";
+import { internalApiFetch } from "@/lib/internal-api-fetch";
 import { ContractForm } from "./ui";
 
 export default async function NewContractPage() {
   await requireRole("ADMIN");
   const companyRows = await db.select().from(companies).orderBy(desc(companies.createdAt));
-  const [signingLocationOptions, signerPositionNomOptions, signerPositionGenOptions, actingUnderOptions, projectTimelineOptions, contractDurationOptions] = await Promise.all([
+  const [
+    signingLocationOptions,
+    taxStatusOptions,
+    signerPositionNomOptions,
+    signerPositionGenOptions,
+    actingUnderOptions,
+    projectTimelineOptions,
+    contractDurationOptions,
+    lineItemUnitOptions,
+  ] = await Promise.all([
     getDropdownOptions(DROPDOWN_SCOPE.SIGNING_LOCATION),
+    getDropdownOptions(DROPDOWN_SCOPE.TAX_STATUS),
     getDropdownOptions(DROPDOWN_SCOPE.SIGNER_POSITION_NOM),
     getDropdownOptions(DROPDOWN_SCOPE.SIGNER_POSITION_GEN),
     getDropdownOptions(DROPDOWN_SCOPE.ACTING_UNDER),
     getDropdownOptions(DROPDOWN_SCOPE.PROJECT_TIMELINE),
     getDropdownOptions(DROPDOWN_SCOPE.CONTRACT_DURATION),
+    getDropdownOptions(DROPDOWN_SCOPE.LINE_ITEM_UNIT),
   ]);
 
   async function create(payload: any) {
     "use server";
     await requireRole("ADMIN");
-    const res = await fetch(`${process.env.APP_URL ?? "http://localhost:3000"}/api/contracts`, {
+    const res = await internalApiFetch(`${process.env.APP_URL ?? "http://localhost:3000"}/api/contracts`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(payload),
@@ -50,11 +62,13 @@ export default async function NewContractPage() {
           contractSignerActingUnder: c.contractSignerActingUnder,
         }))}
         signingLocationOptions={signingLocationOptions}
+        taxStatusOptions={taxStatusOptions}
         signerPositionNomOptions={signerPositionNomOptions}
         signerPositionGenOptions={signerPositionGenOptions}
         actingUnderOptions={actingUnderOptions}
         projectTimelineOptions={projectTimelineOptions}
         contractDurationOptions={contractDurationOptions}
+        lineItemUnitOptions={lineItemUnitOptions}
         onSubmit={create}
       />
     </div>

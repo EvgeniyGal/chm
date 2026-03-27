@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { invoices } from "@/db/schema";
 import { requireRole } from "@/lib/authz";
+import { internalApiFetch } from "@/lib/internal-api-fetch";
 import { AcceptanceActForm } from "./ui";
 
 export default async function NewAcceptanceActPage({
@@ -20,7 +21,7 @@ export default async function NewAcceptanceActPage({
   async function create(payload: any) {
     "use server";
     await requireRole("ADMIN");
-    const res = await fetch(`${process.env.APP_URL ?? "http://localhost:3000"}/api/acceptance-acts`, {
+    const res = await internalApiFetch(`${process.env.APP_URL ?? "http://localhost:3000"}/api/acceptance-acts`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(payload),

@@ -1,8 +1,11 @@
 "use client";
 
 import { FormProvider, useForm } from "react-hook-form";
+import { toast } from "sonner";
 
 import { useUnsavedChangesGuard } from "@/components/forms/useUnsavedChangesGuard";
+import { getServerActionErrorMessage } from "@/lib/server-action-error-message";
+import { isNextNavigationError } from "@/lib/is-next-navigation-error";
 
 type InvoiceOpt = { id: string; label: string };
 
@@ -47,7 +50,12 @@ export function AcceptanceActForm({
       <form
         className="flex flex-col gap-4 rounded-xl border bg-white p-4"
         onSubmit={form.handleSubmit(async (values) => {
-          await onSubmit(values);
+          try {
+            await onSubmit(values);
+          } catch (e) {
+            if (isNextNavigationError(e)) throw e;
+            toast.error(getServerActionErrorMessage(e));
+          }
         })}
       >
         <label className="flex flex-col gap-1 text-sm">

@@ -13,6 +13,7 @@ const scopeSchema = z.enum([
   "SIGNING_LOCATION",
   "PROJECT_TIMELINE",
   "CONTRACT_DURATION",
+  "LINE_ITEM_UNIT",
 ]);
 const bodySchema = z.object({
   scope: scopeSchema,

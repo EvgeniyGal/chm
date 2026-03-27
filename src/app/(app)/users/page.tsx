@@ -5,6 +5,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import type { UserRole } from "@/db/schema";
+import { FormWithToastAction } from "@/components/forms/FormWithToastAction";
 import { requireRole } from "@/lib/authz";
 
 const updateUserSchema = z.object({
@@ -126,7 +127,7 @@ export default async function UsersPage() {
                     />
                   </td>
                   <td className="px-4 py-3">
-                    <form id={`u-${u.id}`} action={updateUser} className="flex items-center gap-2">
+                    <FormWithToastAction id={`u-${u.id}`} action={updateUser} className="flex items-center gap-2">
                       <input type="hidden" name="userId" value={u.id} />
                       <button
                         type="submit"
@@ -134,7 +135,7 @@ export default async function UsersPage() {
                       >
                         Зберегти
                       </button>
-                    </form>
+                    </FormWithToastAction>
                   </td>
                 </tr>
               );

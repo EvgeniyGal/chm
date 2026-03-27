@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 function ResetPasswordForm() {
   const searchParams = useSearchParams();
@@ -31,10 +32,17 @@ function ResetPasswordForm() {
       });
       const data = (await res.json().catch(() => null)) as { error?: string } | null;
       if (!res.ok) {
-        setError(data?.error === "EMAIL_SEND_FAILED" ? "Не вдалося надіслати лист. Перевірте налаштування пошти." : "Помилка запиту.");
+        const msg =
+          data?.error === "EMAIL_SEND_FAILED"
+            ? "Не вдалося надіслати лист. Перевірте налаштування пошти."
+            : "Помилка запиту.";
+        setError(msg);
+        toast.error(msg);
         return;
       }
-      setSuccess("Якщо акаунт існує, лист для скидання паролю вже надіслано.");
+      const okMsg = "Якщо акаунт існує, лист для скидання паролю вже надіслано.";
+      setSuccess(okMsg);
+      toast.success(okMsg);
       setEmail("");
     } finally {
       setIsLoading(false);
@@ -56,10 +64,15 @@ function ResetPasswordForm() {
       });
       const data = (await res.json().catch(() => null)) as { error?: string } | null;
       if (!res.ok) {
-        setError(data?.error === "INVALID_OR_EXPIRED_TOKEN" ? "Посилання недійсне або прострочене." : "Не вдалося змінити пароль.");
+        const msg =
+          data?.error === "INVALID_OR_EXPIRED_TOKEN" ? "Посилання недійсне або прострочене." : "Не вдалося змінити пароль.";
+        setError(msg);
+        toast.error(msg);
         return;
       }
-      setSuccess("Пароль оновлено. Тепер можна увійти з новим паролем.");
+      const okMsg = "Пароль оновлено. Тепер можна увійти з новим паролем.";
+      setSuccess(okMsg);
+      toast.success(okMsg);
       setNewPassword("");
     } finally {
       setIsLoading(false);

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 
 import { DROPDOWN_SCOPE } from "@/lib/dropdown-scopes";
 
@@ -141,7 +142,11 @@ export function SigningLocationField({
               headers: { "content-type": "application/json" },
               body: JSON.stringify({ scope, value: next }),
             }).then((res) => {
-              if (!res.ok) return;
+              if (!res.ok) {
+                toast.error("Не вдалося зберегти варіант.");
+                return;
+              }
+              toast.success("Варіант додано.");
               window.dispatchEvent(
                 new CustomEvent("dropdown-options:changed", {
                   detail: { scope, action: "add", value: next },
@@ -165,7 +170,11 @@ export function SigningLocationField({
               headers: { "content-type": "application/json" },
               body: JSON.stringify({ scope, value: selected }),
             }).then((res) => {
-              if (!res.ok) return;
+              if (!res.ok) {
+                toast.error("Не вдалося видалити варіант.");
+                return;
+              }
+              toast.success("Варіант видалено зі списку.");
               setOptions((prev) => prev.filter((v) => v !== selected));
               onChange("");
               setQuery("");
