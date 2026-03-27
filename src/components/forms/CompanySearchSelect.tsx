@@ -12,7 +12,7 @@ export function CompanySearchSelect({
   onChange,
   disabledCompanyId,
 }: {
-  label: string;
+  label?: string;
   placeholder?: string;
   companies: CompanyOpt[];
   value: string;
@@ -42,12 +42,12 @@ export function CompanySearchSelect({
   }, []);
 
   return (
-    <div ref={wrapperRef} className="flex flex-col gap-1 text-sm">
-      <span className="text-zinc-700">{label}</span>
+    <div ref={wrapperRef} className="flex flex-col gap-1 text-sm min-w-0">
+      {label ? <span className="text-zinc-700">{label}</span> : null}
 
-      <div className="relative">
+      <div className="relative min-w-0">
         <input
-          className="h-10 w-full rounded-md border px-3"
+          className="h-10 w-full min-w-0 rounded-md border px-3"
           placeholder={placeholder}
           value={open ? query : selected?.label ?? ""}
           onChange={(e) => {

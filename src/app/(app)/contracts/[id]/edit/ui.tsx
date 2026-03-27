@@ -1,12 +1,16 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Controller, FormProvider, useForm } from "react-hook-form";
+import { Plus } from "lucide-react";
 
 import { useUnsavedChangesGuard } from "@/components/forms/useUnsavedChangesGuard";
 import { LineItemsTable } from "@/components/line-items/LineItemsTable";
 import { SigningLocationField } from "@/components/forms/SigningLocationField";
 import { CompanySearchSelect } from "@/components/forms/CompanySearchSelect";
+import { UnsavedChangesNavigationDialog } from "@/components/forms/UnsavedChangesNavigationDialog";
+import { SearchableDropdownOptionField } from "@/components/forms/SearchableDropdownOptionField";
+import { QuickCreateCompanyModal } from "@/components/forms/QuickCreateCompanyModal";
 
 type CompanyOpt = {
   id: string;
@@ -37,12 +41,22 @@ type ContractFormValues = {
 export function ContractEditForm({
   companies,
   signingLocationOptions,
+  signerPositionNomOptions,
+  signerPositionGenOptions,
+  actingUnderOptions,
+  projectTimelineOptions,
+  contractDurationOptions,
   initial,
   onSubmit,
   cancelHref,
 }: {
   companies: CompanyOpt[];
   signingLocationOptions: string[];
+  signerPositionNomOptions: string[];
+  signerPositionGenOptions: string[];
+  actingUnderOptions: string[];
+  projectTimelineOptions: string[];
+  contractDurationOptions: string[];
   initial: ContractFormValues;
   onSubmit: (payload: ContractFormValues) => Promise<void>;
   cancelHref: string;
@@ -52,15 +66,20 @@ export function ContractEditForm({
     mode: "onBlur",
   });
 
-  useUnsavedChangesGuard(form.formState.isDirty);
+  const suppressBeforeUnloadOnce = useUnsavedChangesGuard(form.formState.isDirty);
   const workType = form.watch("workType");
   const customerCompanyId = form.watch("customerCompanyId");
   const contractorCompanyId = form.watch("contractorCompanyId");
 
-  const companiesById = useMemo(() => new Map(companies.map((c) => [c.id, c])), [companies]);
+  const [companiesState, setCompaniesState] = useState(companies);
+  const [companyModalFor, setCompanyModalFor] = useState<"customer" | "contractor" | null>(null);
+  const companiesById = useMemo(() => new Map(companiesState.map((c) => [c.id, c])), [companiesState]);
   const selectedCustomerCompany = customerCompanyId ? companiesById.get(customerCompanyId) : null;
   const selectedContractorCompany = contractorCompanyId ? companiesById.get(contractorCompanyId) : null;
-  const companyOptions = useMemo(() => companies.map((c) => ({ id: c.id, label: c.label })), [companies]);
+  const companyOptions = useMemo(() => companiesState.map((c) => ({ id: c.id, label: c.label })), [companiesState]);
+  const [customerSignerPositionNom, setCustomerSignerPositionNom] = useState("");
+  const [customerSignerPositionGen, setCustomerSignerPositionGen] = useState("");
+  const [customerSignerActingUnder, setCustomerSignerActingUnder] = useState("");
 
   useEffect(() => {
     if (!selectedContractorCompany) {
@@ -101,6 +120,18 @@ export function ContractEditForm({
     form.setValue("signerActingUnder", "", { shouldDirty: true });
   }, [customerCompanyId, contractorCompanyId, form]);
 
+  useEffect(() => {
+    if (!selectedCustomerCompany) {
+      setCustomerSignerPositionNom("");
+      setCustomerSignerPositionGen("");
+      setCustomerSignerActingUnder("");
+      return;
+    }
+    setCustomerSignerPositionNom(selectedCustomerCompany.contractSignerPositionNom ?? "");
+    setCustomerSignerPositionGen(selectedCustomerCompany.contractSignerPositionGen ?? "");
+    setCustomerSignerActingUnder(selectedCustomerCompany.contractSignerActingUnder ?? "");
+  }, [selectedCustomerCompany]);
+
   return (
     <FormProvider {...form}>
       <form
@@ -109,7 +140,7 @@ export function ContractEditForm({
           await onSubmit(values);
         })}
       >
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <Field label="Дата" type="date" {...form.register("date", { required: true })} />
 
           <label className="flex flex-col gap-1 text-sm">
@@ -119,9 +150,6 @@ export function ContractEditForm({
               <option value="SERVICES">Послуги</option>
             </select>
           </label>
-        </div>
-
-        <div className="grid grid-cols-1 gap-4">
           <Controller
             name="signingLocation"
             control={form.control}
@@ -143,14 +171,30 @@ export function ContractEditForm({
             control={form.control}
             rules={{ required: true }}
             render={({ field }) => (
-              <CompanySearchSelect
-                label="Замовник"
-                placeholder="Оберіть компанію…"
-                companies={companyOptions}
-                value={field.value}
-                onChange={(nextId) => field.onChange(nextId)}
-                disabledCompanyId={contractorCompanyId}
-              />
+              <div className="flex flex-col gap-1 text-sm min-w-0">
+                <span className="text-zinc-700">Замовник</span>
+                <div className="flex w-full flex-nowrap items-center gap-2 min-w-0">
+                  <div className="flex-1 min-w-0">
+                    <CompanySearchSelect
+                      label=""
+                      placeholder="Оберіть компанію…"
+                      companies={companyOptions}
+                      value={field.value}
+                      onChange={(nextId) => field.onChange(nextId)}
+                      disabledCompanyId={contractorCompanyId}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-md border text-zinc-700 hover:bg-zinc-50"
+                    aria-label="Додати компанію для Замовника"
+                    title="Додати компанію"
+                    onClick={() => setCompanyModalFor("customer")}
+                  >
+                    <Plus className="size-4" aria-hidden="true" />
+                  </button>
+                </div>
+              </div>
             )}
           />
 
@@ -159,14 +203,30 @@ export function ContractEditForm({
             control={form.control}
             rules={{ required: true }}
             render={({ field }) => (
-              <CompanySearchSelect
-                label="Виконавець"
-                placeholder="Оберіть компанію…"
-                companies={companyOptions}
-                value={field.value}
-                onChange={(nextId) => field.onChange(nextId)}
-                disabledCompanyId={customerCompanyId}
-              />
+              <div className="flex flex-col gap-1 text-sm min-w-0">
+                <span className="text-zinc-700">Виконавець</span>
+                <div className="flex w-full flex-nowrap items-center gap-2 min-w-0">
+                  <div className="flex-1 min-w-0">
+                    <CompanySearchSelect
+                      label=""
+                      placeholder="Оберіть компанію…"
+                      companies={companyOptions}
+                      value={field.value}
+                      onChange={(nextId) => field.onChange(nextId)}
+                      disabledCompanyId={customerCompanyId}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-md border text-zinc-700 hover:bg-zinc-50"
+                    aria-label="Додати компанію для Виконавця"
+                    title="Додати компанію"
+                    onClick={() => setCompanyModalFor("contractor")}
+                  >
+                    <Plus className="size-4" aria-hidden="true" />
+                  </button>
+                </div>
+              </div>
             )}
           />
         </div>
@@ -175,9 +235,45 @@ export function ContractEditForm({
           <p className="text-sm text-red-600">Замовник і Виконавець не можуть бути однією компанією.</p>
         ) : null}
 
-        <div className="grid grid-cols-1 gap-4">
-          <Field label="Терміни виконання робіт" {...form.register("projectTimeline", { required: true })} />
-          <Field label="Термін дії договору" {...form.register("contractDuration", { required: true })} />
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <Controller
+            name="projectTimeline"
+            control={form.control}
+            rules={{ required: true }}
+            render={({ field }) => (
+              <SearchableDropdownOptionField
+                label="Терміни виконання робіт"
+                scope="PROJECT_TIMELINE"
+                value={field.value ?? ""}
+                onChange={(next) => field.onChange(next)}
+                optionsFromBackend={projectTimelineOptions}
+                placeholder="Оберіть або введіть терміни"
+                inputClassName="bg-zinc-50"
+                multiline
+                rows={3}
+                listFirstLineOnly
+              />
+            )}
+          />
+          <Controller
+            name="contractDuration"
+            control={form.control}
+            rules={{ required: true }}
+            render={({ field }) => (
+              <SearchableDropdownOptionField
+                label="Термін дії договору"
+                scope="CONTRACT_DURATION"
+                value={field.value ?? ""}
+                onChange={(next) => field.onChange(next)}
+                optionsFromBackend={contractDurationOptions}
+                placeholder="Оберіть або введіть термін"
+                inputClassName="bg-zinc-50"
+                multiline
+                rows={3}
+                listFirstLineOnly
+              />
+            )}
+          />
         </div>
 
         <div className="grid grid-cols-1 gap-4 rounded-lg bg-[#FFF7E5] p-4 md:grid-cols-2">
@@ -188,20 +284,92 @@ export function ContractEditForm({
             <div className="grid grid-cols-1 gap-3">
               <ReadOnlyField label="ПІБ (називний)" value={selectedCustomerCompany?.contractSignerFullNameNom ?? ""} />
               <ReadOnlyField label="ПІБ (родовий)" value={selectedCustomerCompany?.contractSignerFullNameGen ?? ""} />
-              <ReadOnlyField label="Посада (називний)" value={selectedCustomerCompany?.contractSignerPositionNom ?? ""} />
-              <ReadOnlyField label="Посада (родовий)" value={selectedCustomerCompany?.contractSignerPositionGen ?? ""} />
-              <ReadOnlyField label="Діє на підставі" value={selectedCustomerCompany?.contractSignerActingUnder ?? ""} />
+              <SearchableDropdownOptionField
+                label="Посада (називний)"
+                scope="SIGNER_POSITION_NOM"
+                value={customerSignerPositionNom}
+                onChange={setCustomerSignerPositionNom}
+                optionsFromBackend={signerPositionNomOptions}
+                placeholder="Оберіть або введіть посаду"
+                required={false}
+                inputClassName="bg-zinc-50"
+              />
+              <SearchableDropdownOptionField
+                label="Посада (родовий)"
+                scope="SIGNER_POSITION_GEN"
+                value={customerSignerPositionGen}
+                onChange={setCustomerSignerPositionGen}
+                optionsFromBackend={signerPositionGenOptions}
+                placeholder="Оберіть або введіть посаду"
+                required={false}
+                inputClassName="bg-zinc-50"
+              />
+              <SearchableDropdownOptionField
+                label="Діє на підставі"
+                scope="ACTING_UNDER"
+                value={customerSignerActingUnder}
+                onChange={setCustomerSignerActingUnder}
+                optionsFromBackend={actingUnderOptions}
+                placeholder="Оберіть або введіть підставу"
+                required={false}
+                inputClassName="bg-zinc-50"
+              />
             </div>
           </div>
 
           <div className="rounded-md border border-sky-200 bg-sky-50/70 p-3">
             <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-sky-900">Виконавець</div>
             <div className="grid grid-cols-1 gap-3">
-              <Field label="ПІБ (називний)" {...form.register("signerFullNameNom", { required: true })} />
-              <Field label="ПІБ (родовий)" {...form.register("signerFullNameGen", { required: true })} />
-              <Field label="Посада (називний)" {...form.register("signerPositionNom", { required: true })} />
-              <Field label="Посада (родовий)" {...form.register("signerPositionGen", { required: true })} />
-              <Field label="Діє на підставі" {...form.register("signerActingUnder", { required: true })} />
+              <Field label="ПІБ (називний)" inputClassName="bg-zinc-50" {...form.register("signerFullNameNom", { required: true })} />
+              <Field label="ПІБ (родовий)" inputClassName="bg-zinc-50" {...form.register("signerFullNameGen", { required: true })} />
+              <Controller
+                name="signerPositionNom"
+                control={form.control}
+                rules={{ required: true }}
+                render={({ field }) => (
+                  <SearchableDropdownOptionField
+                    label="Посада (називний)"
+                    scope="SIGNER_POSITION_NOM"
+                    value={field.value ?? ""}
+                    onChange={(next) => field.onChange(next)}
+                    optionsFromBackend={signerPositionNomOptions}
+                    placeholder="Оберіть або введіть посаду"
+                    inputClassName="bg-zinc-50"
+                  />
+                )}
+              />
+              <Controller
+                name="signerPositionGen"
+                control={form.control}
+                rules={{ required: true }}
+                render={({ field }) => (
+                  <SearchableDropdownOptionField
+                    label="Посада (родовий)"
+                    scope="SIGNER_POSITION_GEN"
+                    value={field.value ?? ""}
+                    onChange={(next) => field.onChange(next)}
+                    optionsFromBackend={signerPositionGenOptions}
+                    placeholder="Оберіть або введіть посаду"
+                    inputClassName="bg-zinc-50"
+                  />
+                )}
+              />
+              <Controller
+                name="signerActingUnder"
+                control={form.control}
+                rules={{ required: true }}
+                render={({ field }) => (
+                  <SearchableDropdownOptionField
+                    label="Діє на підставі"
+                    scope="ACTING_UNDER"
+                    value={field.value ?? ""}
+                    onChange={(next) => field.onChange(next)}
+                    optionsFromBackend={actingUnderOptions}
+                    placeholder="Оберіть або введіть підставу"
+                    inputClassName="bg-zinc-50"
+                  />
+                )}
+              />
             </div>
           </div>
         </div>
@@ -223,29 +391,51 @@ export function ContractEditForm({
           </a>
         </div>
       </form>
+      <UnsavedChangesNavigationDialog
+        isDirty={form.formState.isDirty}
+        suppressBeforeUnloadOnce={suppressBeforeUnloadOnce}
+      />
+      <QuickCreateCompanyModal
+        open={companyModalFor !== null}
+        onOpenChange={(next) => {
+          if (!next) setCompanyModalFor(null);
+        }}
+        onCreated={(company) => {
+          setCompaniesState((prev) => [company, ...prev.filter((c) => c.id !== company.id)]);
+          if (companyModalFor === "customer") {
+            form.setValue("customerCompanyId", company.id, { shouldDirty: true });
+          } else if (companyModalFor === "contractor") {
+            form.setValue("contractorCompanyId", company.id, { shouldDirty: true });
+          }
+          setCompanyModalFor(null);
+        }}
+      />
     </FormProvider>
   );
 }
 
 function Field({
   label,
+  inputClassName,
   ...props
 }: React.InputHTMLAttributes<HTMLInputElement> & {
   label: string;
+  inputClassName?: string;
 }) {
   return (
-    <label className="flex flex-col gap-1 text-sm">
+    <label className="flex flex-col gap-1 text-sm min-w-0">
       <span className="text-zinc-700">{label}</span>
-      <input {...props} className="h-10 rounded-md border px-3" />
+      <input {...props} className={`h-10 w-full min-w-0 rounded-md border px-3 ${inputClassName ?? ""}`} />
     </label>
   );
 }
 
 function ReadOnlyField({ label, value }: { label: string; value: string }) {
   return (
-    <label className="flex flex-col gap-1 text-sm">
+    <label className="flex flex-col gap-1 text-sm min-w-0">
       <span className="text-zinc-700">{label}</span>
-      <input value={value} readOnly className="h-10 rounded-md border px-3 bg-zinc-50" />
+      <input value={value} readOnly className="h-10 w-full min-w-0 rounded-md border px-3 bg-zinc-50" />
     </label>
   );
 }
+

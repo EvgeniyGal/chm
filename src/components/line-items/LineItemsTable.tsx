@@ -1,6 +1,7 @@
 "use client";
 
-import { Fragment, useMemo } from "react";
+import { Fragment, useMemo, useState } from "react";
+import * as Dialog from "@radix-ui/react-dialog";
 import { useFieldArray, useFormContext } from "react-hook-form";
 import { flexRender, getCoreRowModel, useReactTable, type ColumnDef } from "@tanstack/react-table";
 
@@ -18,6 +19,7 @@ type LineItemForm = {
 export function LineItemsTable({ currency = "₴" }: { currency?: string }) {
   const { register, watch } = useFormContext<LineItemForm>();
   const { fields, append, remove } = useFieldArray({ name: "items" });
+  const [pendingDeleteIdx, setPendingDeleteIdx] = useState<number | null>(null);
 
   const items = watch("items") ?? [];
   const totals = calcTotals(
@@ -107,7 +109,7 @@ export function LineItemsTable({ currency = "₴" }: { currency?: string }) {
             <button
               type="button"
               className="h-10 w-full rounded-md border px-3 text-sm hover:bg-zinc-50 disabled:opacity-50"
-              onClick={() => remove(row.original.idx)}
+              onClick={() => setPendingDeleteIdx(row.original.idx)}
               disabled={fields.length <= 1}
               title={fields.length <= 1 ? "Не можна видалити останній рядок" : "Видалити рядок"}
             >
@@ -168,7 +170,7 @@ export function LineItemsTable({ currency = "₴" }: { currency?: string }) {
                 <button
                   type="button"
                   className="h-10 rounded-md border px-3 text-sm hover:bg-zinc-50 disabled:opacity-50"
-                  onClick={() => remove(idx)}
+                  onClick={() => setPendingDeleteIdx(idx)}
                   disabled={fields.length <= 1}
                   title={fields.length <= 1 ? "Не можна видалити останній рядок" : "Видалити рядок"}
                 >
@@ -249,6 +251,38 @@ export function LineItemsTable({ currency = "₴" }: { currency?: string }) {
           </div>
         </div>
       </div>
+
+      <Dialog.Root open={pendingDeleteIdx !== null} onOpenChange={(next) => !next && setPendingDeleteIdx(null)}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 bg-black/40" />
+          <Dialog.Content className="fixed left-1/2 top-1/2 w-[min(420px,calc(100vw-24px))] -translate-x-1/2 -translate-y-1/2 rounded-xl bg-white p-4 shadow-lg">
+            <Dialog.Title className="text-sm font-semibold text-zinc-900">Підтвердження видалення</Dialog.Title>
+            <Dialog.Description className="mt-2 text-sm text-zinc-700">
+              Ви дійсно хочете видалити цей рядок? Цю дію не можна скасувати.
+            </Dialog.Description>
+            <div className="mt-4 flex justify-end gap-2">
+              <Dialog.Close asChild>
+                <button type="button" className="h-9 rounded-md border px-3 text-sm hover:bg-zinc-50">
+                  Скасувати
+                </button>
+              </Dialog.Close>
+              <Dialog.Close asChild>
+                <button
+                  type="button"
+                  className="h-9 rounded-md bg-red-600 px-3 text-sm text-white hover:bg-red-700"
+                  onClick={() => {
+                    if (pendingDeleteIdx === null) return;
+                    remove(pendingDeleteIdx);
+                    setPendingDeleteIdx(null);
+                  }}
+                >
+                  Видалити
+                </button>
+              </Dialog.Close>
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
     </div>
   );
 }

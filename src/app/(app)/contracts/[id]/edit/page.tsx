@@ -15,7 +15,14 @@ export default async function EditContractPage({ params }: { params: Promise<{ i
   if (!contract) redirect("/contracts");
   const items = await db.query.lineItems.findMany({ where: eq(lineItems.contractId, id) });
   const companyRows = await db.select().from(companies).orderBy(desc(companies.createdAt));
-  const signingLocationOptions = await getDropdownOptions(DROPDOWN_SCOPE.SIGNING_LOCATION);
+  const [signingLocationOptions, signerPositionNomOptions, signerPositionGenOptions, actingUnderOptions, projectTimelineOptions, contractDurationOptions] = await Promise.all([
+    getDropdownOptions(DROPDOWN_SCOPE.SIGNING_LOCATION),
+    getDropdownOptions(DROPDOWN_SCOPE.SIGNER_POSITION_NOM),
+    getDropdownOptions(DROPDOWN_SCOPE.SIGNER_POSITION_GEN),
+    getDropdownOptions(DROPDOWN_SCOPE.ACTING_UNDER),
+    getDropdownOptions(DROPDOWN_SCOPE.PROJECT_TIMELINE),
+    getDropdownOptions(DROPDOWN_SCOPE.CONTRACT_DURATION),
+  ]);
 
   async function update(payload: any) {
     "use server";
@@ -32,7 +39,7 @@ export default async function EditContractPage({ params }: { params: Promise<{ i
   }
 
   return (
-    <div className="max-w-5xl">
+    <div className="w-full">
       <div className="mb-4">
         <h1 className="text-2xl font-semibold text-zinc-900">Редагувати договір {contract.number}</h1>
       </div>
@@ -47,6 +54,11 @@ export default async function EditContractPage({ params }: { params: Promise<{ i
           contractSignerActingUnder: c.contractSignerActingUnder,
         }))}
         signingLocationOptions={signingLocationOptions}
+        signerPositionNomOptions={signerPositionNomOptions}
+        signerPositionGenOptions={signerPositionGenOptions}
+        actingUnderOptions={actingUnderOptions}
+        projectTimelineOptions={projectTimelineOptions}
+        contractDurationOptions={contractDurationOptions}
         initial={{
           date: new Date(contract.date).toISOString().slice(0, 10),
           signingLocation: contract.signingLocation,

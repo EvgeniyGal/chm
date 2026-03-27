@@ -10,7 +10,14 @@ import { ContractForm } from "./ui";
 export default async function NewContractPage() {
   await requireRole("ADMIN");
   const companyRows = await db.select().from(companies).orderBy(desc(companies.createdAt));
-  const signingLocationOptions = await getDropdownOptions(DROPDOWN_SCOPE.SIGNING_LOCATION);
+  const [signingLocationOptions, signerPositionNomOptions, signerPositionGenOptions, actingUnderOptions, projectTimelineOptions, contractDurationOptions] = await Promise.all([
+    getDropdownOptions(DROPDOWN_SCOPE.SIGNING_LOCATION),
+    getDropdownOptions(DROPDOWN_SCOPE.SIGNER_POSITION_NOM),
+    getDropdownOptions(DROPDOWN_SCOPE.SIGNER_POSITION_GEN),
+    getDropdownOptions(DROPDOWN_SCOPE.ACTING_UNDER),
+    getDropdownOptions(DROPDOWN_SCOPE.PROJECT_TIMELINE),
+    getDropdownOptions(DROPDOWN_SCOPE.CONTRACT_DURATION),
+  ]);
 
   async function create(payload: any) {
     "use server";
@@ -27,7 +34,7 @@ export default async function NewContractPage() {
   }
 
   return (
-    <div className="max-w-5xl">
+    <div className="w-full">
       <div className="mb-4">
         <h1 className="text-2xl font-semibold text-zinc-900">Новий договір</h1>
         <p className="text-sm text-zinc-600">Заповніть поля договору.</p>
@@ -43,6 +50,11 @@ export default async function NewContractPage() {
           contractSignerActingUnder: c.contractSignerActingUnder,
         }))}
         signingLocationOptions={signingLocationOptions}
+        signerPositionNomOptions={signerPositionNomOptions}
+        signerPositionGenOptions={signerPositionGenOptions}
+        actingUnderOptions={actingUnderOptions}
+        projectTimelineOptions={projectTimelineOptions}
+        contractDurationOptions={contractDurationOptions}
         onSubmit={create}
       />
     </div>

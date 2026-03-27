@@ -192,7 +192,7 @@ export default async function NewCompanyPage() {
   }
 
   return (
-    <div className="max-w-3xl">
+    <div className="w-full">
       <div className="mb-4">
         <h1 className="text-2xl font-semibold text-zinc-900">Нова компанія</h1>
       </div>
@@ -200,12 +200,16 @@ export default async function NewCompanyPage() {
       <GuardedForm action={create} className="grid grid-cols-1 gap-4 rounded-xl border bg-white p-4">
         <Field name="fullName" label="Повна назва" />
         <Field name="shortName" label="Скорочена назва" />
-        <Field name="address" label="Адреса" />
-        <Field name="edrpouCode" label="ЄДРПОУ" />
-        <Field name="vatIdTin" label="ІПН" required={false} />
+        <Field name="address" label="Адреса" multiline />
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <Field name="edrpouCode" label="ЄДРПОУ" />
+          <Field name="vatIdTin" label="ІПН" required={false} />
+        </div>
         <TaxStatusField optionsFromBackend={taxStatusOptions} />
-        <Field name="iban" label="IBAN" />
-        <Field name="bank" label="Банк" />
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <Field name="iban" label="IBAN" />
+          <Field name="bank" label="Банк" />
+        </div>
 
         <ContactsField defaultValue="[]" />
 
@@ -215,52 +219,62 @@ export default async function NewCompanyPage() {
           <div className="rounded-md border border-amber-200 bg-amber-50/70 p-3">
             <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-amber-900">Називний відмінок</div>
             <div className="grid grid-cols-1 gap-3">
-              <Field name="contractSignerFullNameNom" label="Підписант договору" />
-              <SignerPositionField
-                name="contractSignerPositionNom"
-                label="Посада підписанта договору"
-                scope="SIGNER_POSITION_NOM"
-                deletedName="signerPositionNomDeletedJson"
-                optionsFromBackend={signerPositionNomOptions}
-              />
-              <Field name="actSignerFullNameNom" label="Підписант акту" />
-              <SignerPositionField
-                name="actSignerPositionNom"
-                label="Посада підписанта акту"
-                scope="SIGNER_POSITION_NOM"
-                deletedName="signerPositionNomDeletedJson"
-                optionsFromBackend={signerPositionNomOptions}
-              />
-              <Field name="invoiceSignerFullNameNom" label="Підписант рахунку" />
-              <SignerPositionField
-                name="invoiceSignerPositionNom"
-                label="Посада підписанта рахунку"
-                scope="SIGNER_POSITION_NOM"
-                deletedName="signerPositionNomDeletedJson"
-                optionsFromBackend={signerPositionNomOptions}
-              />
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <Field name="contractSignerFullNameNom" label="Підписант договору" />
+                <SignerPositionField
+                  name="contractSignerPositionNom"
+                  label="Посада підписанта договору"
+                  scope="SIGNER_POSITION_NOM"
+                  deletedName="signerPositionNomDeletedJson"
+                  optionsFromBackend={signerPositionNomOptions}
+                />
+              </div>
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <Field name="actSignerFullNameNom" label="Підписант акту" />
+                <SignerPositionField
+                  name="actSignerPositionNom"
+                  label="Посада підписанта акту"
+                  scope="SIGNER_POSITION_NOM"
+                  deletedName="signerPositionNomDeletedJson"
+                  optionsFromBackend={signerPositionNomOptions}
+                />
+              </div>
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <Field name="invoiceSignerFullNameNom" label="Підписант рахунку" />
+                <SignerPositionField
+                  name="invoiceSignerPositionNom"
+                  label="Посада підписанта рахунку"
+                  scope="SIGNER_POSITION_NOM"
+                  deletedName="signerPositionNomDeletedJson"
+                  optionsFromBackend={signerPositionNomOptions}
+                />
+              </div>
             </div>
           </div>
 
           <div className="rounded-md border border-sky-200 bg-sky-50/70 p-3">
             <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-sky-900">Родовий відмінок</div>
             <div className="grid grid-cols-1 gap-3">
-              <Field name="contractSignerFullNameGen" label="Підписант договору" />
-              <SignerPositionField
-                name="contractSignerPositionGen"
-                label="Посада підписанта договору"
-                scope="SIGNER_POSITION_GEN"
-                deletedName="signerPositionGenDeletedJson"
-                optionsFromBackend={signerPositionGenOptions}
-              />
-              <Field name="actSignerFullNameGen" label="Підписант акту" />
-              <SignerPositionField
-                name="actSignerPositionGen"
-                label="Посада підписанта акту"
-                scope="SIGNER_POSITION_GEN"
-                deletedName="signerPositionGenDeletedJson"
-                optionsFromBackend={signerPositionGenOptions}
-              />
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <Field name="contractSignerFullNameGen" label="Підписант договору" />
+                <SignerPositionField
+                  name="contractSignerPositionGen"
+                  label="Посада підписанта договору"
+                  scope="SIGNER_POSITION_GEN"
+                  deletedName="signerPositionGenDeletedJson"
+                  optionsFromBackend={signerPositionGenOptions}
+                />
+              </div>
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <Field name="actSignerFullNameGen" label="Підписант акту" />
+                <SignerPositionField
+                  name="actSignerPositionGen"
+                  label="Посада підписанта акту"
+                  scope="SIGNER_POSITION_GEN"
+                  deletedName="signerPositionGenDeletedJson"
+                  optionsFromBackend={signerPositionGenOptions}
+                />
+              </div>
             </div>
           </div>
 
@@ -287,20 +301,31 @@ function Field({
   name,
   label,
   required = true,
+  multiline = false,
 }: {
   name: string;
   label: string;
   required?: boolean;
+  multiline?: boolean;
 }) {
   return (
     <label className="flex flex-col gap-1 text-sm">
       <span className="text-zinc-700">{label}</span>
-      <input
-        name={name}
-        required={required}
-        className="h-10 rounded-md border px-3"
-        autoComplete="off"
-      />
+      {multiline ? (
+        <textarea
+          name={name}
+          required={required}
+          className="min-h-24 rounded-md border bg-white px-3 py-2"
+          autoComplete="off"
+        />
+      ) : (
+        <input
+          name={name}
+          required={required}
+          className="h-10 rounded-md border bg-white px-3"
+          autoComplete="off"
+        />
+      )}
     </label>
   );
 }

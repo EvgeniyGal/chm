@@ -11,6 +11,8 @@ const scopeSchema = z.enum([
   "SIGNER_POSITION_GEN",
   "ACTING_UNDER",
   "SIGNING_LOCATION",
+  "PROJECT_TIMELINE",
+  "CONTRACT_DURATION",
 ]);
 const bodySchema = z.object({
   scope: scopeSchema,
