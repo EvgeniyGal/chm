@@ -35,8 +35,14 @@ type ContractFormValues = {
   signerPositionNom: string;
   signerPositionGen: string;
   signerActingUnder: string;
-  items: Array<{ title: string; unit: string; quantity: number; price: number }>;
+  items: Array<{ title: string; unit: string; quantity: number | string; price: number | string }>;
 };
+
+function toDecimal(value: number | string): number {
+  if (typeof value === "number") return Number.isFinite(value) && value >= 0 ? value : 0;
+  const parsed = Number.parseFloat(value.replace(",", "."));
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+}
 
 export function ContractForm({
   companies,
@@ -147,7 +153,14 @@ export function ContractForm({
       <form
         className="flex flex-col gap-4 rounded-xl border bg-white p-4"
         onSubmit={form.handleSubmit(async (values) => {
-          await onSubmit(values);
+          await onSubmit({
+            ...values,
+            items: values.items.map((item) => ({
+              ...item,
+              quantity: toDecimal(item.quantity),
+              price: toDecimal(item.price),
+            })),
+          });
         })}
       >
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
