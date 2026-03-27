@@ -39,7 +39,7 @@ export default async function NewInvoicePage({
   return (
     <div className="max-w-5xl">
       <div className="mb-4">
-        <h1 className="text-2xl font-semibold text-zinc-900">Новий рахунок</h1>
+        <h1 className="page-title">Новий рахунок</h1>
         <p className="text-sm text-zinc-600">{contract ? `Створення на основі договору ${contract.number}` : "Створення окремого рахунку"}</p>
       </div>
 

@@ -53,7 +53,7 @@ export default async function EditContractPage({ params }: { params: Promise<{ i
   return (
     <div className="w-full">
       <div className="mb-4">
-        <h1 className="text-2xl font-semibold text-zinc-900">Редагувати договір {contract.number}</h1>
+        <h1 className="page-title">Редагувати договір {contract.number}</h1>
       </div>
       <ContractEditForm
         companies={companyRows.map((c) => ({

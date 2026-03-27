@@ -10,11 +10,14 @@ export function FormWithToastAction({
   id,
   className,
   children,
+  successMessage,
 }: {
   action: (formData: FormData) => void | Promise<void>;
   id?: string;
   className?: string;
   children: React.ReactNode;
+  /** Shown after a successful save. Also shown when the server action ends with `redirect()`. */
+  successMessage?: string;
 }) {
   return (
     <form
@@ -22,8 +25,12 @@ export function FormWithToastAction({
       action={async (formData) => {
         try {
           await action(formData);
+          if (successMessage) toast.success(successMessage);
         } catch (e) {
-          if (isNextNavigationError(e)) throw e;
+          if (isNextNavigationError(e)) {
+            if (successMessage) toast.success(successMessage);
+            throw e;
+          }
           toast.error(getServerActionErrorMessage(e));
         }
       }}

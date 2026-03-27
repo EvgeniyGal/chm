@@ -26,19 +26,19 @@ export default async function AuditPage({
   return (
     <div className="flex max-w-4xl flex-col gap-4">
       <div>
-        <h1 className="text-2xl font-semibold text-zinc-900">Історія змін</h1>
+        <h1 className="page-title">Історія змін</h1>
         <p className="text-sm text-zinc-600">
           {normalized} / {id}
         </p>
       </div>
 
       <div className="rounded-xl border bg-white">
-        <div className="border-b bg-[#FFF7E5] px-4 py-3 text-sm font-semibold text-zinc-900">Події</div>
+        <div className="border-b bg-muted px-4 py-3 text-sm font-semibold text-foreground">Події</div>
         <div className="divide-y">
           {rows.map((e) => (
             <div key={e.id} className="px-4 py-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="text-sm font-semibold text-zinc-900">{e.action}</div>
+                <div className="text-sm font-semibold text-foreground">{e.action}</div>
                 <div className="text-xs text-zinc-500">{new Date(e.at).toLocaleString("uk-UA")}</div>
               </div>
               <div className="mt-1 text-xs text-zinc-500">actor: {e.actorUserId ?? "—"}</div>

@@ -198,11 +198,15 @@ export default async function EditCompanyPage({ params }: { params: Promise<{ id
   return (
     <div className="w-full">
       <div className="mb-4">
-        <h1 className="text-2xl font-semibold text-zinc-900">Редагувати компанію</h1>
+        <h1 className="page-title">Редагувати компанію</h1>
         <p className="text-sm text-zinc-600">{row.shortName}</p>
       </div>
 
-      <GuardedForm action={update} className="grid grid-cols-1 gap-4 rounded-xl border bg-white p-4">
+      <GuardedForm
+        action={update}
+        successMessage="Компанію оновлено."
+        className="grid grid-cols-1 gap-4 rounded-xl border bg-white p-4"
+      >
         <Field name="fullName" label="Повна назва" defaultValue={row.fullName} />
         <Field name="shortName" label="Скорочена назва" defaultValue={row.shortName} />
         <Field name="address" label="Адреса" defaultValue={row.address} multiline />
@@ -217,8 +221,8 @@ export default async function EditCompanyPage({ params }: { params: Promise<{ id
         </div>
         <ContactsField defaultValue={row.contacts} />
 
-        <div className="mt-2 grid grid-cols-1 gap-4 rounded-lg bg-[#FFF7E5] p-4">
-          <div className="text-sm font-semibold text-zinc-900">Підписанти (за замовчуванням)</div>
+        <div className="mt-2 grid grid-cols-1 gap-4 rounded-lg bg-muted p-4">
+          <div className="text-sm font-semibold text-foreground">Підписанти (за замовчуванням)</div>
 
           <div className="rounded-md border border-amber-200 bg-amber-50/70 p-3">
             <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-amber-900">Називний відмінок</div>
@@ -293,7 +297,7 @@ export default async function EditCompanyPage({ params }: { params: Promise<{ id
         <div className="mt-2 flex gap-3">
           <button
             type="submit"
-            className="inline-flex h-10 items-center rounded-md bg-[#FFAA00] px-4 text-sm font-medium text-[#241800] hover:bg-[#FFBB33]"
+            className="crm-btn-primary"
           >
             Зберегти
           </button>

@@ -150,32 +150,39 @@ export function QuickCreateCompanyModal({
       invoiceSignerPositionNom: form.invoiceSignerPositionNom.trim(),
     };
 
-    const res = await fetch("/api/companies", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    const body = (await res.json().catch(() => null)) as { data?: Record<string, unknown> } | null;
-    if (!res.ok || !body?.data) {
+    try {
+      const res = await fetch("/api/companies", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const body = (await res.json().catch(() => null)) as { data?: Record<string, unknown> } | null;
+      if (!res.ok || !body?.data) {
+        setSubmitting(false);
+        const msg = "Не вдалося створити компанію. Перевірте права доступу та спробуйте ще раз.";
+        setError(msg);
+        toast.error(msg);
+        return;
+      }
+
+      const d = body.data;
+      toast.success("Компанію створено.");
+      onCreated({
+        id: String(d.id),
+        label: String(d.shortName),
+        contractSignerFullNameNom: String(d.contractSignerFullNameNom),
+        contractSignerFullNameGen: String(d.contractSignerFullNameGen),
+        contractSignerPositionNom: String(d.contractSignerPositionNom),
+        contractSignerPositionGen: String(d.contractSignerPositionGen),
+        contractSignerActingUnder: String(d.contractSignerActingUnder),
+      });
+      onOpenChange(false);
+    } catch {
       setSubmitting(false);
-      const msg = "Не вдалося створити компанію. Перевірте права доступу та спробуйте ще раз.";
+      const msg = "Помилка мережі. Спробуйте ще раз.";
       setError(msg);
       toast.error(msg);
-      return;
     }
-
-    const d = body.data;
-    toast.success("Компанію створено.");
-    onCreated({
-      id: String(d.id),
-      label: String(d.shortName),
-      contractSignerFullNameNom: String(d.contractSignerFullNameNom),
-      contractSignerFullNameGen: String(d.contractSignerFullNameGen),
-      contractSignerPositionNom: String(d.contractSignerPositionNom),
-      contractSignerPositionGen: String(d.contractSignerPositionGen),
-      contractSignerActingUnder: String(d.contractSignerActingUnder),
-    });
-    onOpenChange(false);
   }
 
   return (
@@ -183,14 +190,14 @@ export function QuickCreateCompanyModal({
       <Dialog.Root open={open} onOpenChange={(next) => (next ? onOpenChange(true) : requestClose())}>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 bg-black/40" />
-          <Dialog.Content className="fixed left-1/2 top-1/2 flex max-h-[min(90vh,calc(100vh-24px))] w-[min(960px,calc(100vw-24px))] -translate-x-1/2 -translate-y-1/2 flex-col rounded-xl bg-white p-4 shadow-lg outline-none">
-            <Dialog.Title className="text-2xl font-semibold text-zinc-900">Нова компанія</Dialog.Title>
+          <Dialog.Content className="fixed left-1/2 top-1/2 flex max-h-[min(90vh,calc(100vh-24px))] w-[min(960px,calc(100vw-24px))] -translate-x-1/2 -translate-y-1/2 flex-col rounded-xl border border-border bg-card p-4 text-card-foreground shadow-lg outline-none">
+            <Dialog.Title className="page-title">Нова компанія</Dialog.Title>
             <Dialog.Description className="sr-only">
               Створення компанії: реквізити, контакти та підписанти за замовчуванням.
             </Dialog.Description>
 
             <div className="mt-4 min-h-0 flex-1 overflow-y-auto pr-1">
-              <div className="grid grid-cols-1 gap-4 rounded-xl border bg-white p-4">
+              <div className="grid grid-cols-1 gap-4 rounded-xl border border-border bg-card p-4">
                 <ModalField
                   label="Повна назва"
                   value={form.fullName}
@@ -236,8 +243,8 @@ export function QuickCreateCompanyModal({
                   onContactsJsonChange={setContactsJson}
                 />
 
-                <div className="mt-2 grid grid-cols-1 gap-4 rounded-lg bg-[#FFF7E5] p-4">
-                  <div className="text-sm font-semibold text-zinc-900">Підписанти (за замовчуванням)</div>
+                <div className="mt-2 grid grid-cols-1 gap-4 rounded-lg bg-muted p-4">
+                  <div className="text-sm font-semibold text-foreground">Підписанти (за замовчуванням)</div>
 
                   <div className="rounded-md border border-amber-200 bg-amber-50/70 p-3">
                     <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-amber-900">Називний відмінок</div>
@@ -344,7 +351,7 @@ export function QuickCreateCompanyModal({
                   <button
                     type="button"
                     disabled={submitting}
-                    className="inline-flex h-10 items-center rounded-md bg-[#FFAA00] px-4 text-sm font-medium text-[#241800] hover:bg-[#FFBB33] disabled:opacity-50"
+                    className="crm-btn-primary disabled:opacity-50"
                     onClick={submit}
                   >
                     {submitting ? "Створення..." : "Зберегти"}
@@ -366,8 +373,8 @@ export function QuickCreateCompanyModal({
       <Dialog.Root open={confirmCloseOpen} onOpenChange={setConfirmCloseOpen}>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 bg-black/40" />
-          <Dialog.Content className="fixed left-1/2 top-1/2 w-[min(420px,calc(100vw-24px))] -translate-x-1/2 -translate-y-1/2 rounded-xl bg-white p-4 shadow-lg">
-            <Dialog.Title className="text-sm font-semibold text-zinc-900">Незбережені зміни</Dialog.Title>
+          <Dialog.Content className="fixed left-1/2 top-1/2 w-[min(420px,calc(100vw-24px))] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border bg-card p-4 text-card-foreground shadow-lg">
+            <Dialog.Title className="text-sm font-semibold text-foreground">Незбережені зміни</Dialog.Title>
             <Dialog.Description className="mt-2 text-sm text-zinc-700">
               У формі створення компанії є незбережені зміни. Закрити вікно без збереження?
             </Dialog.Description>
@@ -417,7 +424,7 @@ function ModalField({
       {multiline ? (
         <textarea
           required={required}
-          className="min-h-24 rounded-md border bg-white px-3 py-2"
+          className="min-h-24 rounded-md border border-border bg-card px-3 py-2"
           autoComplete="off"
           value={value}
           onChange={(e) => onChange(e.target.value)}
@@ -425,7 +432,7 @@ function ModalField({
       ) : (
         <input
           required={required}
-          className="h-10 rounded-md border bg-white px-3"
+          className="h-10 rounded-md border border-border bg-card px-3"
           autoComplete="off"
           value={value}
           onChange={(e) => onChange(e.target.value)}

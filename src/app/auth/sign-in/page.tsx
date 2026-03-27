@@ -56,7 +56,7 @@ function SignInForm() {
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h1 className="text-xl font-semibold text-zinc-900">Вхід</h1>
+        <h1 className="page-title-sm">Вхід</h1>
         <p className="text-sm text-zinc-600">Увійдіть у CRM.</p>
       </div>
       {emailConfirmed ? (

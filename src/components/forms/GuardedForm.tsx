@@ -21,10 +21,12 @@ export function GuardedForm({
   action,
   className,
   children,
+  successMessage,
 }: {
   action: (formData: FormData) => void | Promise<void>;
   className?: string;
   children: React.ReactNode;
+  successMessage?: string;
 }) {
   const formRef = useRef<HTMLFormElement | null>(null);
   const initialSnapshotRef = useRef<string | null>(null);
@@ -73,8 +75,13 @@ export function GuardedForm({
           try {
             await action(formData);
             setIsDirty(false);
+            if (successMessage) toast.success(successMessage);
           } catch (e) {
-            if (isNextNavigationError(e)) throw e;
+            if (isNextNavigationError(e)) {
+              if (successMessage) toast.success(successMessage);
+              setIsDirty(false);
+              throw e;
+            }
             toast.error(getServerActionErrorMessage(e));
           }
         }}
@@ -89,7 +96,7 @@ export function GuardedForm({
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 bg-black/40" />
           <Dialog.Content className="fixed left-1/2 top-1/2 w-[min(420px,calc(100vw-24px))] -translate-x-1/2 -translate-y-1/2 rounded-xl bg-white p-4 shadow-lg">
-            <Dialog.Title className="text-sm font-semibold text-zinc-900">Незбережені зміни</Dialog.Title>
+            <Dialog.Title className="text-sm font-semibold text-foreground">Незбережені зміни</Dialog.Title>
             <Dialog.Description className="mt-2 text-sm text-zinc-700">
               Є незбережені зміни. Вийти зі сторінки без збереження?
             </Dialog.Description>

@@ -1,16 +1,23 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import {
   type ColumnDef,
   flexRender,
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { FiEdit2, FiInfo } from "react-icons/fi";
 
+import { DetailRow } from "@/components/data-table/detail-row";
+import { EmptyListState } from "@/components/data-table/empty-list-state";
+import { ListPagePagination } from "@/components/data-table/list-page-pagination";
+import { ListPageToolbar } from "@/components/data-table/list-page-toolbar";
+import { listTableHeaderClass, tableActionIconClassName } from "@/components/data-table/list-styles";
 import { InfoDialog } from "@/components/modals/InfoDialog";
+import { Card } from "@/components/ui/card";
+import { useDebouncedListSearch } from "@/hooks/use-debounced-list-search";
+import { useListUrlParams } from "@/hooks/use-list-url-params";
 import { formatMoney } from "@/lib/totals";
 
 export type ContractRow = {
@@ -27,9 +34,6 @@ export type ContractRow = {
 
 type SortBy = "number" | "date" | "workType" | "totalWithVat";
 type SortDir = "asc" | "desc";
-
-const actionIconBtn =
-  "inline-flex h-8 w-8 items-center justify-center rounded-md border text-zinc-700 hover:bg-zinc-50";
 
 export function ContractsTable({
   rows,
@@ -48,9 +52,16 @@ export function ContractsTable({
   sortBy: SortBy;
   sortDir: SortDir;
 }) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
+  const { updateParams } = useListUrlParams();
+
+  const onSearchCommit = useCallback(
+    (trimmed: string) => {
+      updateParams({ q: trimmed || null, page: 1 });
+    },
+    [updateParams],
+  );
+
+  const [queryInput, setQueryInput] = useDebouncedListSearch(q, onSearchCommit);
 
   const columns = useMemo<ColumnDef<ContractRow>[]>(
     () => [
@@ -72,7 +83,7 @@ export function ContractsTable({
         id: "lineItems",
         header: "Позиції",
         cell: ({ row }) => (
-          <span className="line-clamp-2 max-w-[min(28rem,50vw)] text-zinc-800" title={row.original.lineItemsPreview}>
+          <span className="line-clamp-2 max-w-[min(28rem,50vw)] text-foreground/90" title={row.original.lineItemsPreview}>
             {row.original.lineItemsPreview}
           </span>
         ),
@@ -95,20 +106,20 @@ export function ContractsTable({
                 title={`Договір ${c.number}`}
                 trigger={<FiInfo aria-hidden="true" className="size-4" />}
                 triggerAriaLabel="Інформація про договір"
-                triggerClassName={actionIconBtn}
+                triggerClassName={tableActionIconClassName}
               >
                 <div className="grid gap-2">
-                  <Row k="Дата" v={new Date(c.date).toLocaleDateString("uk-UA")} />
-                  <Row k="Тип" v={c.workType === "WORKS" ? "Роботи" : "Послуги"} />
-                  <Row k="Місце" v={c.signingLocation} />
-                  <Row k="Позиції" v={c.lineItemsPreview} />
-                  <Row k="Разом (без ПДВ)" v={c.totalWithoutVat} />
-                  <Row k="ПДВ 20%" v={c.vat20} />
-                  <Row k="Разом з ПДВ" v={c.totalWithVat} />
+                  <DetailRow label="Дата" value={new Date(c.date).toLocaleDateString("uk-UA")} />
+                  <DetailRow label="Тип" value={c.workType === "WORKS" ? "Роботи" : "Послуги"} />
+                  <DetailRow label="Місце" value={c.signingLocation} />
+                  <DetailRow label="Позиції" value={c.lineItemsPreview} />
+                  <DetailRow label="Разом (без ПДВ)" value={c.totalWithoutVat} />
+                  <DetailRow label="ПДВ 20%" value={c.vat20} />
+                  <DetailRow label="Разом з ПДВ" value={c.totalWithVat} />
                 </div>
               </InfoDialog>
               <a
-                className={actionIconBtn}
+                className={tableActionIconClassName}
                 href={`/contracts/${c.id}/edit`}
                 aria-label="Редагувати договір"
                 title="Редагувати договір"
@@ -131,30 +142,6 @@ export function ContractsTable({
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
-  function updateParams(updates: Record<string, string | number | null>) {
-    const params = new URLSearchParams(searchParams.toString());
-    for (const [key, value] of Object.entries(updates)) {
-      if (value === null || value === "") params.delete(key);
-      else params.set(key, String(value));
-    }
-    router.push(`${pathname}?${params.toString()}`);
-  }
-
-  const [queryInput, setQueryInput] = useState(q);
-  useEffect(() => {
-    setQueryInput(q);
-  }, [q]);
-
-  useEffect(() => {
-    const normalizedCurrent = q.trim();
-    const normalizedNext = queryInput.trim();
-    if (normalizedCurrent === normalizedNext) return;
-    const timer = setTimeout(() => {
-      updateParams({ q: normalizedNext || null, page: 1 });
-    }, 350);
-    return () => clearTimeout(timer);
-  }, [queryInput, q]);
-
   function toggleSort(column: SortBy) {
     if (sortBy !== column) {
       updateParams({ sortBy: column, sortDir: "asc", page: 1 });
@@ -164,42 +151,23 @@ export function ContractsTable({
   }
 
   if (rows.length === 0 && !q) {
-    return (
-      <div className="overflow-hidden rounded-xl border bg-white p-8 text-center text-sm text-zinc-500">
-        Поки що немає договорів.
-      </div>
-    );
+    return <EmptyListState message="Поки що немає договорів." />;
   }
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="rounded-xl border bg-white p-3">
-        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-          <input
-            value={queryInput}
-            placeholder="Пошук: номер, місце складання"
-            className="h-10 w-full rounded-md border px-3 text-sm md:max-w-md"
-            onChange={(e) => setQueryInput(e.currentTarget.value)}
-          />
-          <div className="flex items-center gap-2 text-sm">
-            <span className="text-zinc-600">На сторінці:</span>
-            <select
-              value={String(pageSize)}
-              className="h-9 rounded-md border px-2"
-              onChange={(e) => updateParams({ pageSize: e.target.value, page: 1 })}
-            >
-              <option value="25">25</option>
-              <option value="50">50</option>
-              <option value="100">100</option>
-            </select>
-          </div>
-        </div>
-      </div>
+      <ListPageToolbar
+        queryInput={queryInput}
+        onQueryChange={setQueryInput}
+        searchPlaceholder="Пошук: номер, місце складання"
+        pageSize={pageSize}
+        onPageSizeChange={(next) => updateParams({ pageSize: next, page: 1 })}
+      />
 
-      <div className="overflow-hidden rounded-xl border bg-white">
+      <Card className="overflow-hidden p-0">
         <div className="hidden md:block">
           <table className="w-full text-sm">
-            <thead className="bg-[#FFF7E5] text-left text-zinc-700">
+            <thead className={listTableHeaderClass}>
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>
                   {headerGroup.headers.map((header) => (
@@ -263,12 +231,12 @@ export function ContractsTable({
             const c = row.original;
             return (
               <div key={c.id} className="rounded-lg border p-3">
-                <div className="text-base font-medium text-zinc-900">{c.number}</div>
-                <div className="mt-1 text-xs text-zinc-600">
+                <div className="text-base font-medium text-foreground">{c.number}</div>
+                <div className="mt-1 text-xs text-muted-foreground">
                   {new Date(c.date).toLocaleDateString("uk-UA")} · {c.workType === "WORKS" ? "Роботи" : "Послуги"}
                 </div>
-                <div className="mt-1 text-xs text-zinc-700">{c.lineItemsPreview}</div>
-                <div className="mt-1 text-sm font-medium tabular-nums text-zinc-900">
+                <div className="mt-1 text-xs text-foreground/85">{c.lineItemsPreview}</div>
+                <div className="mt-1 text-sm font-medium tabular-nums text-foreground">
                   З ПДВ: {formatMoney(Number.parseFloat(c.totalWithVat) || 0)}
                 </div>
                 <div className="mt-3 flex gap-2">
@@ -276,20 +244,20 @@ export function ContractsTable({
                     title={`Договір ${c.number}`}
                     trigger={<FiInfo aria-hidden="true" className="size-4" />}
                     triggerAriaLabel="Інформація про договір"
-                    triggerClassName={actionIconBtn}
+                    triggerClassName={tableActionIconClassName}
                   >
                     <div className="grid gap-2">
-                      <Row k="Дата" v={new Date(c.date).toLocaleDateString("uk-UA")} />
-                      <Row k="Тип" v={c.workType === "WORKS" ? "Роботи" : "Послуги"} />
-                      <Row k="Місце" v={c.signingLocation} />
-                      <Row k="Позиції" v={c.lineItemsPreview} />
-                      <Row k="Разом (без ПДВ)" v={c.totalWithoutVat} />
-                      <Row k="ПДВ 20%" v={c.vat20} />
-                      <Row k="Разом з ПДВ" v={c.totalWithVat} />
+                      <DetailRow label="Дата" value={new Date(c.date).toLocaleDateString("uk-UA")} />
+                      <DetailRow label="Тип" value={c.workType === "WORKS" ? "Роботи" : "Послуги"} />
+                      <DetailRow label="Місце" value={c.signingLocation} />
+                      <DetailRow label="Позиції" value={c.lineItemsPreview} />
+                      <DetailRow label="Разом (без ПДВ)" value={c.totalWithoutVat} />
+                      <DetailRow label="ПДВ 20%" value={c.vat20} />
+                      <DetailRow label="Разом з ПДВ" value={c.totalWithVat} />
                     </div>
                   </InfoDialog>
                   <a
-                    className={actionIconBtn}
+                    className={tableActionIconClassName}
                     href={`/contracts/${c.id}/edit`}
                     aria-label="Редагувати договір"
                     title="Редагувати договір"
@@ -301,40 +269,15 @@ export function ContractsTable({
             );
           })}
         </div>
-      </div>
+      </Card>
 
-      <div className="flex items-center justify-between rounded-xl border bg-white px-3 py-2 text-sm">
-        <span className="text-zinc-600">
-          Сторінка {page} з {totalPages} (всього: {total})
-        </span>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            disabled={page <= 1}
-            className="h-9 rounded-md border px-3 disabled:opacity-50"
-            onClick={() => updateParams({ page: page - 1 })}
-          >
-            Назад
-          </button>
-          <button
-            type="button"
-            disabled={page >= totalPages}
-            className="h-9 rounded-md border px-3 disabled:opacity-50"
-            onClick={() => updateParams({ page: page + 1 })}
-          >
-            Далі
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Row({ k, v }: { k: string; v: string }) {
-  return (
-    <div className="grid grid-cols-3 gap-3">
-      <div className="text-zinc-500">{k}</div>
-      <div className="col-span-2 text-zinc-900">{v}</div>
+      <ListPagePagination
+        page={page}
+        totalPages={totalPages}
+        total={total}
+        onPrev={() => updateParams({ page: page - 1 })}
+        onNext={() => updateParams({ page: page + 1 })}
+      />
     </div>
   );
 }

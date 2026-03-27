@@ -211,7 +211,10 @@ export function ContractEditForm({
               })),
             });
           } catch (e) {
-            if (isNextNavigationError(e)) throw e;
+            if (isNextNavigationError(e)) {
+              toast.success("Договір оновлено.");
+              throw e;
+            }
             toast.error(getServerActionErrorMessage(e));
           }
         })}
@@ -352,8 +355,8 @@ export function ContractEditForm({
           />
         </div>
 
-        <div className="grid grid-cols-1 gap-4 rounded-lg bg-[#FFF7E5] p-4 md:grid-cols-2">
-          <div className="md:col-span-2 text-sm font-semibold text-zinc-900">Підписант</div>
+        <div className="grid grid-cols-1 gap-4 rounded-lg bg-muted p-4 md:grid-cols-2">
+          <div className="md:col-span-2 text-sm font-semibold text-foreground">Підписант</div>
 
           <div className="rounded-md border border-amber-200 bg-amber-50/70 p-3">
             <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-amber-900">Замовник</div>
@@ -451,7 +454,7 @@ export function ContractEditForm({
         </div>
 
         <div className="flex flex-col gap-2">
-          <div className="text-sm font-semibold text-zinc-900">{workType === "WORKS" ? "Перелік робіт" : "Перелік послуг"}</div>
+          <div className="text-sm font-semibold text-foreground">{workType === "WORKS" ? "Перелік робіт" : "Перелік послуг"}</div>
           <LineItemsTable unitOptionsFromBackend={lineItemUnitOptions} />
         </div>
 
@@ -464,7 +467,7 @@ export function ContractEditForm({
         <div className="mt-2 flex flex-wrap items-center gap-3">
           <button
             type="submit"
-            className="inline-flex h-10 items-center rounded-md bg-[#FFAA00] px-4 text-sm font-medium text-[#241800] hover:bg-[#FFBB33]"
+            className="crm-btn-primary"
           >
             Зберегти
           </button>

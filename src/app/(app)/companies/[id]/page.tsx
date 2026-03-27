@@ -17,7 +17,7 @@ export default async function CompanyInfoPage({ params }: { params: Promise<{ id
     <div className="flex max-w-3xl flex-col gap-4">
       <div className="flex items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-zinc-900">{row.shortName}</h1>
+          <h1 className="page-title">{row.shortName}</h1>
           <p className="text-sm text-zinc-600">{row.fullName}</p>
         </div>
         <div className="flex gap-2">
@@ -48,7 +48,7 @@ function Row({ k, v }: { k: string; v: string }) {
   return (
     <div className="grid grid-cols-3 gap-3">
       <div className="text-zinc-500">{k}</div>
-      <div className="col-span-2 text-zinc-900">{v}</div>
+      <div className="col-span-2 text-foreground">{v}</div>
     </div>
   );
 }

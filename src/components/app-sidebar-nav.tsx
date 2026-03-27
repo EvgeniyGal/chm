@@ -14,8 +14,8 @@ function navLinkClass(pathname: string, href: string) {
   return [
     "block rounded-md px-3 py-2 transition-colors",
     on
-      ? "bg-[#FFAA00] font-medium text-[#241800]"
-      : "text-zinc-800 hover:bg-[#FFEECC]",
+      ? "bg-sidebar-primary font-medium text-sidebar-primary-foreground"
+      : "text-sidebar-foreground hover:bg-sidebar-accent",
   ].join(" ");
 }
 
@@ -79,7 +79,9 @@ export function ProfileSidebarLink() {
     <Link
       className={[
         "inline-flex h-8 w-8 items-center justify-center rounded-md border transition-colors",
-        on ? "border-[#FFAA00] bg-[#FFAA00] text-[#241800]" : "border-zinc-200 text-zinc-700 hover:bg-zinc-50",
+        on
+          ? "border-sidebar-primary bg-sidebar-primary text-sidebar-primary-foreground"
+          : "border-border text-muted-foreground hover:bg-sidebar-accent",
       ].join(" ")}
       href="/profile"
       title="Профіль"

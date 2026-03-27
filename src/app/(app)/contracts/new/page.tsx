@@ -48,7 +48,7 @@ export default async function NewContractPage() {
   return (
     <div className="w-full">
       <div className="mb-4">
-        <h1 className="text-2xl font-semibold text-zinc-900">Новий договір</h1>
+        <h1 className="page-title">Новий договір</h1>
         <p className="text-sm text-zinc-600">Заповніть поля договору.</p>
       </div>
       <ContractForm

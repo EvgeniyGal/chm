@@ -13,11 +13,11 @@ export default async function AcceptanceActsPage() {
     <div className="flex flex-col gap-4">
       <div className="flex items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-zinc-900">Акти</h1>
+          <h1 className="page-title">Акти</h1>
           <p className="text-sm text-zinc-600">Список актів приймання-передачі.</p>
         </div>
         <a
-          className="inline-flex h-10 items-center rounded-md bg-[#FFAA00] px-4 text-sm font-medium text-[#241800] hover:bg-[#FFBB33]"
+          className="crm-btn-primary"
           href="/acceptance-acts/new"
         >
           Додати акт
@@ -26,7 +26,7 @@ export default async function AcceptanceActsPage() {
 
       <div className="overflow-hidden rounded-xl border bg-white">
         <table className="w-full text-sm">
-          <thead className="bg-[#FFF7E5] text-left text-zinc-700">
+          <thead className="bg-crm-table-header text-left text-sm font-semibold text-foreground/90">
             <tr>
               <th className="px-4 py-3">Номер</th>
               <th className="px-4 py-3">Дата</th>
@@ -74,7 +74,7 @@ function Row({ k, v }: { k: string; v: string }) {
   return (
     <div className="grid grid-cols-3 gap-3">
       <div className="text-zinc-500">{k}</div>
-      <div className="col-span-2 text-zinc-900">{v}</div>
+      <div className="col-span-2 text-foreground">{v}</div>
     </div>
   );
 }

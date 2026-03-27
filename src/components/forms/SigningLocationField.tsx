@@ -141,19 +141,23 @@ export function SigningLocationField({
               method: "POST",
               headers: { "content-type": "application/json" },
               body: JSON.stringify({ scope, value: next }),
-            }).then((res) => {
-              if (!res.ok) {
-                toast.error("Не вдалося зберегти варіант.");
-                return;
-              }
-              toast.success("Варіант додано.");
-              window.dispatchEvent(
-                new CustomEvent("dropdown-options:changed", {
-                  detail: { scope, action: "add", value: next },
-                }),
-              );
-              setOpen(false);
-            });
+            })
+              .then((res) => {
+                if (!res.ok) {
+                  toast.error("Не вдалося зберегти варіант.");
+                  return;
+                }
+                toast.success("Варіант додано.");
+                window.dispatchEvent(
+                  new CustomEvent("dropdown-options:changed", {
+                    detail: { scope, action: "add", value: next },
+                  }),
+                );
+                setOpen(false);
+              })
+              .catch(() => {
+                toast.error("Помилка мережі. Спробуйте ще раз.");
+              });
           }}
         >
           <Plus className="size-4" aria-hidden="true" />
@@ -169,22 +173,26 @@ export function SigningLocationField({
               method: "DELETE",
               headers: { "content-type": "application/json" },
               body: JSON.stringify({ scope, value: selected }),
-            }).then((res) => {
-              if (!res.ok) {
-                toast.error("Не вдалося видалити варіант.");
-                return;
-              }
-              toast.success("Варіант видалено зі списку.");
-              setOptions((prev) => prev.filter((v) => v !== selected));
-              onChange("");
-              setQuery("");
-              setOpen(false);
-              window.dispatchEvent(
-                new CustomEvent("dropdown-options:changed", {
-                  detail: { scope, action: "delete", value: selected },
-                }),
-              );
-            });
+            })
+              .then((res) => {
+                if (!res.ok) {
+                  toast.error("Не вдалося видалити варіант.");
+                  return;
+                }
+                toast.success("Варіант видалено зі списку.");
+                setOptions((prev) => prev.filter((v) => v !== selected));
+                onChange("");
+                setQuery("");
+                setOpen(false);
+                window.dispatchEvent(
+                  new CustomEvent("dropdown-options:changed", {
+                    detail: { scope, action: "delete", value: selected },
+                  }),
+                );
+              })
+              .catch(() => {
+                toast.error("Помилка мережі. Спробуйте ще раз.");
+              });
           }}
         />
       </div>

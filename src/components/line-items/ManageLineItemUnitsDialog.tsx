@@ -38,50 +38,64 @@ export function ManageLineItemUnitsDialog({
     if (!v) return;
     setBusy(true);
     setError(null);
-    const res = await fetch("/api/dropdown-options", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ scope: DROPDOWN_SCOPE.LINE_ITEM_UNIT, value: v }),
-    });
-    setBusy(false);
-    if (!res.ok) {
-      const msg = "Не вдалося зберегти.";
+    try {
+      const res = await fetch("/api/dropdown-options", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ scope: DROPDOWN_SCOPE.LINE_ITEM_UNIT, value: v }),
+      });
+      if (!res.ok) {
+        const msg = "Не вдалося зберегти.";
+        setError(msg);
+        toast.error(msg);
+        return;
+      }
+      toast.success("Одиницю додано.");
+      setList((prev) => sortUa([...new Set([...prev, v])]));
+      setNewValue("");
+      window.dispatchEvent(
+        new CustomEvent("dropdown-options:changed", {
+          detail: { scope: DROPDOWN_SCOPE.LINE_ITEM_UNIT, action: "add", value: v },
+        }),
+      );
+    } catch {
+      const msg = "Помилка мережі. Спробуйте ще раз.";
       setError(msg);
       toast.error(msg);
-      return;
+    } finally {
+      setBusy(false);
     }
-    toast.success("Одиницю додано.");
-    setList((prev) => sortUa([...new Set([...prev, v])]));
-    setNewValue("");
-    window.dispatchEvent(
-      new CustomEvent("dropdown-options:changed", {
-        detail: { scope: DROPDOWN_SCOPE.LINE_ITEM_UNIT, action: "add", value: v },
-      }),
-    );
   }
 
   async function removeUnit(value: string) {
     setBusy(true);
     setError(null);
-    const res = await fetch("/api/dropdown-options", {
-      method: "DELETE",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ scope: DROPDOWN_SCOPE.LINE_ITEM_UNIT, value }),
-    });
-    setBusy(false);
-    if (!res.ok) {
-      const msg = "Не вдалося видалити.";
+    try {
+      const res = await fetch("/api/dropdown-options", {
+        method: "DELETE",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ scope: DROPDOWN_SCOPE.LINE_ITEM_UNIT, value }),
+      });
+      if (!res.ok) {
+        const msg = "Не вдалося видалити.";
+        setError(msg);
+        toast.error(msg);
+        return;
+      }
+      toast.success("Одиницю видалено зі списку.");
+      setList((prev) => prev.filter((x) => x !== value));
+      window.dispatchEvent(
+        new CustomEvent("dropdown-options:changed", {
+          detail: { scope: DROPDOWN_SCOPE.LINE_ITEM_UNIT, action: "delete", value },
+        }),
+      );
+    } catch {
+      const msg = "Помилка мережі. Спробуйте ще раз.";
       setError(msg);
       toast.error(msg);
-      return;
+    } finally {
+      setBusy(false);
     }
-    toast.success("Одиницю видалено зі списку.");
-    setList((prev) => prev.filter((x) => x !== value));
-    window.dispatchEvent(
-      new CustomEvent("dropdown-options:changed", {
-        detail: { scope: DROPDOWN_SCOPE.LINE_ITEM_UNIT, action: "delete", value },
-      }),
-    );
   }
 
   return (
@@ -89,7 +103,7 @@ export function ManageLineItemUnitsDialog({
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/40" />
         <Dialog.Content className="fixed left-1/2 top-1/2 max-h-[min(85vh,calc(100vh-24px))] w-[min(480px,calc(100vw-24px))] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl bg-white p-4 shadow-lg outline-none">
-          <Dialog.Title className="text-lg font-semibold text-zinc-900">Одиниці виміру</Dialog.Title>
+          <Dialog.Title className="text-lg font-semibold text-foreground">Одиниці виміру</Dialog.Title>
           <Dialog.Description className="mt-1 text-sm text-zinc-600">
             Додавайте типові одиниці для рядків таблиці. Видалення прибирає варіант зі списку (не з уже збережених документів).
           </Dialog.Description>
@@ -102,7 +116,7 @@ export function ManageLineItemUnitsDialog({
             ) : (
               list.map((u) => (
                 <li key={u} className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5 hover:bg-zinc-50">
-                  <span className="min-w-0 text-sm text-zinc-900">{u}</span>
+                  <span className="min-w-0 text-sm text-foreground">{u}</span>
                   <button
                     type="button"
                     disabled={busy}
@@ -138,7 +152,7 @@ export function ManageLineItemUnitsDialog({
             <button
               type="button"
               disabled={busy || !newValue.trim()}
-              className="inline-flex h-10 shrink-0 items-center justify-center rounded-md bg-[#FFAA00] px-4 text-sm font-medium text-[#241800] hover:bg-[#FFBB33] disabled:opacity-50"
+              className="crm-btn-primary shrink-0 disabled:opacity-50"
               onClick={() => void addUnit()}
             >
               Додати

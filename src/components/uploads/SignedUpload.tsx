@@ -17,7 +17,7 @@ export function SignedUpload({
 
   return (
     <div className="rounded-xl border bg-white p-4">
-      <div className="text-sm font-semibold text-zinc-900">Підписаний документ (скан)</div>
+      <div className="text-sm font-semibold text-foreground">Підписаний документ (скан)</div>
       <p className="mt-1 text-xs text-zinc-500">Тільки JPG. Файл буде конвертовано у WebP.</p>
       <form
         className="mt-3 flex flex-col gap-3"
@@ -58,7 +58,7 @@ export function SignedUpload({
         <button
           type="submit"
           disabled={busy}
-          className="inline-flex h-10 items-center justify-center rounded-md bg-[#FFAA00] px-4 text-sm font-medium text-[#241800] hover:bg-[#FFBB33] disabled:opacity-50"
+          className="crm-btn-primary disabled:opacity-50"
         >
           {busy ? "Завантаження…" : "Завантажити"}
         </button>

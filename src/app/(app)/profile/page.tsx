@@ -78,11 +78,15 @@ export default async function ProfilePage({
 
   return (
     <div className="max-w-2xl">
-      <h1 className="text-2xl font-semibold text-zinc-900">Профіль</h1>
+      <h1 className="page-title">Профіль</h1>
 
       <div className="mt-4 rounded-xl border bg-white p-4 text-sm">
-        <div className="font-semibold text-zinc-900">Редагувати ім'я</div>
-        <FormWithToastAction action={updateName} className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
+        <div className="font-semibold text-foreground">Редагувати ім'я</div>
+        <FormWithToastAction
+          action={updateName}
+          successMessage="Ім'я збережено."
+          className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2"
+        >
           <label className="flex flex-col gap-1">
             <span className="text-zinc-700">First Name</span>
             <input
@@ -134,7 +138,7 @@ export default async function ProfilePage({
       </div>
 
       <div className="mt-4 rounded-xl border bg-white p-4 text-sm">
-        <div className="font-semibold text-zinc-900">Зміна email</div>
+        <div className="font-semibold text-foreground">Зміна email</div>
         <FormWithToastAction className="mt-3 flex flex-col gap-3" action={requestEmailChange}>
           <input name="newEmail" type="email" required className="h-10 rounded-md border px-3" placeholder="new@email.com" />
           <button className="inline-flex h-10 items-center justify-center rounded-md border px-4 text-sm hover:bg-zinc-50" type="submit">

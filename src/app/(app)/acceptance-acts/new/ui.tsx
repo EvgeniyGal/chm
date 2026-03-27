@@ -53,7 +53,10 @@ export function AcceptanceActForm({
           try {
             await onSubmit(values);
           } catch (e) {
-            if (isNextNavigationError(e)) throw e;
+            if (isNextNavigationError(e)) {
+              toast.success("Акт створено.");
+              throw e;
+            }
             toast.error(getServerActionErrorMessage(e));
           }
         })}
@@ -78,8 +81,8 @@ export function AcceptanceActForm({
           <Field label="Дата завершення" type="date" {...form.register("completionDate", { required: true })} />
         </div>
 
-        <div className="grid grid-cols-1 gap-4 rounded-lg bg-[#FFF7E5] p-4 md:grid-cols-2">
-          <div className="md:col-span-2 text-sm font-semibold text-zinc-900">Підписант</div>
+        <div className="grid grid-cols-1 gap-4 rounded-lg bg-muted p-4 md:grid-cols-2">
+          <div className="md:col-span-2 text-sm font-semibold text-foreground">Підписант</div>
           <Field label="ПІБ (називний)" {...form.register("signerFullNameNom", { required: true })} />
           <Field label="ПІБ (родовий)" {...form.register("signerFullNameGen", { required: true })} />
           <Field label="Посада (називний)" {...form.register("signerPositionNom", { required: true })} />
@@ -93,7 +96,7 @@ export function AcceptanceActForm({
         <div className="mt-2 flex gap-3">
           <button
             type="submit"
-            className="inline-flex h-10 items-center rounded-md bg-[#FFAA00] px-4 text-sm font-medium text-[#241800] hover:bg-[#FFBB33]"
+            className="crm-btn-primary"
           >
             Зберегти
           </button>

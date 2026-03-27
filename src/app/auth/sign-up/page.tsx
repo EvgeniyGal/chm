@@ -52,7 +52,7 @@ export default function SignUpPage() {
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h1 className="text-xl font-semibold text-zinc-900">Реєстрація</h1>
+        <h1 className="page-title-sm">Реєстрація</h1>
         <p className="text-sm text-zinc-600">Створіть акаунт (потрібне підтвердження email).</p>
       </div>
 

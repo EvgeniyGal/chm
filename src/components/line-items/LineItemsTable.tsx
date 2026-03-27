@@ -6,6 +6,7 @@ import { Settings2 } from "lucide-react";
 import { Controller, useFieldArray, useFormContext } from "react-hook-form";
 import { flexRender, getCoreRowModel, useReactTable, type ColumnDef } from "@tanstack/react-table";
 import { FiTrash2 } from "react-icons/fi";
+import { toast } from "sonner";
 
 import { SearchableDropdownOptionField } from "@/components/forms/SearchableDropdownOptionField";
 import { ManageLineItemUnitsDialog } from "@/components/line-items/ManageLineItemUnitsDialog";
@@ -200,7 +201,7 @@ export function LineItemsTable({ unitOptionsFromBackend = [] }: { unitOptionsFro
       <div className="hidden overflow-x-auto md:block">
         {isDesktop ? (
           <table className="w-full text-sm">
-            <thead className="bg-[#FFF7E5] text-left text-zinc-700">
+            <thead className="bg-crm-table-header text-left text-sm font-semibold text-foreground/90">
               {table.getHeaderGroups().map((hg) => (
                 <tr key={hg.id}>
                   {hg.headers.map((header) => (
@@ -244,7 +245,7 @@ export function LineItemsTable({ unitOptionsFromBackend = [] }: { unitOptionsFro
             return (
               <div key={row.original.fieldId} className="rounded-xl border bg-white p-3">
                 <div className="mb-2 flex items-center justify-between gap-2">
-                  <div className="text-sm font-semibold text-zinc-900">Рядок #{idx + 1}</div>
+                  <div className="text-sm font-semibold text-foreground">Рядок #{idx + 1}</div>
                   <button
                     type="button"
                     className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50"
@@ -333,7 +334,7 @@ export function LineItemsTable({ unitOptionsFromBackend = [] }: { unitOptionsFro
                     </label>
                   </div>
 
-                  <div className="flex justify-end text-sm tabular-nums text-zinc-900">
+                  <div className="flex justify-end text-sm tabular-nums text-foreground">
                     {formatMoney(Number.isFinite(rowTotal) ? rowTotal : 0)}
                   </div>
                 </div>
@@ -383,7 +384,7 @@ export function LineItemsTable({ unitOptionsFromBackend = [] }: { unitOptionsFro
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 bg-black/40" />
           <Dialog.Content className="fixed left-1/2 top-1/2 w-[min(420px,calc(100vw-24px))] -translate-x-1/2 -translate-y-1/2 rounded-xl bg-white p-4 shadow-lg">
-            <Dialog.Title className="text-sm font-semibold text-zinc-900">Підтвердження видалення</Dialog.Title>
+            <Dialog.Title className="text-sm font-semibold text-foreground">Підтвердження видалення</Dialog.Title>
             <Dialog.Description className="mt-2 text-sm text-zinc-700">
               Ви дійсно хочете видалити цей рядок? Цю дію не можна скасувати.
             </Dialog.Description>
@@ -401,6 +402,7 @@ export function LineItemsTable({ unitOptionsFromBackend = [] }: { unitOptionsFro
                     if (pendingDeleteIdx === null) return;
                     remove(pendingDeleteIdx);
                     setPendingDeleteIdx(null);
+                    toast.success("Рядок видалено.");
                   }}
                 >
                   Видалити

@@ -19,7 +19,7 @@ export default async function ContractInfoPage({ params }: { params: Promise<{ i
     <div className="flex max-w-5xl flex-col gap-4">
       <div className="flex items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-zinc-900">Договір {contract.number}</h1>
+          <h1 className="page-title">Договір {contract.number}</h1>
           <p className="text-sm text-zinc-600">{new Date(contract.date).toLocaleDateString("uk-UA")}</p>
         </div>
         <div className="flex gap-2">
@@ -60,7 +60,7 @@ export default async function ContractInfoPage({ params }: { params: Promise<{ i
 
       <div className="overflow-hidden rounded-xl border bg-white">
         <table className="w-full text-sm">
-          <thead className="bg-[#FFF7E5] text-left text-zinc-700">
+          <thead className="bg-crm-table-header text-left text-sm font-semibold text-foreground/90">
             <tr>
               <th className="px-4 py-3 w-12">#</th>
               <th className="px-4 py-3">Назва</th>

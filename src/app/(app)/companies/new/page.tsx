@@ -160,10 +160,14 @@ export default async function NewCompanyPage() {
   return (
     <div className="w-full">
       <div className="mb-4">
-        <h1 className="text-2xl font-semibold text-zinc-900">Нова компанія</h1>
+        <h1 className="page-title">Нова компанія</h1>
       </div>
 
-      <GuardedForm action={create} className="grid grid-cols-1 gap-4 rounded-xl border bg-white p-4">
+      <GuardedForm
+        action={create}
+        successMessage="Компанію створено."
+        className="grid grid-cols-1 gap-4 rounded-xl border bg-white p-4"
+      >
         <Field name="fullName" label="Повна назва" />
         <Field name="shortName" label="Скорочена назва" />
         <Field name="address" label="Адреса" multiline />
@@ -179,8 +183,8 @@ export default async function NewCompanyPage() {
 
         <ContactsField defaultValue="[]" />
 
-        <div className="mt-2 grid grid-cols-1 gap-4 rounded-lg bg-[#FFF7E5] p-4">
-          <div className="text-sm font-semibold text-zinc-900">Підписанти (за замовчуванням)</div>
+        <div className="mt-2 grid grid-cols-1 gap-4 rounded-lg bg-muted p-4">
+          <div className="text-sm font-semibold text-foreground">Підписанти (за замовчуванням)</div>
 
           <div className="rounded-md border border-amber-200 bg-amber-50/70 p-3">
             <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-amber-900">Називний відмінок</div>
@@ -250,7 +254,7 @@ export default async function NewCompanyPage() {
         <div className="mt-2 flex gap-3">
           <button
             type="submit"
-            className="inline-flex h-10 items-center rounded-md bg-[#FFAA00] px-4 text-sm font-medium text-[#241800] hover:bg-[#FFBB33]"
+            className="crm-btn-primary"
           >
             Зберегти
           </button>

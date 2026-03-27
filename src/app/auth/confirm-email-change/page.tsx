@@ -67,7 +67,7 @@ function ConfirmEmailChangeContent() {
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h1 className="text-xl font-semibold text-zinc-900">Підтвердження email</h1>
+        <h1 className="page-title-sm">Підтвердження email</h1>
         <p className="text-sm text-zinc-600">{message}</p>
       </div>
       {state === "loading" ? (

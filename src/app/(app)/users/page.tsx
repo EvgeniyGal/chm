@@ -58,10 +58,10 @@ export default async function UsersPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-2xl font-semibold text-zinc-900">Користувачі</h1>
+      <h1 className="page-title">Користувачі</h1>
       <div className="overflow-hidden rounded-xl border bg-white">
         <table className="w-full text-sm">
-          <thead className="bg-[#FFF7E5] text-left text-zinc-700">
+          <thead className="bg-crm-table-header text-left text-sm font-semibold text-foreground/90">
             <tr>
               <th className="px-4 py-3">First Name</th>
               <th className="px-4 py-3">Last Name</th>
@@ -127,7 +127,12 @@ export default async function UsersPage() {
                     />
                   </td>
                   <td className="px-4 py-3">
-                    <FormWithToastAction id={`u-${u.id}`} action={updateUser} className="flex items-center gap-2">
+                    <FormWithToastAction
+                      id={`u-${u.id}`}
+                      action={updateUser}
+                      successMessage="Користувача оновлено."
+                      className="flex items-center gap-2"
+                    >
                       <input type="hidden" name="userId" value={u.id} />
                       <button
                         type="submit"

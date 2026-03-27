@@ -82,7 +82,7 @@ function ResetPasswordForm() {
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h1 className="text-xl font-semibold text-zinc-900">Скидання паролю</h1>
+        <h1 className="page-title-sm">Скидання паролю</h1>
         <p className="text-sm text-zinc-600">
           {hasToken ? "Встановіть новий пароль для акаунта." : "Введіть email і ми надішлемо посилання для скидання."}
         </p>
