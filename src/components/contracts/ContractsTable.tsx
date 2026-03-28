@@ -19,6 +19,9 @@ import { listTableHeaderClass, tableActionIconClassName } from "@/components/dat
 import { InfoDialog } from "@/components/modals/InfoDialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { useDebouncedListSearch } from "@/hooks/use-debounced-list-search";
@@ -112,6 +115,13 @@ export function ContractsTable({
   q,
   sortBy,
   sortDir,
+  isDatabaseEmpty,
+  filterWorkType,
+  filterSigned,
+  filterArchived,
+  filterDateFrom,
+  filterDateTo,
+  dateRangeInvalid,
 }: {
   rows: ContractRow[];
   total: number;
@@ -120,6 +130,13 @@ export function ContractsTable({
   q: string;
   sortBy: SortBy;
   sortDir: SortDir;
+  isDatabaseEmpty: boolean;
+  filterWorkType: "WORKS" | "SERVICES" | null;
+  filterSigned: "yes" | "no" | null;
+  filterArchived: "yes" | "no" | null;
+  filterDateFrom: string | null;
+  filterDateTo: string | null;
+  dateRangeInvalid: boolean;
 }) {
   const router = useRouter();
   const { updateParams } = useListUrlParams();
@@ -321,7 +338,7 @@ export function ContractsTable({
     );
   }
 
-  if (rows.length === 0 && !q) {
+  if (isDatabaseEmpty) {
     return <EmptyListState message="Поки що немає договорів." />;
   }
 
@@ -365,8 +382,93 @@ export function ContractsTable({
         queryInput={queryInput}
         onQueryChange={setQueryInput}
         searchPlaceholder="Пошук: номер, місце складання"
-        pageSize={pageSize}
-        onPageSizeChange={(next) => updateParams({ pageSize: next, page: 1 })}
+        filters={
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
+            {dateRangeInvalid ? (
+              <p className="w-full text-sm text-destructive" role="alert">
+                «Дата від» пізніша за «Дату до». Виправте діапазон — фільтр за датою тимчасово вимкнено.
+              </p>
+            ) : null}
+            <div className="flex min-w-0 flex-col gap-1 text-sm">
+              <Label className="text-muted-foreground">Дата від</Label>
+              <Input
+                type="date"
+                className="h-10 w-full min-w-[10.5rem] sm:w-auto"
+                value={filterDateFrom ?? ""}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  updateParams({ dateFrom: v || null, page: 1 });
+                }}
+              />
+            </div>
+            <div className="flex min-w-0 flex-col gap-1 text-sm">
+              <Label className="text-muted-foreground">Дата до</Label>
+              <Input
+                type="date"
+                className="h-10 w-full min-w-[10.5rem] sm:w-auto"
+                value={filterDateTo ?? ""}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  updateParams({ dateTo: v || null, page: 1 });
+                }}
+              />
+            </div>
+            <div className="flex min-w-0 flex-col gap-1 text-sm">
+              <Label className="text-muted-foreground">Тип</Label>
+              <NativeSelect
+                className="h-10 w-full min-w-[10rem] sm:w-auto"
+                value={filterWorkType ?? ""}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  updateParams({
+                    workType: v === "WORKS" || v === "SERVICES" ? v : null,
+                    page: 1,
+                  });
+                }}
+              >
+                <option value="">Усі</option>
+                <option value="WORKS">Роботи</option>
+                <option value="SERVICES">Послуги</option>
+              </NativeSelect>
+            </div>
+            <div className="flex min-w-0 flex-col gap-1 text-sm">
+              <Label className="text-muted-foreground">Підписаний</Label>
+              <NativeSelect
+                className="h-10 w-full min-w-[10rem] sm:w-auto"
+                value={filterSigned ?? ""}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  updateParams({
+                    signed: v === "yes" || v === "no" ? v : null,
+                    page: 1,
+                  });
+                }}
+              >
+                <option value="">Усі</option>
+                <option value="yes">Так</option>
+                <option value="no">Ні</option>
+              </NativeSelect>
+            </div>
+            <div className="flex min-w-0 flex-col gap-1 text-sm">
+              <Label className="text-muted-foreground">В архіві</Label>
+              <NativeSelect
+                className="h-10 w-full min-w-[10rem] sm:w-auto"
+                value={filterArchived ?? ""}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  updateParams({
+                    archived: v === "yes" || v === "no" ? v : null,
+                    page: 1,
+                  });
+                }}
+              >
+                <option value="">Усі</option>
+                <option value="yes">Так</option>
+                <option value="no">Ні</option>
+              </NativeSelect>
+            </div>
+          </div>
+        }
       />
 
       <Card className="overflow-hidden p-0">
@@ -511,6 +613,8 @@ export function ContractsTable({
         page={page}
         totalPages={totalPages}
         total={total}
+        pageSize={pageSize}
+        onPageSizeChange={(next) => updateParams({ pageSize: next, page: 1 })}
         onPrev={() => updateParams({ page: page - 1 })}
         onNext={() => updateParams({ page: page + 1 })}
       />

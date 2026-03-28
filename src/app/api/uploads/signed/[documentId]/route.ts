@@ -1,10 +1,10 @@
-import { del, get } from "@vercel/blob";
+import { BlobNotFoundError, del, get } from "@vercel/blob";
 import { and, eq } from "drizzle-orm";
 
 import { db } from "@/db";
 import { documents } from "@/db/schema";
 import { writeAuditEvent } from "@/lib/audit";
-import { blobReadWriteToken } from "@/lib/blob-token";
+import { blobReadWriteToken, vercelPrivateBlobUrlFromStorageKey } from "@/lib/blob-token";
 import { requireRole } from "@/lib/authz";
 
 export const runtime = "nodejs";
@@ -57,10 +57,22 @@ export async function DELETE(_req: Request, ctx: RouteContext<"/api/uploads/sign
   });
   if (!doc) return Response.json({ error: "NOT_FOUND" }, { status: 404 });
 
+  let blobUrl: string;
   try {
-    await del(doc.storageKey, { token });
+    blobUrl = vercelPrivateBlobUrlFromStorageKey(doc.storageKey, token);
   } catch {
-    // Blob already removed or missing — still drop DB row.
+    return Response.json({ error: "BLOB_TOKEN_INVALID" }, { status: 503 });
+  }
+
+  try {
+    await del(blobUrl, { token });
+  } catch (e) {
+    if (e instanceof BlobNotFoundError) {
+      // Already removed from blob store — continue to drop DB row.
+    } else {
+      console.error("[signed upload DELETE] blob del failed", e);
+      return Response.json({ error: "BLOB_DELETE_FAILED" }, { status: 502 });
+    }
   }
 
   await db.delete(documents).where(eq(documents.id, documentId));

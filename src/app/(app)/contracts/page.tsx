@@ -1,4 +1,4 @@
-import { asc, count, desc, ilike, inArray, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, ilike, inArray, lte, or } from "drizzle-orm";
 
 import { ContractsTable } from "@/components/contracts/ContractsTable";
 import { db } from "@/db";
@@ -15,6 +15,22 @@ function getSortColumn(sortBy: SortBy, sortDir: SortDir) {
   if (sortBy === "date") return dir(contracts.date);
   if (sortBy === "workType") return dir(contracts.workType);
   return dir(contracts.totalWithVat);
+}
+
+function parseIsoDateOnly(raw: string): string | null {
+  const s = raw.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+  const d = new Date(`${s}T00:00:00.000Z`);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString().slice(0, 10) === s ? s : null;
+}
+
+function utcDayStart(isoDate: string): Date {
+  return new Date(`${isoDate}T00:00:00.000Z`);
+}
+
+function utcDayEnd(isoDate: string): Date {
+  return new Date(`${isoDate}T23:59:59.999Z`);
 }
 
 function formatLineItemsPreview(titles: string[]): string {
@@ -50,10 +66,38 @@ export default async function ContractsPage({
   const page = Number.isFinite(pageRaw) && pageRaw > 0 ? Math.floor(pageRaw) : 1;
   const pageSize = pageSizeOptions.has(pageSizeRaw) ? pageSizeRaw : 25;
 
-  const where = q
+  const workTypeRaw = String(sp.workType ?? "");
+  const workTypeFilter =
+    workTypeRaw === "WORKS" || workTypeRaw === "SERVICES" ? workTypeRaw : null;
+
+  const signedRaw = String(sp.signed ?? "");
+  const signedFilter = signedRaw === "yes" || signedRaw === "no" ? signedRaw : null;
+
+  const archivedRaw = String(sp.archived ?? "");
+  const archivedFilter = archivedRaw === "yes" || archivedRaw === "no" ? archivedRaw : null;
+
+  const dateFromRaw = parseIsoDateOnly(String(sp.dateFrom ?? ""));
+  const dateToRaw = parseIsoDateOnly(String(sp.dateTo ?? ""));
+  const dateRangeInvalid = Boolean(dateFromRaw && dateToRaw && dateFromRaw > dateToRaw);
+
+  const searchWhere = q
     ? or(ilike(contracts.number, `%${q}%`), ilike(contracts.signingLocation, `%${q}%`))
     : undefined;
 
+  const filterParts = [];
+  if (searchWhere) filterParts.push(searchWhere);
+  if (workTypeFilter) filterParts.push(eq(contracts.workType, workTypeFilter));
+  if (signedFilter === "yes") filterParts.push(eq(contracts.isSigned, true));
+  if (signedFilter === "no") filterParts.push(eq(contracts.isSigned, false));
+  if (archivedFilter === "yes") filterParts.push(eq(contracts.isArchived, true));
+  if (archivedFilter === "no") filterParts.push(eq(contracts.isArchived, false));
+  if (!dateRangeInvalid && dateFromRaw) filterParts.push(gte(contracts.date, utcDayStart(dateFromRaw)));
+  if (!dateRangeInvalid && dateToRaw) filterParts.push(lte(contracts.date, utcDayEnd(dateToRaw)));
+
+  const where =
+    filterParts.length === 0 ? undefined : filterParts.length === 1 ? filterParts[0]! : and(...filterParts);
+
+  const [{ dbTotal }] = await db.select({ dbTotal: count() }).from(contracts);
   const [{ total }] = await db.select({ total: count() }).from(contracts).where(where);
   const offset = (page - 1) * pageSize;
 
@@ -101,6 +145,13 @@ export default async function ContractsPage({
         q={q}
         sortBy={sortBy}
         sortDir={sortDir}
+        isDatabaseEmpty={Number(dbTotal) === 0}
+        filterWorkType={workTypeFilter}
+        filterSigned={signedFilter}
+        filterArchived={archivedFilter}
+        filterDateFrom={dateFromRaw}
+        filterDateTo={dateToRaw}
+        dateRangeInvalid={dateRangeInvalid}
         rows={rows.map((c) => ({
           id: c.id,
           number: c.number,

@@ -143,8 +143,6 @@ export function CompaniesTable({
         queryInput={queryInput}
         onQueryChange={setQueryInput}
         searchPlaceholder="Пошук: назва, ЄДРПОУ, адреса"
-        pageSize={pageSize}
-        onPageSizeChange={(next) => updateParams({ pageSize: next, page: 1 })}
       />
 
       <Card className="overflow-hidden p-0">
@@ -244,6 +242,8 @@ export function CompaniesTable({
         page={page}
         totalPages={totalPages}
         total={total}
+        pageSize={pageSize}
+        onPageSizeChange={(next) => updateParams({ pageSize: next, page: 1 })}
         onPrev={() => updateParams({ page: page - 1 })}
         onNext={() => updateParams({ page: page + 1 })}
       />

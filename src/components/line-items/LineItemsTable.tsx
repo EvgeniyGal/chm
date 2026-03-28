@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { SearchableDropdownOptionField } from "@/components/forms/SearchableDropdownOptionField";
 import { ManageLineItemUnitsDialog } from "@/components/line-items/ManageLineItemUnitsDialog";
 import { calcTotals, formatMoney } from "@/lib/totals";
+import { cn } from "@/lib/utils";
 
 function formatPriceTwoDecimals(raw: string) {
   const n = Number.parseFloat(String(raw).replace(",", ".").trim());
@@ -27,19 +28,40 @@ type LineItemForm = {
   }>;
 };
 
-/**
- * Desktop `<colgroup>` (table-fixed). Остання колонка ≥ місця під кнопку 40px + padding (узкий % давав overflow).
- * 3+55+8+4+11+11+8 = 100%.
- */
-const LINE_ITEMS_DESKTOP_COLS = [
-  "w-[3%]",
-  "w-[55%]",
-  "w-[8%]",
-  "w-[4%]",
-  "w-[11%]",
-  "w-[11%]",
-  "w-[8%]",
+/** Desktop `<colgroup>` (table-fixed): fixed px + назва забирає решту ширини. */
+const LINE_ITEMS_DESKTOP_COLGROUP = [
+  "w-[40px]",
+  "min-w-0",
+  "w-[100px]",
+  "w-[100px]",
+  "w-[100px]",
+  "w-[100px]",
+  "w-[60px]",
 ] as const;
+
+function lineItemDesktopColClass(columnId: string, tag: "th" | "td"): string {
+  const base = "box-border whitespace-normal py-2";
+  switch (columnId) {
+    case "index":
+      return cn(base, "align-middle w-[40px] max-w-[40px] overflow-hidden px-2 text-center");
+    case "title":
+      return cn(base, "align-middle min-w-0 overflow-hidden px-3");
+    case "unit":
+      return cn(
+        base,
+        tag === "th" ? "align-top overflow-visible" : "align-middle overflow-hidden",
+        "w-[100px] max-w-[100px] px-3",
+      );
+    case "quantity":
+    case "price":
+    case "sum":
+      return cn(base, "align-middle w-[100px] max-w-[100px] overflow-hidden px-3");
+    case "actions":
+      return cn(base, "align-middle w-[60px] max-w-[60px] overflow-hidden px-2 text-center");
+    default:
+      return cn(base, "align-middle min-w-0 overflow-hidden px-3");
+  }
+}
 
 export function LineItemsTable({ unitOptionsFromBackend = [] }: { unitOptionsFromBackend?: string[] }) {
   const { register, watch, setValue, control } = useFormContext<LineItemForm>();
@@ -73,14 +95,14 @@ export function LineItemsTable({ unitOptionsFromBackend = [] }: { unitOptionsFro
         id: "index",
         header: "#",
         cell: ({ row }) => (
-          <td className="min-w-0 overflow-hidden align-middle px-3 py-2 text-zinc-500">{row.original.idx + 1}</td>
+          <td className={cn(lineItemDesktopColClass("index", "td"), "text-zinc-500")}>{row.original.idx + 1}</td>
         ),
       },
       {
         id: "title",
         header: "Назва",
         cell: ({ row }) => (
-          <td className="min-w-0 overflow-hidden align-middle px-3 py-2">
+          <td className={lineItemDesktopColClass("title", "td")}>
             <textarea
               className="min-h-10 w-full min-w-0 max-w-full rounded-md border px-3 py-2"
               rows={2}
@@ -111,7 +133,7 @@ export function LineItemsTable({ unitOptionsFromBackend = [] }: { unitOptionsFro
           </div>
         ),
         cell: ({ row }) => (
-          <td className="min-w-0 overflow-hidden align-middle px-3 py-2">
+          <td className={lineItemDesktopColClass("unit", "td")}>
             <div className="min-w-0 max-w-full">
               <Controller
                 name={`items.${row.original.idx}.unit`}
@@ -139,7 +161,7 @@ export function LineItemsTable({ unitOptionsFromBackend = [] }: { unitOptionsFro
         id: "quantity",
         header: "К-сть",
         cell: ({ row }) => (
-          <td className="min-w-0 overflow-hidden align-middle px-3 py-2">
+          <td className={lineItemDesktopColClass("quantity", "td")}>
             <input
               type="text"
               inputMode="decimal"
@@ -153,7 +175,7 @@ export function LineItemsTable({ unitOptionsFromBackend = [] }: { unitOptionsFro
         id: "price",
         header: "Ціна без ПДВ",
         cell: ({ row }) => (
-          <td className="min-w-0 overflow-hidden align-middle px-3 py-2">
+          <td className={lineItemDesktopColClass("price", "td")}>
             <input
               type="text"
               inputMode="decimal"
@@ -182,7 +204,7 @@ export function LineItemsTable({ unitOptionsFromBackend = [] }: { unitOptionsFro
           const p = Number(items[row.original.idx]?.price ?? 0);
           const rowTotal = q * p;
           return (
-            <td className="min-w-0 overflow-hidden align-middle px-3 py-2 text-center tabular-nums break-words">
+            <td className={cn(lineItemDesktopColClass("sum", "td"), "text-center tabular-nums break-words")}>
               {formatMoney(Number.isFinite(rowTotal) ? rowTotal : 0)}
             </td>
           );
@@ -192,10 +214,10 @@ export function LineItemsTable({ unitOptionsFromBackend = [] }: { unitOptionsFro
         id: "actions",
         header: "",
         cell: ({ row }) => (
-          <td className="min-w-0 overflow-hidden align-middle px-3 py-2 text-center">
+          <td className={lineItemDesktopColClass("actions", "td")}>
             <button
               type="button"
-              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50"
+              className="inline-flex size-9 shrink-0 items-center justify-center rounded-md border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50"
               onClick={() => setPendingDeleteIdx(row.original.idx)}
               disabled={fields.length <= 1}
               aria-label={fields.length <= 1 ? "Не можна видалити останній рядок" : "Видалити рядок"}
@@ -223,7 +245,7 @@ export function LineItemsTable({ unitOptionsFromBackend = [] }: { unitOptionsFro
         {isDesktop ? (
           <table className="w-full max-w-full table-fixed border-collapse text-sm">
             <colgroup>
-              {LINE_ITEMS_DESKTOP_COLS.map((cls, i) => (
+              {LINE_ITEMS_DESKTOP_COLGROUP.map((cls, i) => (
                 <col key={i} className={cls} />
               ))}
             </colgroup>
@@ -231,14 +253,7 @@ export function LineItemsTable({ unitOptionsFromBackend = [] }: { unitOptionsFro
               {table.getHeaderGroups().map((hg) => (
                 <tr key={hg.id}>
                   {hg.headers.map((header) => (
-                    <th
-                      key={header.id}
-                      className={
-                        header.id === "unit"
-                          ? "min-w-0 overflow-visible whitespace-normal px-3 py-2 align-top"
-                          : "min-w-0 overflow-hidden whitespace-normal px-3 py-2 align-middle"
-                      }
-                    >
+                    <th key={header.id} className={lineItemDesktopColClass(header.id, "th")}>
                       {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                     </th>
                   ))}

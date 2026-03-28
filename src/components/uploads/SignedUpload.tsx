@@ -66,32 +66,51 @@ export function SignedUpload({
   const upload = useCallback(async () => {
     setMsg(null);
     const input = fileRef.current;
-    const file = input?.files?.[0];
-    if (!file) {
-      const m = "Оберіть файл.";
+    const files = Array.from(input?.files ?? []);
+    if (files.length === 0) {
+      const m = "Оберіть один або кілька файлів.";
       setMsg(m);
       toast.error(m);
       return;
     }
     setBusy(true);
     try {
-      const fd = new FormData();
-      fd.set("file", file);
-      const res = await fetch(`/api/uploads/signed?entityType=${entityType}&entityId=${entityId}`, {
-        method: "POST",
-        body: fd,
-      });
-      const data = (await res.json().catch(() => null)) as { error?: string; hint?: string; maxMb?: number } | null;
-      if (!res.ok) {
-        const parts = [data?.error ?? "UPLOAD_FAILED"];
-        if (data?.hint) parts.push(data.hint);
-        if (typeof data?.maxMb === "number") parts.push(`Макс. ${data.maxMb} МБ.`);
-        throw new Error(parts.filter(Boolean).join(" "));
+      let ok = 0;
+      const failures: string[] = [];
+
+      for (const file of files) {
+        const fd = new FormData();
+        fd.set("file", file);
+        const res = await fetch(`/api/uploads/signed?entityType=${entityType}&entityId=${entityId}`, {
+          method: "POST",
+          body: fd,
+        });
+        const data = (await res.json().catch(() => null)) as { error?: string; hint?: string; maxMb?: number } | null;
+        if (!res.ok) {
+          const parts = [data?.error ?? "UPLOAD_FAILED"];
+          if (data?.hint) parts.push(data.hint);
+          if (typeof data?.maxMb === "number") parts.push(`Макс. ${data.maxMb} МБ.`);
+          failures.push(`${file.name}: ${parts.filter(Boolean).join(" ")}`);
+          continue;
+        }
+        ok += 1;
       }
-      setMsg("Завантажено.");
-      toast.success("Файл збережено в сховищі.");
+
       input.value = "";
       await loadScans();
+
+      if (failures.length === 0) {
+        setMsg(ok === 1 ? "Завантажено 1 файл." : `Завантажено файлів: ${ok}.`);
+        toast.success(ok === 1 ? "Файл збережено в сховищі." : `Завантажено файлів: ${ok}.`);
+      } else if (ok > 0) {
+        const summary = `Завантажено ${ok} з ${files.length}. Помилки:\n${failures.join("\n")}`;
+        setMsg(summary);
+        toast.error(`Завантажено лише ${ok} з ${files.length}. Перевірте повідомлення нижче.`);
+      } else {
+        const summary = failures.join("\n");
+        setMsg(summary);
+        toast.error(getServerActionErrorMessage(new Error(failures[0] ?? "UPLOAD_FAILED")));
+      }
     } catch (err: unknown) {
       const m = err instanceof Error ? err.message : "Помилка завантаження.";
       setMsg(m);
@@ -124,7 +143,7 @@ export function SignedUpload({
     <div className="rounded-xl border bg-white p-4">
       <div className="text-sm font-semibold text-foreground">Скан підписаного {docPhrase} — хмарне сховище</div>
       <p className="mt-1 text-xs text-muted-foreground">
-        PDF у хмару зберігається як є. Будь-яке растрове зображення (JPEG, PNG тощо) перед збереженням конвертується у WebP (якість 80) для меншого розміру. Можна додати кілька файлів (окремі сторінки скану). Максимальний розмір залежить від сервера (типово ~12 МБ;{" "}
+        PDF у хмару зберігається як є. Будь-яке растрове зображення (JPEG, PNG тощо) перед збереженням конвертується у WebP (якість 80) для меншого розміру. Можна обрати кілька файлів одразу (окремі сторінки скану) і завантажити їх однією кнопкою. Максимальний розмір кожного файлу залежить від сервера (типово ~12 МБ;{" "}
         <code className="rounded bg-muted px-1">MAX_SIGNED_UPLOAD_MB</code>).
       </p>
 
@@ -171,11 +190,18 @@ export function SignedUpload({
       </div>
 
       <div className="mt-3 flex flex-col gap-3 border-t border-border pt-3">
-        <input ref={fileRef} type="file" accept={ACCEPT_ATTR} className="text-sm" aria-label="Файл для завантаження" />
+        <input
+          ref={fileRef}
+          type="file"
+          accept={ACCEPT_ATTR}
+          multiple
+          className="text-sm"
+          aria-label="Файли для завантаження (можна обрати кілька)"
+        />
         <button type="button" disabled={busy} className="crm-btn-primary w-fit disabled:opacity-50" onClick={upload}>
-          {busy ? "Завантаження…" : "Додати файл у хмару"}
+          {busy ? "Завантаження…" : "Додати файли у хмару"}
         </button>
-        {msg ? <div className="text-sm text-zinc-700">{msg}</div> : null}
+        {msg ? <div className="whitespace-pre-wrap text-sm text-zinc-700">{msg}</div> : null}
       </div>
 
       <Dialog.Root open={pendingDelete !== null} onOpenChange={(open) => !open && setPendingDelete(null)}>
