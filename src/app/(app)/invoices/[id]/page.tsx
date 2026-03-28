@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { invoices, lineItems } from "@/db/schema";
 import { SignedUpload } from "@/components/uploads/SignedUpload";
 import { requireRole } from "@/lib/authz";
+import { getSignedScansForEntity } from "@/lib/signed-scans";
 
 export default async function InvoiceInfoPage({ params }: { params: Promise<{ id: string }> }) {
   await requireRole("MANAGER");
@@ -13,6 +14,7 @@ export default async function InvoiceInfoPage({ params }: { params: Promise<{ id
   const inv = await db.query.invoices.findFirst({ where: eq(invoices.id, id) });
   if (!inv) redirect("/invoices");
   const items = await db.query.lineItems.findMany({ where: eq(lineItems.invoiceId, id) });
+  const signedScansInitial = await getSignedScansForEntity("INVOICE", id);
 
   return (
     <div className="flex max-w-5xl flex-col gap-4">
@@ -26,7 +28,7 @@ export default async function InvoiceInfoPage({ params }: { params: Promise<{ id
         </a>
       </div>
 
-      <SignedUpload entityType="INVOICE" entityId={id} />
+      <SignedUpload entityType="INVOICE" entityId={id} initialScans={signedScansInitial} />
 
       <div className="overflow-hidden rounded-xl border bg-white">
         <table className="w-full text-sm">

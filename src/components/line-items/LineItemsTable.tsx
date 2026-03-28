@@ -27,6 +27,20 @@ type LineItemForm = {
   }>;
 };
 
+/**
+ * Desktop `<colgroup>` (table-fixed). Остання колонка ≥ місця під кнопку 40px + padding (узкий % давав overflow).
+ * 3+55+8+4+11+11+8 = 100%.
+ */
+const LINE_ITEMS_DESKTOP_COLS = [
+  "w-[3%]",
+  "w-[55%]",
+  "w-[8%]",
+  "w-[4%]",
+  "w-[11%]",
+  "w-[11%]",
+  "w-[8%]",
+] as const;
+
 export function LineItemsTable({ unitOptionsFromBackend = [] }: { unitOptionsFromBackend?: string[] }) {
   const { register, watch, setValue, control } = useFormContext<LineItemForm>();
   const { fields, append, remove } = useFieldArray({ name: "items" });
@@ -59,16 +73,16 @@ export function LineItemsTable({ unitOptionsFromBackend = [] }: { unitOptionsFro
         id: "index",
         header: "#",
         cell: ({ row }) => (
-          <td className="align-middle px-3 py-2 text-zinc-500">{row.original.idx + 1}</td>
+          <td className="min-w-0 overflow-hidden align-middle px-3 py-2 text-zinc-500">{row.original.idx + 1}</td>
         ),
       },
       {
         id: "title",
         header: "Назва",
         cell: ({ row }) => (
-          <td className="align-middle w-[38%] min-w-[320px] px-3 py-2">
+          <td className="min-w-0 overflow-hidden align-middle px-3 py-2">
             <textarea
-              className="min-h-10 w-full rounded-md border px-3 py-2"
+              className="min-h-10 w-full min-w-0 max-w-full rounded-md border px-3 py-2"
               rows={2}
               {...register(`items.${row.original.idx}.title`, { required: true })}
             />
@@ -78,39 +92,46 @@ export function LineItemsTable({ unitOptionsFromBackend = [] }: { unitOptionsFro
       {
         id: "unit",
         header: () => (
-          <div className="flex items-center gap-1.5">
-            <span>Од. вим.</span>
+          <div
+            className="flex min-w-0 flex-col gap-1"
+            title="Одиниці виміру"
+          >
+            <span className="whitespace-normal break-words text-left leading-tight">
+              Од. вим.
+            </span>
             <button
               type="button"
-              className="inline-flex shrink-0 items-center justify-center rounded-md border border-zinc-200 bg-white p-1 text-zinc-600 hover:bg-zinc-50"
+              className="inline-flex size-7 shrink-0 items-center justify-center self-start rounded-md border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50"
               onClick={() => setUnitManageOpen(true)}
               title="Керувати одиницями виміру"
               aria-label="Керувати одиницями виміру"
             >
-              <Settings2 className="size-4" aria-hidden />
+              <Settings2 className="size-3.5" aria-hidden />
             </button>
           </div>
         ),
         cell: ({ row }) => (
-          <td className="align-middle px-3 py-2 min-w-[280px]">
-            <Controller
-              name={`items.${row.original.idx}.unit`}
-              control={control}
-              rules={{ required: true }}
-              render={({ field }) => (
-                <SearchableDropdownOptionField
-                  label="Одиниця виміру"
-                  hideLabel
-                  scope="LINE_ITEM_UNIT"
-                  value={field.value ?? ""}
-                  onChange={field.onChange}
-                  optionsFromBackend={unitOptionsFromBackend}
-                  placeholder="Оберіть або введіть одиницю"
-                  inputClassName="bg-white"
-                  showManageButtons={false}
-                />
-              )}
-            />
+          <td className="min-w-0 overflow-hidden align-middle px-3 py-2">
+            <div className="min-w-0 max-w-full">
+              <Controller
+                name={`items.${row.original.idx}.unit`}
+                control={control}
+                rules={{ required: true }}
+                render={({ field }) => (
+                  <SearchableDropdownOptionField
+                    label="Одиниця виміру"
+                    hideLabel
+                    scope="LINE_ITEM_UNIT"
+                    value={field.value ?? ""}
+                    onChange={field.onChange}
+                    optionsFromBackend={unitOptionsFromBackend}
+                    placeholder="Оберіть або введіть одиницю"
+                    inputClassName="bg-white"
+                    showManageButtons={false}
+                  />
+                )}
+              />
+            </div>
           </td>
         ),
       },
@@ -118,11 +139,11 @@ export function LineItemsTable({ unitOptionsFromBackend = [] }: { unitOptionsFro
         id: "quantity",
         header: "К-сть",
         cell: ({ row }) => (
-          <td className="align-middle px-3 py-2">
+          <td className="min-w-0 overflow-hidden align-middle px-3 py-2">
             <input
               type="text"
               inputMode="decimal"
-              className="h-10 w-full rounded-md border px-3"
+              className="h-10 w-full min-w-0 max-w-full rounded-md border px-3"
               {...register(`items.${row.original.idx}.quantity`, { required: true })}
             />
           </td>
@@ -132,11 +153,11 @@ export function LineItemsTable({ unitOptionsFromBackend = [] }: { unitOptionsFro
         id: "price",
         header: "Ціна без ПДВ",
         cell: ({ row }) => (
-          <td className="align-middle px-3 py-2">
+          <td className="min-w-0 overflow-hidden align-middle px-3 py-2">
             <input
               type="text"
               inputMode="decimal"
-              className="h-10 w-full rounded-md border px-3"
+              className="h-10 w-full min-w-0 max-w-full rounded-md border px-3"
               {...register(`items.${row.original.idx}.price`, {
                 required: true,
                 onBlur: (e) => {
@@ -161,7 +182,7 @@ export function LineItemsTable({ unitOptionsFromBackend = [] }: { unitOptionsFro
           const p = Number(items[row.original.idx]?.price ?? 0);
           const rowTotal = q * p;
           return (
-            <td className="align-middle px-3 py-2 text-center tabular-nums">
+            <td className="min-w-0 overflow-hidden align-middle px-3 py-2 text-center tabular-nums break-words">
               {formatMoney(Number.isFinite(rowTotal) ? rowTotal : 0)}
             </td>
           );
@@ -171,10 +192,10 @@ export function LineItemsTable({ unitOptionsFromBackend = [] }: { unitOptionsFro
         id: "actions",
         header: "",
         cell: ({ row }) => (
-          <td className="align-middle px-3 py-2">
+          <td className="min-w-0 overflow-hidden align-middle px-3 py-2 text-center">
             <button
               type="button"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50"
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50"
               onClick={() => setPendingDeleteIdx(row.original.idx)}
               disabled={fields.length <= 1}
               aria-label={fields.length <= 1 ? "Не можна видалити останній рядок" : "Видалити рядок"}
@@ -196,11 +217,16 @@ export function LineItemsTable({ unitOptionsFromBackend = [] }: { unitOptionsFro
   });
 
   return (
-    <div className="rounded-xl border bg-white">
+    <div className="min-w-0 max-w-full rounded-xl border bg-white">
       {/* Desktop/table view */}
-      <div className="hidden overflow-x-auto md:block">
+      <div className="hidden min-w-0 max-w-full overflow-x-hidden md:block">
         {isDesktop ? (
-          <table className="w-full text-sm">
+          <table className="w-full max-w-full table-fixed border-collapse text-sm">
+            <colgroup>
+              {LINE_ITEMS_DESKTOP_COLS.map((cls, i) => (
+                <col key={i} className={cls} />
+              ))}
+            </colgroup>
             <thead className="bg-crm-table-header text-left text-sm font-semibold text-foreground/90">
               {table.getHeaderGroups().map((hg) => (
                 <tr key={hg.id}>
@@ -208,11 +234,9 @@ export function LineItemsTable({ unitOptionsFromBackend = [] }: { unitOptionsFro
                     <th
                       key={header.id}
                       className={
-                        header.id === "title"
-                          ? "w-[38%] min-w-[320px] px-3 py-2"
-                          : header.id === "unit"
-                            ? "min-w-[280px] px-3 py-2"
-                            : "px-3 py-2"
+                        header.id === "unit"
+                          ? "min-w-0 overflow-visible whitespace-normal px-3 py-2 align-top"
+                          : "min-w-0 overflow-hidden whitespace-normal px-3 py-2 align-middle"
                       }
                     >
                       {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
@@ -344,28 +368,28 @@ export function LineItemsTable({ unitOptionsFromBackend = [] }: { unitOptionsFro
           : null}
       </div>
 
-      <div className="flex items-center justify-between gap-3 border-t p-3">
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-3 border-t p-3">
         <button
           type="button"
-          className="inline-flex h-10 items-center rounded-md border px-4 text-sm hover:bg-zinc-50"
+          className="inline-flex h-10 shrink-0 items-center rounded-md border px-4 text-sm hover:bg-zinc-50"
           onClick={() => append({ title: "", unit: "", quantity: 0, price: 0 })}
         >
           + Додати рядок
         </button>
-        <div className="text-sm tabular-nums text-zinc-700">
-          <div className="flex justify-end gap-4">
+        <div className="min-w-0 text-sm tabular-nums text-zinc-700">
+          <div className="flex flex-wrap justify-end gap-x-4 gap-y-1">
             <span>Разом (без ПДВ):</span>
             <span>
               {formatMoney(totals.totalWithoutVat)}
             </span>
           </div>
-          <div className="flex justify-end gap-4">
+          <div className="flex flex-wrap justify-end gap-x-4 gap-y-1">
             <span>ПДВ 20%:</span>
             <span>
               {formatMoney(totals.vat20)}
             </span>
           </div>
-          <div className="flex justify-end gap-4 font-semibold">
+          <div className="flex flex-wrap justify-end gap-x-4 gap-y-1 font-semibold">
             <span>Разом з ПДВ:</span>
             <span>
               {formatMoney(totals.totalWithVat)}

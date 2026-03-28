@@ -4,8 +4,11 @@ import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { companies, contracts, lineItems } from "@/db/schema";
 import { requireRole } from "@/lib/authz";
+import { getContractLinesWithRemainingForInvoicing } from "@/lib/contract-invoice-remaining";
 import { DROPDOWN_SCOPE, getDropdownOptions } from "@/lib/dropdown-options";
 import { internalApiFetch } from "@/lib/internal-api-fetch";
+import { getSignedScansForEntity } from "@/lib/signed-scans";
+import { ContractAuditHistory } from "@/components/audit/ContractAuditHistory";
 import { ContractEditForm } from "./ui";
 
 export default async function EditContractPage({ params }: { params: Promise<{ id: string }> }) {
@@ -15,6 +18,8 @@ export default async function EditContractPage({ params }: { params: Promise<{ i
   const contract = await db.query.contracts.findFirst({ where: eq(contracts.id, id) });
   if (!contract) redirect("/contracts");
   const items = await db.query.lineItems.findMany({ where: eq(lineItems.contractId, id) });
+  const linesForInvoicing = await getContractLinesWithRemainingForInvoicing(id);
+  const signedScansInitial = await getSignedScansForEntity("CONTRACT", id);
   const companyRows = await db.select().from(companies).orderBy(desc(companies.createdAt));
   const [
     signingLocationOptions,
@@ -47,11 +52,11 @@ export default async function EditContractPage({ params }: { params: Promise<{ i
     });
     const data = (await res.json().catch(() => null)) as any;
     if (!res.ok) throw new Error(data?.error ?? "UPDATE_FAILED");
-    redirect(`/contracts/${id}`);
+    redirect("/contracts");
   }
 
   return (
-    <div className="w-full">
+    <div className="w-full min-w-0">
       <div className="mb-4">
         <h1 className="page-title">Редагувати договір {contract.number}</h1>
       </div>
@@ -86,6 +91,8 @@ export default async function EditContractPage({ params }: { params: Promise<{ i
           signerPositionNom: contract.signerPositionNom,
           signerPositionGen: contract.signerPositionGen,
           signerActingUnder: contract.signerActingUnder,
+          isSigned: Boolean(contract.isSigned),
+          isArchived: Boolean(contract.isArchived),
           items: items.map((it) => ({
             title: it.title,
             unit: it.unit,
@@ -94,9 +101,16 @@ export default async function EditContractPage({ params }: { params: Promise<{ i
           })),
         }}
         onSubmit={update}
-        cancelHref={`/contracts/${id}`}
+        cancelHref="/contracts"
         contractNumber={contract.number}
+        contractId={id}
+        linesForInvoicing={linesForInvoicing}
+        signedScansInitial={signedScansInitial}
       />
+
+      <div className="mt-8">
+        <ContractAuditHistory contractId={id} />
+      </div>
     </div>
   );
 }

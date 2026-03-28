@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { db } from "@/db";
@@ -31,6 +31,8 @@ const patchSchema = z
     signerPositionNom: z.string().min(1).optional(),
     signerPositionGen: z.string().min(1).optional(),
     signerActingUnder: z.string().min(1).optional(),
+    isSigned: z.boolean().optional(),
+    isArchived: z.boolean().optional(),
     items: z.array(itemSchema).min(1).optional(),
   })
   .refine((v) => {
@@ -38,6 +40,15 @@ const patchSchema = z
     return v.customerCompanyId !== v.contractorCompanyId;
   }, { message: "CUSTOMER_AND_CONTRACTOR_SAME" })
   .refine((v) => Object.keys(v).length > 0, { message: "No fields to update" });
+
+/** List quick-actions: only paper/cupboard flags; allowed for MANAGER+. */
+const flagsOnlySchema = z
+  .object({
+    isSigned: z.boolean().optional(),
+    isArchived: z.boolean().optional(),
+  })
+  .strict()
+  .refine((v) => v.isSigned !== undefined || v.isArchived !== undefined, { message: "No fields to update" });
 
 export async function GET(_req: Request, ctx: RouteContext<"/api/contracts/[id]">) {
   await requireRole("MANAGER");
@@ -49,19 +60,43 @@ export async function GET(_req: Request, ctx: RouteContext<"/api/contracts/[id]"
 }
 
 export async function PATCH(req: Request, ctx: RouteContext<"/api/contracts/[id]">) {
-  const { userId } = await requireRole("ADMIN");
   const { id } = await ctx.params;
+  const json = await req.json().catch(() => null);
 
+  const flagsParsed = flagsOnlySchema.safeParse(json);
+  if (flagsParsed.success) {
+    const { userId } = await requireRole("MANAGER");
+    const before = await db.query.contracts.findFirst({ where: eq(contracts.id, id) });
+    if (!before) return Response.json({ error: "NOT_FOUND" }, { status: 404 });
+
+    const updates: Record<string, unknown> = { updatedAt: new Date() };
+    if (flagsParsed.data.isSigned !== undefined) updates.isSigned = flagsParsed.data.isSigned;
+    if (flagsParsed.data.isArchived !== undefined) updates.isArchived = flagsParsed.data.isArchived;
+
+    const [after] = await db.update(contracts).set(updates as Record<string, unknown>).where(eq(contracts.id, id)).returning();
+
+    await writeAuditEvent({
+      entityType: "CONTRACT",
+      entityId: id,
+      action: "UPDATE",
+      actorUserId: userId,
+      diff: { before, after },
+    });
+
+    return Response.json({ data: after });
+  }
+
+  const { userId } = await requireRole("ADMIN");
   const before = await db.query.contracts.findFirst({ where: eq(contracts.id, id) });
   if (!before) return Response.json({ error: "NOT_FOUND" }, { status: 404 });
 
-  const json = await req.json().catch(() => null);
   const parsed = patchSchema.safeParse(json);
   if (!parsed.success) {
     return Response.json({ error: "VALIDATION_ERROR", details: parsed.error.flatten() }, { status: 400 });
   }
 
-  const updates: any = { ...parsed.data, updatedAt: new Date() };
+  const { items: itemsPayload, ...contractPatch } = parsed.data;
+  const updates: Record<string, unknown> = { ...contractPatch, updatedAt: new Date() };
   if (parsed.data.date) {
     const d = new Date(parsed.data.date);
     if (Number.isNaN(d.getTime())) return Response.json({ error: "INVALID_DATE" }, { status: 400 });
@@ -69,8 +104,8 @@ export async function PATCH(req: Request, ctx: RouteContext<"/api/contracts/[id]
   }
 
   let itemsAfter: any[] | undefined;
-  if (parsed.data.items) {
-    const totals = calcTotals(parsed.data.items);
+  if (itemsPayload) {
+    const totals = calcTotals(itemsPayload);
     updates.totalWithoutVat = String(totals.totalWithoutVat);
     updates.vat20 = String(totals.vat20);
     updates.totalWithVat = String(totals.totalWithVat);
@@ -79,7 +114,7 @@ export async function PATCH(req: Request, ctx: RouteContext<"/api/contracts/[id]
       await tx.delete(lineItems).where(eq(lineItems.contractId, id));
       const now = new Date();
       await tx.insert(lineItems).values(
-        parsed.data.items!.map((it) => ({
+        itemsPayload.map((it) => ({
           contractId: id,
           title: it.title,
           unit: it.unit,
@@ -90,10 +125,10 @@ export async function PATCH(req: Request, ctx: RouteContext<"/api/contracts/[id]
         })),
       );
     });
-    itemsAfter = parsed.data.items;
+    itemsAfter = itemsPayload;
   }
 
-  const [after] = await db.update(contracts).set(updates).where(eq(contracts.id, id)).returning();
+  const [after] = await db.update(contracts).set(updates as Record<string, unknown>).where(eq(contracts.id, id)).returning();
 
   if (parsed.data.signingLocation) {
     // Keep dropdown options in sync with what admins used on the contract.

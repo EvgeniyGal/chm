@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { companies } from "@/db/schema";
 import { requireRole } from "@/lib/authz";
 import { DROPDOWN_SCOPE, getDropdownOptions } from "@/lib/dropdown-options";
+import { peekNextDocumentNumber } from "@/db/numbering";
 import { internalApiFetch } from "@/lib/internal-api-fetch";
 import { ContractForm } from "./ui";
 
@@ -31,6 +32,12 @@ export default async function NewContractPage() {
     getDropdownOptions(DROPDOWN_SCOPE.LINE_ITEM_UNIT),
   ]);
 
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const initialContractNumber = await peekNextDocumentNumber({
+    documentType: "CONTRACT",
+    at: new Date(`${todayIso}T00:00:00.000Z`),
+  });
+
   async function create(payload: any) {
     "use server";
     await requireRole("ADMIN");
@@ -46,10 +53,9 @@ export default async function NewContractPage() {
   }
 
   return (
-    <div className="w-full">
+    <div className="w-full min-w-0">
       <div className="mb-4">
         <h1 className="page-title">Новий договір</h1>
-        <p className="text-sm text-zinc-600">Заповніть поля договору.</p>
       </div>
       <ContractForm
         companies={companyRows.map((c) => ({
@@ -69,6 +75,7 @@ export default async function NewContractPage() {
         projectTimelineOptions={projectTimelineOptions}
         contractDurationOptions={contractDurationOptions}
         lineItemUnitOptions={lineItemUnitOptions}
+        initialContractNumber={initialContractNumber}
         onSubmit={create}
       />
     </div>

@@ -51,7 +51,7 @@ function toDecimal(value: number | string): number {
 async function downloadTreatyDocx(
   variant: "full" | "short",
   values: ContractFormValues,
-  contractNumber?: string,
+  contractNumberPreview: string,
 ) {
   const items = values.items.map((item) => ({
     title: item.title,
@@ -64,7 +64,7 @@ async function downloadTreatyDocx(
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
       variant,
-      contractNumber,
+      contractNumber: contractNumberPreview.trim() || undefined,
       date: values.date,
       signingLocation: values.signingLocation,
       workType: values.workType,
@@ -105,6 +105,7 @@ export function ContractForm({
   projectTimelineOptions,
   contractDurationOptions,
   lineItemUnitOptions,
+  initialContractNumber,
   onSubmit,
 }: {
   companies: CompanyOpt[];
@@ -116,6 +117,7 @@ export function ContractForm({
   projectTimelineOptions: string[];
   contractDurationOptions: string[];
   lineItemUnitOptions: string[];
+  initialContractNumber: string;
   onSubmit: (payload: ContractFormValues) => Promise<void>;
 }) {
   const form = useForm<ContractFormValues>({
@@ -153,6 +155,28 @@ export function ContractForm({
   const [customerSignerActingUnder, setCustomerSignerActingUnder] = useState("");
   const [treatyLoading, setTreatyLoading] = useState<null | "full" | "short">(null);
   const [treatyError, setTreatyError] = useState<string | null>(null);
+  const [previewContractNumber, setPreviewContractNumber] = useState(initialContractNumber);
+
+  const contractDate = form.watch("date");
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch(`/api/contracts/preview-number?date=${encodeURIComponent(contractDate)}`);
+        if (!res.ok || cancelled) return;
+        const json = (await res.json()) as { data?: { number: string } };
+        if (!cancelled && json.data?.number) {
+          setPreviewContractNumber(json.data.number);
+        }
+      } catch {
+        /* ignore preview failures */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [contractDate]);
 
   useEffect(() => {
     if (!selectedContractorCompany) {
@@ -228,7 +252,12 @@ export function ContractForm({
           }
         })}
       >
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+          <ReadOnlyField
+            label="Номер договору"
+            hint="Присвоюється автоматично при збереженні (залежить від дати)."
+            value={previewContractNumber}
+          />
           <Field label="Дата" type="date" {...form.register("date", { required: true })} />
           <label className="flex flex-col gap-1 text-sm">
             <span className="text-zinc-700">Тип</span>
@@ -498,14 +527,18 @@ export function ContractForm({
               setTreatyLoading("full");
               try {
                 const v = form.getValues();
-                await downloadTreatyDocx("full", {
-                  ...v,
-                  items: v.items.map((item) => ({
-                    ...item,
-                    quantity: toDecimal(item.quantity),
-                    price: toDecimal(item.price),
-                  })),
-                });
+                await downloadTreatyDocx(
+                  "full",
+                  {
+                    ...v,
+                    items: v.items.map((item) => ({
+                      ...item,
+                      quantity: toDecimal(item.quantity),
+                      price: toDecimal(item.price),
+                    })),
+                  },
+                  previewContractNumber,
+                );
                 toast.success("Документ завантажено.");
               } catch (e) {
                 const msg = e instanceof Error ? e.message : "Не вдалося сформувати файл.";
@@ -534,14 +567,18 @@ export function ContractForm({
               setTreatyLoading("short");
               try {
                 const v = form.getValues();
-                await downloadTreatyDocx("short", {
-                  ...v,
-                  items: v.items.map((item) => ({
-                    ...item,
-                    quantity: toDecimal(item.quantity),
-                    price: toDecimal(item.price),
-                  })),
-                });
+                await downloadTreatyDocx(
+                  "short",
+                  {
+                    ...v,
+                    items: v.items.map((item) => ({
+                      ...item,
+                      quantity: toDecimal(item.quantity),
+                      price: toDecimal(item.price),
+                    })),
+                  },
+                  previewContractNumber,
+                );
                 toast.success("Документ завантажено.");
               } catch (e) {
                 const msg = e instanceof Error ? e.message : "Не вдалося сформувати файл.";
@@ -599,12 +636,19 @@ function Field({
   );
 }
 
-function ReadOnlyField({ label, value }: { label: string; value: string }) {
+function ReadOnlyField({ label, hint, value }: { label: string; hint?: string; value: string }) {
   return (
-    <label className="flex flex-col gap-1 text-sm min-w-0">
-      <span className="text-zinc-700">{label}</span>
-      <input value={value} readOnly className="h-10 w-full min-w-0 rounded-md border px-3 bg-zinc-50" />
-    </label>
+    <div className="flex min-w-0 flex-col gap-1 text-sm">
+      <span className="text-muted-foreground">{label}</span>
+      <input
+        value={value}
+        readOnly
+        tabIndex={-1}
+        aria-readonly="true"
+        className="h-10 w-full min-w-0 cursor-default rounded-md border border-border bg-muted px-3 text-foreground"
+      />
+      {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
+    </div>
   );
 }
 

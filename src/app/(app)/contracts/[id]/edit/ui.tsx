@@ -14,6 +14,10 @@ import { CompanySearchSelect } from "@/components/forms/CompanySearchSelect";
 import { UnsavedChangesNavigationDialog } from "@/components/forms/UnsavedChangesNavigationDialog";
 import { SearchableDropdownOptionField } from "@/components/forms/SearchableDropdownOptionField";
 import { QuickCreateCompanyModal } from "@/components/forms/QuickCreateCompanyModal";
+import { CreateInvoiceFromContractDialog } from "@/components/contracts/CreateInvoiceFromContractDialog";
+import { SignedUpload } from "@/components/uploads/SignedUpload";
+import type { ContractLineInvoiceRemaining } from "@/lib/contract-invoice-remaining";
+import type { SignedScanListItem } from "@/lib/signed-scans";
 
 type CompanyOpt = {
   id: string;
@@ -38,6 +42,8 @@ type ContractFormValues = {
   signerPositionNom: string;
   signerPositionGen: string;
   signerActingUnder: string;
+  isSigned: boolean;
+  isArchived: boolean;
   items: Array<{ title: string; unit: string; quantity: number | string; price: number | string }>;
 };
 
@@ -108,6 +114,9 @@ export function ContractEditForm({
   onSubmit,
   cancelHref,
   contractNumber,
+  contractId,
+  linesForInvoicing,
+  signedScansInitial,
 }: {
   companies: CompanyOpt[];
   signingLocationOptions: string[];
@@ -122,6 +131,9 @@ export function ContractEditForm({
   onSubmit: (payload: ContractFormValues) => Promise<void>;
   cancelHref: string;
   contractNumber: string;
+  contractId: string;
+  linesForInvoicing: ContractLineInvoiceRemaining[];
+  signedScansInitial: SignedScanListItem[];
 }) {
   const form = useForm<ContractFormValues>({
     defaultValues: initial,
@@ -144,6 +156,7 @@ export function ContractEditForm({
   const [customerSignerActingUnder, setCustomerSignerActingUnder] = useState("");
   const [treatyLoading, setTreatyLoading] = useState<null | "full" | "short">(null);
   const [treatyError, setTreatyError] = useState<string | null>(null);
+  const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!selectedContractorCompany) {
@@ -199,7 +212,7 @@ export function ContractEditForm({
   return (
     <FormProvider {...form}>
       <form
-        className="flex flex-col gap-4 rounded-xl border bg-white p-4"
+        className="flex min-w-0 flex-col gap-4 rounded-xl border bg-white p-4"
         onSubmit={form.handleSubmit(async (values) => {
           try {
             await onSubmit({
@@ -453,6 +466,22 @@ export function ContractEditForm({
           </div>
         </div>
 
+        <div className="rounded-lg border border-border bg-muted/40 p-4">
+          <div className="mb-3 text-sm font-semibold text-foreground">Оригінал і архів</div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+            <label className="flex cursor-pointer items-start gap-2 text-sm">
+              <input type="checkbox" className="mt-0.5 size-4 shrink-0 rounded border-zinc-300" {...form.register("isSigned")} />
+              <span className="text-foreground/90">Підписаний</span>
+            </label>
+            <label className="flex cursor-pointer items-start gap-2 text-sm">
+              <input type="checkbox" className="mt-0.5 size-4 shrink-0 rounded border-zinc-300" {...form.register("isArchived")} />
+              <span className="text-foreground/90">В архіві</span>
+            </label>
+          </div>
+        </div>
+
+        <SignedUpload entityType="CONTRACT" entityId={contractId} initialScans={signedScansInitial} />
+
         <div className="flex flex-col gap-2">
           <div className="text-sm font-semibold text-foreground">{workType === "WORKS" ? "Перелік робіт" : "Перелік послуг"}</div>
           <LineItemsTable unitOptionsFromBackend={lineItemUnitOptions} />
@@ -474,6 +503,13 @@ export function ContractEditForm({
           <a className="inline-flex h-10 items-center rounded-md border px-4 text-sm" href={cancelHref}>
             Скасувати
           </a>
+          <button
+            type="button"
+            className="inline-flex h-10 items-center rounded-md border border-zinc-300 bg-white px-4 text-sm text-zinc-800 hover:bg-zinc-50"
+            onClick={() => setInvoiceDialogOpen(true)}
+          >
+            Створити рахунок
+          </button>
           <button
             type="button"
             disabled={!!treatyLoading}
@@ -551,6 +587,12 @@ export function ContractEditForm({
       <UnsavedChangesNavigationDialog
         isDirty={form.formState.isDirty}
         suppressBeforeUnloadOnce={suppressBeforeUnloadOnce}
+      />
+      <CreateInvoiceFromContractDialog
+        open={invoiceDialogOpen}
+        onOpenChange={setInvoiceDialogOpen}
+        contractId={contractId}
+        lines={linesForInvoicing}
       />
       <QuickCreateCompanyModal
         open={companyModalFor !== null}

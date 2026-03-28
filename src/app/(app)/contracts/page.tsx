@@ -107,6 +107,8 @@ export default async function ContractsPage({
           date: c.date instanceof Date ? c.date.toISOString() : String(c.date),
           signingLocation: c.signingLocation,
           workType: c.workType,
+          isSigned: Boolean(c.isSigned),
+          isArchived: Boolean(c.isArchived),
           lineItemsPreview: formatLineItemsPreview(lineItemTitlesByContract.get(c.id) ?? []),
           totalWithoutVat: String(c.totalWithoutVat),
           vat20: String(c.vat20),

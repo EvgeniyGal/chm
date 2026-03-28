@@ -43,7 +43,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <aside className="hidden w-52 border-r border-sidebar-border bg-sidebar p-3 text-sidebar-foreground md:block">
         <SidebarContent email={session.user.email} role={role} />
       </aside>
-      <main className="flex-1 p-4 pt-16 md:p-6 md:pt-6">
+      <main className="min-w-0 flex-1 p-4 pt-16 md:p-6 md:pt-6">
         <div className="md:hidden">
           <div className="mb-2 text-xs text-muted-foreground">{session.user.email}</div>
         </div>

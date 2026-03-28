@@ -1,70 +1,213 @@
 "use client";
 
-import { useState } from "react";
+import * as Dialog from "@radix-ui/react-dialog";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { FiTrash2 } from "react-icons/fi";
 import { toast } from "sonner";
 
 import { getServerActionErrorMessage } from "@/lib/server-action-error-message";
+import type { SignedScanListItem } from "@/lib/signed-scans";
+
+export type { SignedScanListItem } from "@/lib/signed-scans";
+
+const ACCEPT_ATTR =
+  "application/pdf,.pdf,image/jpeg,image/png,image/gif,image/webp,image/bmp,image/tiff,image/x-ms-bmp,.tif,.tiff,.heic,.heif";
+
+const entityLabels: Record<"CONTRACT" | "INVOICE" | "ACCEPTANCE_ACT", string> = {
+  CONTRACT: "документа (договір)",
+  INVOICE: "документа (рахунок)",
+  ACCEPTANCE_ACT: "документа (акт)",
+};
 
 export function SignedUpload({
   entityType,
   entityId,
+  initialScans,
 }: {
   entityType: "CONTRACT" | "INVOICE" | "ACCEPTANCE_ACT";
   entityId: string;
+  /** Optional SSR list to avoid empty flash on first paint. */
+  initialScans?: SignedScanListItem[];
 }) {
   const [busy, setBusy] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; label: string } | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const [scans, setScans] = useState<SignedScanListItem[]>(() => initialScans ?? []);
+  const [listLoading, setListLoading] = useState(() => initialScans === undefined);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const docPhrase = entityLabels[entityType];
+
+  const loadScans = useCallback(async () => {
+    setListLoading(true);
+    try {
+      const res = await fetch(`/api/uploads/signed?entityType=${entityType}&entityId=${entityId}`, {
+        cache: "no-store",
+      });
+      const data = (await res.json().catch(() => null)) as { data?: SignedScanListItem[]; error?: string } | null;
+      if (!res.ok) throw new Error(data?.error ?? "LIST_FAILED");
+      setScans(data?.data ?? []);
+    } catch {
+      setScans([]);
+    } finally {
+      setListLoading(false);
+    }
+  }, [entityId, entityType]);
+
+  useEffect(() => {
+    if (initialScans !== undefined) {
+      setScans(initialScans);
+      setListLoading(false);
+      return;
+    }
+    void loadScans();
+  }, [entityId, entityType, initialScans, loadScans]);
+
+  const upload = useCallback(async () => {
+    setMsg(null);
+    const input = fileRef.current;
+    const file = input?.files?.[0];
+    if (!file) {
+      const m = "Оберіть файл.";
+      setMsg(m);
+      toast.error(m);
+      return;
+    }
+    setBusy(true);
+    try {
+      const fd = new FormData();
+      fd.set("file", file);
+      const res = await fetch(`/api/uploads/signed?entityType=${entityType}&entityId=${entityId}`, {
+        method: "POST",
+        body: fd,
+      });
+      const data = (await res.json().catch(() => null)) as { error?: string; hint?: string; maxMb?: number } | null;
+      if (!res.ok) {
+        const parts = [data?.error ?? "UPLOAD_FAILED"];
+        if (data?.hint) parts.push(data.hint);
+        if (typeof data?.maxMb === "number") parts.push(`Макс. ${data.maxMb} МБ.`);
+        throw new Error(parts.filter(Boolean).join(" "));
+      }
+      setMsg("Завантажено.");
+      toast.success("Файл збережено в сховищі.");
+      input.value = "";
+      await loadScans();
+    } catch (err: unknown) {
+      const m = err instanceof Error ? err.message : "Помилка завантаження.";
+      setMsg(m);
+      toast.error(getServerActionErrorMessage(err instanceof Error ? err : new Error(m)));
+    } finally {
+      setBusy(false);
+    }
+  }, [entityId, entityType, loadScans]);
+
+  const confirmDelete = useCallback(async () => {
+    if (!pendingDelete) return;
+    const scanId = pendingDelete.id;
+    setDeletingId(scanId);
+    try {
+      const res = await fetch(`/api/uploads/signed/${scanId}`, { method: "DELETE" });
+      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+      if (!res.ok) throw new Error(data?.error ?? "DELETE_FAILED");
+      toast.success("Файл видалено.");
+      setPendingDelete(null);
+      await loadScans();
+    } catch (err: unknown) {
+      const m = err instanceof Error ? err.message : "Не вдалося видалити.";
+      toast.error(getServerActionErrorMessage(err instanceof Error ? err : new Error(m)));
+    } finally {
+      setDeletingId(null);
+    }
+  }, [loadScans, pendingDelete]);
 
   return (
     <div className="rounded-xl border bg-white p-4">
-      <div className="text-sm font-semibold text-foreground">Підписаний документ (скан)</div>
-      <p className="mt-1 text-xs text-zinc-500">Тільки JPG. Файл буде конвертовано у WebP.</p>
-      <form
-        className="mt-3 flex flex-col gap-3"
-        onSubmit={async (e) => {
-          e.preventDefault();
-          setMsg(null);
-          const form = e.currentTarget;
-          const input = form.elements.namedItem("file") as HTMLInputElement | null;
-          const file = input?.files?.[0];
-          if (!file) {
-            const m = "Оберіть файл.";
-            setMsg(m);
-            toast.error(m);
-            return;
-          }
-          setBusy(true);
-          try {
-            const fd = new FormData();
-            fd.set("file", file);
-            const res = await fetch(`/api/uploads/signed?entityType=${entityType}&entityId=${entityId}`, {
-              method: "POST",
-              body: fd,
-            });
-            const data = (await res.json().catch(() => null)) as any;
-            if (!res.ok) throw new Error(data?.error ?? "UPLOAD_FAILED");
-            setMsg("Завантажено.");
-            toast.success("Файл завантажено.");
-          } catch (err: any) {
-            const m = err?.message ?? "Помилка завантаження.";
-            setMsg(m);
-            toast.error(getServerActionErrorMessage(err instanceof Error ? err : new Error(m)));
-          } finally {
-            setBusy(false);
-          }
-        }}
-      >
-        <input name="file" type="file" accept="image/jpeg" className="text-sm" />
-        <button
-          type="submit"
-          disabled={busy}
-          className="crm-btn-primary disabled:opacity-50"
-        >
-          {busy ? "Завантаження…" : "Завантажити"}
+      <div className="text-sm font-semibold text-foreground">Скан підписаного {docPhrase} — хмарне сховище</div>
+      <p className="mt-1 text-xs text-muted-foreground">
+        PDF у хмару зберігається як є. Будь-яке растрове зображення (JPEG, PNG тощо) перед збереженням конвертується у WebP (якість 80) для меншого розміру. Можна додати кілька файлів (окремі сторінки скану). Максимальний розмір залежить від сервера (типово ~12 МБ;{" "}
+        <code className="rounded bg-muted px-1">MAX_SIGNED_UPLOAD_MB</code>).
+      </p>
+
+      <div className="mt-3 border-t border-border pt-3">
+        <div className="text-xs font-medium text-foreground/90">Завантажені файли</div>
+        {listLoading ? (
+          <p className="mt-1 text-xs text-muted-foreground">Завантаження списку…</p>
+        ) : scans.length === 0 ? (
+          <p className="mt-1 text-xs text-muted-foreground">Поки що немає завантажених сканів.</p>
+        ) : (
+          <ul className="mt-2 flex flex-col gap-1.5">
+            {scans.map((s, idx) => {
+              const label =
+                s.originalFilename?.trim() ||
+                (s.contentType === "application/pdf" ? `Скан ${idx + 1} (PDF)` : `Скан ${idx + 1} (WebP)`);
+              return (
+                <li key={s.id} className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <a
+                    href={`/api/uploads/signed/${s.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-primary underline-offset-2 hover:underline"
+                  >
+                    {label}
+                  </a>
+                  <span className="text-xs tabular-nums text-muted-foreground">
+                    {new Date(s.createdAt).toLocaleString("uk-UA")}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={deletingId === s.id}
+                    className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50"
+                    aria-label={`Видалити файл: ${label}`}
+                    title="Видалити файл"
+                    onClick={() => setPendingDelete({ id: s.id, label })}
+                  >
+                    <FiTrash2 className="size-4" aria-hidden="true" />
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+
+      <div className="mt-3 flex flex-col gap-3 border-t border-border pt-3">
+        <input ref={fileRef} type="file" accept={ACCEPT_ATTR} className="text-sm" aria-label="Файл для завантаження" />
+        <button type="button" disabled={busy} className="crm-btn-primary w-fit disabled:opacity-50" onClick={upload}>
+          {busy ? "Завантаження…" : "Додати файл у хмару"}
         </button>
         {msg ? <div className="text-sm text-zinc-700">{msg}</div> : null}
-      </form>
+      </div>
+
+      <Dialog.Root open={pendingDelete !== null} onOpenChange={(open) => !open && setPendingDelete(null)}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 bg-black/40" />
+          <Dialog.Content className="fixed left-1/2 top-1/2 w-[min(420px,calc(100vw-24px))] -translate-x-1/2 -translate-y-1/2 rounded-xl bg-white p-4 shadow-lg">
+            <Dialog.Title className="text-sm font-semibold text-foreground">Підтвердження видалення</Dialog.Title>
+            <Dialog.Description className="mt-2 text-sm text-zinc-700">
+              {pendingDelete ? (
+                <>
+                  Видалити файл «{pendingDelete.label}» зі сховища? Цю дію не можна скасувати.
+                </>
+              ) : null}
+            </Dialog.Description>
+            <div className="mt-4 flex justify-end gap-2">
+              <Dialog.Close asChild>
+                <button type="button" className="h-9 rounded-md border px-3 text-sm hover:bg-zinc-50" disabled={!!deletingId}>
+                  Скасувати
+                </button>
+              </Dialog.Close>
+              <button
+                type="button"
+                disabled={!!deletingId}
+                className="h-9 rounded-md bg-red-600 px-3 text-sm text-white hover:bg-red-700 disabled:opacity-50"
+                onClick={() => void confirmDelete()}
+              >
+                {deletingId ? "Видалення…" : "Видалити"}
+              </button>
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
     </div>
   );
 }
-

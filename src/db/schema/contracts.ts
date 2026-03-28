@@ -1,4 +1,4 @@
-import { numeric, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, numeric, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { workTypes } from "./_enums";
 import { companies } from "./companies";
 
@@ -30,6 +30,11 @@ export const contracts = pgTable("contracts", {
   totalWithoutVat: numeric("total_without_vat", { precision: 14, scale: 2 }).notNull().default("0"),
   vat20: numeric("vat_20", { precision: 14, scale: 2 }).notNull().default("0"),
   totalWithVat: numeric("total_with_vat", { precision: 14, scale: 2 }).notNull().default("0"),
+
+  /** Original contract signed (paper counterpart received). */
+  isSigned: boolean("is_signed").notNull().default(false),
+  /** Filed in physical archive / paper cupboard. */
+  isArchived: boolean("is_archived").notNull().default(false),
 
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true })

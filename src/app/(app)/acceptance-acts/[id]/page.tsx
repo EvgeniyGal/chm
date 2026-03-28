@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { acceptanceActs, lineItems } from "@/db/schema";
 import { SignedUpload } from "@/components/uploads/SignedUpload";
 import { requireRole } from "@/lib/authz";
+import { getSignedScansForEntity } from "@/lib/signed-scans";
 
 export default async function AcceptanceActInfoPage({ params }: { params: Promise<{ id: string }> }) {
   await requireRole("MANAGER");
@@ -13,6 +14,7 @@ export default async function AcceptanceActInfoPage({ params }: { params: Promis
   const act = await db.query.acceptanceActs.findFirst({ where: eq(acceptanceActs.id, id) });
   if (!act) redirect("/acceptance-acts");
   const items = await db.query.lineItems.findMany({ where: eq(lineItems.acceptanceActId, id) });
+  const signedScansInitial = await getSignedScansForEntity("ACCEPTANCE_ACT", id);
 
   return (
     <div className="flex max-w-5xl flex-col gap-4">
@@ -29,7 +31,7 @@ export default async function AcceptanceActInfoPage({ params }: { params: Promis
         </a>
       </div>
 
-      <SignedUpload entityType="ACCEPTANCE_ACT" entityId={id} />
+      <SignedUpload entityType="ACCEPTANCE_ACT" entityId={id} initialScans={signedScansInitial} />
 
       <div className="overflow-hidden rounded-xl border bg-white">
         <table className="w-full text-sm">

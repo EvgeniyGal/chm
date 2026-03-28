@@ -1,19 +1,32 @@
 "use client";
 
+import { useEffect, useMemo, useRef } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 import { useUnsavedChangesGuard } from "@/components/forms/useUnsavedChangesGuard";
 import { getServerActionErrorMessage } from "@/lib/server-action-error-message";
 import { isNextNavigationError } from "@/lib/is-next-navigation-error";
+import { invoicePartialSelectionStorageKey } from "@/lib/invoice-from-contract-session";
 import { LineItemsTable } from "@/components/line-items/LineItemsTable";
 
 type CompanyOpt = { id: string; label: string };
+
+type ContractSeedItem = {
+  id: string;
+  title: string;
+  unit: string;
+  /** Default quantity for the invoice row (= remaining on the contract line). */
+  quantity: number;
+  price: number;
+  remaining: number;
+};
+
 type ContractSeed = {
   id: string;
   customerCompanyId: string;
   contractorCompanyId: string;
-  items: Array<{ id: string; title: string; unit: string; quantity: number; price: number }>;
+  items: ContractSeedItem[];
 };
 
 type InvoiceFormValues = {
@@ -32,16 +45,31 @@ type InvoiceFormValues = {
 export function InvoiceForm({
   companies,
   contract,
+  defaultInvoiceSigner = { signerFullNameNom: "", signerPositionNom: "" },
   lineItemUnitOptions,
+  partialSelection = false,
   onSubmit,
 }: {
   companies: CompanyOpt[];
   contract: ContractSeed | null;
+  defaultInvoiceSigner?: { signerFullNameNom: string; signerPositionNom: string };
   lineItemUnitOptions: string[];
+  partialSelection?: boolean;
   onSubmit: (payload: InvoiceFormValues) => Promise<void>;
 }) {
-  const form = useForm<InvoiceFormValues>({
-    defaultValues: {
+  const defaultValues = useMemo((): InvoiceFormValues => {
+    const itemsFromContract =
+      contract?.items?.length && !(contract.id && partialSelection)
+        ? contract.items.map((it) => ({
+            title: it.title,
+            unit: it.unit,
+            quantity: it.remaining,
+            price: it.price,
+            sourceContractLineItemId: it.id,
+          }))
+        : null;
+
+    return {
       date: new Date().toISOString().slice(0, 10),
       customerCompanyId: contract?.customerCompanyId ?? "",
       contractorCompanyId: contract?.contractorCompanyId ?? "",
@@ -49,31 +77,101 @@ export function InvoiceForm({
       isExternalContract: false,
       externalContractNumber: null,
       externalContractDate: null,
-      signerFullNameNom: "",
-      signerPositionNom: "",
-      items:
-        contract?.items?.length
-          ? contract.items.map((it) => ({
-              title: it.title,
-              unit: it.unit,
-              quantity: it.quantity,
-              price: it.price,
-              sourceContractLineItemId: it.id,
-            }))
-          : [{ title: "", unit: "", quantity: 0, price: 0, sourceContractLineItemId: null }],
-    },
+      signerFullNameNom: contract?.id ? defaultInvoiceSigner.signerFullNameNom : "",
+      signerPositionNom: contract?.id ? defaultInvoiceSigner.signerPositionNom : "",
+      items: itemsFromContract?.length
+        ? itemsFromContract
+        : [{ title: "", unit: "", quantity: 0, price: 0, sourceContractLineItemId: null }],
+    };
+  }, [contract, partialSelection, defaultInvoiceSigner]);
+
+  const form = useForm<InvoiceFormValues>({
+    defaultValues,
     mode: "onBlur",
   });
+
+  const partialHydratedRef = useRef(false);
+
+  useEffect(() => {
+    if (!contract?.id || !partialSelection || partialHydratedRef.current) return;
+    const requestKey = invoicePartialSelectionStorageKey(contract.id);
+    const raw = sessionStorage.getItem(requestKey);
+    if (!raw) return;
+
+    partialHydratedRef.current = true;
+    sessionStorage.removeItem(requestKey);
+
+    let parsed: { lines?: Array<{ sourceContractLineItemId: string; quantity: number }> };
+    try {
+      parsed = JSON.parse(raw) as { lines?: Array<{ sourceContractLineItemId: string; quantity: number }> };
+    } catch {
+      toast.error("Некоректні дані вибору позицій.");
+      partialHydratedRef.current = false;
+      return;
+    }
+
+    const byId = new Map(contract.items.map((it) => [it.id, it]));
+    const built: InvoiceFormValues["items"] = [];
+    for (const line of parsed.lines ?? []) {
+      const src = byId.get(line.sourceContractLineItemId);
+      if (!src || src.remaining <= 0) continue;
+      const qty = Math.min(Math.max(0, Number(line.quantity) || 0), src.remaining);
+      if (qty <= 0) continue;
+      built.push({
+        title: src.title,
+        unit: src.unit,
+        quantity: qty,
+        price: src.price,
+        sourceContractLineItemId: src.id,
+      });
+    }
+
+    if (built.length === 0) {
+      toast.error("Жодна з обраних позицій не має доступного залишку.");
+      partialHydratedRef.current = false;
+      return;
+    }
+
+    form.reset({
+      ...form.getValues(),
+      items: built,
+    });
+  }, [contract, partialSelection, form]);
 
   useUnsavedChangesGuard(form.formState.isDirty);
 
   const isFromContract = Boolean(contract?.id);
+
+  const remainingBySourceId = useMemo(
+    () => new Map(contract?.items.map((it) => [it.id, it.remaining]) ?? []),
+    [contract?.items],
+  );
 
   return (
     <FormProvider {...form}>
       <form
         className="flex flex-col gap-4 rounded-xl border bg-white p-4"
         onSubmit={form.handleSubmit(async (values) => {
+          if (contract?.id) {
+            const qtyBySource = new Map<string, number>();
+            for (const row of values.items) {
+              if (!row.sourceContractLineItemId) continue;
+              const id = row.sourceContractLineItemId;
+              qtyBySource.set(id, (qtyBySource.get(id) ?? 0) + row.quantity);
+            }
+            for (const [sourceId, sumQty] of qtyBySource) {
+              const max = remainingBySourceId.get(sourceId);
+              if (max === undefined) {
+                toast.error("У рахунку є позиція з прив’язкою до договору, якої немає в поточних залишках.");
+                return;
+              }
+              if (sumQty > max + 1e-9) {
+                toast.error(`Сума кількостей по одній позиції договору перевищує залишок (макс. ${max}).`);
+                return;
+              }
+            }
+          }
+
           try {
             await onSubmit(values);
           } catch (e) {
@@ -148,16 +246,14 @@ export function InvoiceForm({
           <LineItemsTable unitOptionsFromBackend={lineItemUnitOptions} />
           {isFromContract ? (
             <p className="text-xs text-zinc-500">
-              Рахунок створено з договору: кількості будуть перевірені сервером (залишок по договору).
+              Рахунок на основі договору: кількість по кожній прив’язаній позиції не може перевищити залишок (уже з урахуванням
+              попередніх рахунків).
             </p>
           ) : null}
         </div>
 
         <div className="mt-2 flex gap-3">
-          <button
-            type="submit"
-            className="crm-btn-primary"
-          >
+          <button type="submit" className="crm-btn-primary">
             Зберегти
           </button>
           <a className="inline-flex h-10 items-center rounded-md border px-4 text-sm" href="/invoices">
@@ -182,4 +278,3 @@ function Field({
     </label>
   );
 }
-

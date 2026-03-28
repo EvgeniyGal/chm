@@ -61,13 +61,6 @@ export function AppSidebarNav({ role }: { role?: string }) {
           Користувачі
         </Link>
       ) : null}
-      <Link
-        className={navLinkClass(pathname, "/audit")}
-        href="/audit"
-        aria-current={routeActive(pathname, "/audit") ? "page" : undefined}
-      >
-        Історія змін
-      </Link>
     </nav>
   );
 }
