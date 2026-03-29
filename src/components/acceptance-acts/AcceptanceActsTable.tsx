@@ -1,0 +1,512 @@
+"use client";
+
+import { useCallback, useMemo, useState } from "react";
+import {
+  type ColumnDef,
+  flexRender,
+  getCoreRowModel,
+  useReactTable,
+} from "@tanstack/react-table";
+import { useRouter } from "next/navigation";
+import { FiEdit2, FiInfo, FiTrash2 } from "react-icons/fi";
+import { toast } from "sonner";
+
+import { DetailRow } from "@/components/data-table/detail-row";
+import { EmptyListState } from "@/components/data-table/empty-list-state";
+import { ListPagePagination } from "@/components/data-table/list-page-pagination";
+import { ListPageToolbar } from "@/components/data-table/list-page-toolbar";
+import { listTableHeaderClass, tableActionIconClassName } from "@/components/data-table/list-styles";
+import { InfoDialog } from "@/components/modals/InfoDialog";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
+import { cn } from "@/lib/utils";
+import { useDebouncedListSearch } from "@/hooks/use-debounced-list-search";
+import { useListUrlParams } from "@/hooks/use-list-url-params";
+import { formatMoney } from "@/lib/totals";
+
+export type AcceptanceActRow = {
+  id: string;
+  number: string;
+  date: string;
+  workType: "WORKS" | "SERVICES";
+  invoiceNumber: string;
+  hasContract: boolean;
+  signingLocation: string;
+  lineItemsPreview: string;
+  totalWithoutVat: string;
+  vat20: string;
+  totalWithVat: string;
+};
+
+type SortBy = "number" | "date" | "workType" | "totalWithVat";
+type SortDir = "asc" | "desc";
+
+function actsTableHeadClass(columnId: string): string {
+  const narrow = "w-0 px-2 py-3 whitespace-nowrap";
+  switch (columnId) {
+    case "actions":
+      return `${narrow} text-center`;
+    case "lineItems":
+      return "min-w-0 px-3 py-3";
+    case "totalWithVat":
+      return `${narrow} text-right tabular-nums`;
+    case "invoiceNumber":
+    case "hasContract":
+      return narrow;
+    case "number":
+    case "date":
+    case "workType":
+      return narrow;
+    default:
+      return "px-3 py-3";
+  }
+}
+
+function actsTableCellClass(columnId: string): string {
+  const base = "align-top py-3";
+  const narrow = `${base} w-0 px-2 whitespace-nowrap`;
+  switch (columnId) {
+    case "actions":
+      return narrow;
+    case "lineItems":
+      return `${base} min-w-0 px-3`;
+    case "totalWithVat":
+      return `${narrow} text-right tabular-nums`;
+    case "invoiceNumber":
+    case "hasContract":
+      return narrow;
+    case "number":
+    case "date":
+    case "workType":
+      return narrow;
+    default:
+      return `${base} px-3`;
+  }
+}
+
+export function AcceptanceActsTable({
+  rows,
+  total,
+  page,
+  pageSize,
+  q,
+  sortBy,
+  sortDir,
+  isDatabaseEmpty,
+  filterWorkType,
+  filterHasContract,
+  filterDateFrom,
+  filterDateTo,
+  dateRangeInvalid,
+}: {
+  rows: AcceptanceActRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+  q: string;
+  sortBy: SortBy;
+  sortDir: SortDir;
+  isDatabaseEmpty: boolean;
+  filterWorkType: "WORKS" | "SERVICES" | null;
+  filterHasContract: "yes" | "no" | null;
+  filterDateFrom: string | null;
+  filterDateTo: string | null;
+  dateRangeInvalid: boolean;
+}) {
+  const router = useRouter();
+  const { updateParams } = useListUrlParams();
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; number: string } | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+
+  const onSearchCommit = useCallback(
+    (trimmed: string) => {
+      updateParams({ q: trimmed || null, page: 1 });
+    },
+    [updateParams],
+  );
+
+  const [queryInput, setQueryInput] = useDebouncedListSearch(q, onSearchCommit);
+
+  const confirmDelete = useCallback(async () => {
+    if (!deleteConfirm || deleteBusy) return;
+    setDeleteBusy(true);
+    try {
+      const res = await fetch(`/api/acceptance-acts/${deleteConfirm.id}`, { method: "DELETE" });
+      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+      if (!res.ok) {
+        toast.error(
+          data?.error === "FORBIDDEN"
+            ? "Недостатньо прав."
+            : data?.error ?? "Не вдалося видалити акт.",
+        );
+        return;
+      }
+      toast.success(`Акт № ${deleteConfirm.number} видалено.`);
+      setDeleteConfirm(null);
+      router.refresh();
+    } finally {
+      setDeleteBusy(false);
+    }
+  }, [deleteConfirm, deleteBusy, router]);
+
+  const columns = useMemo<ColumnDef<AcceptanceActRow>[]>(
+    () => [
+      {
+        accessorKey: "number",
+        header: "Номер акту",
+      },
+      {
+        accessorKey: "date",
+        header: "Дата",
+        cell: ({ row }) => new Date(row.original.date).toLocaleDateString("uk-UA"),
+      },
+      {
+        accessorKey: "workType",
+        header: "Тип",
+        cell: ({ row }) => (row.original.workType === "WORKS" ? "Роботи" : "Послуги"),
+      },
+      {
+        id: "invoiceNumber",
+        header: "Рахунок",
+        cell: ({ row }) => <span className="tabular-nums">{row.original.invoiceNumber}</span>,
+      },
+      {
+        id: "hasContract",
+        header: "Договір у базі",
+        cell: ({ row }) =>
+          row.original.hasContract ? (
+            <span className="font-medium text-emerald-800">Так</span>
+          ) : (
+            <span className="text-muted-foreground">Ні</span>
+          ),
+      },
+      {
+        id: "lineItems",
+        header: "Позиції",
+        cell: ({ row }) => (
+          <span
+            className="line-clamp-2 max-w-[min(28rem,50vw)] text-foreground/90"
+            title={row.original.lineItemsPreview}
+          >
+            {row.original.lineItemsPreview}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "totalWithVat",
+        header: "Сума з ПДВ",
+        cell: ({ row }) => (
+          <span className="tabular-nums">{formatMoney(Number.parseFloat(row.original.totalWithVat) || 0)}</span>
+        ),
+      },
+      {
+        id: "actions",
+        header: "Дії",
+        cell: ({ row }) => {
+          const act = row.original;
+          return (
+            <div className="flex flex-nowrap items-center justify-center gap-1">
+              <InfoDialog
+                title={`Акт ${act.number}`}
+                trigger={<FiInfo aria-hidden="true" className="size-4" />}
+                triggerAriaLabel="Інформація про акт"
+                triggerClassName={tableActionIconClassName}
+              >
+                <div className="grid gap-2">
+                  <DetailRow label="Дата" value={new Date(act.date).toLocaleDateString("uk-UA")} />
+                  <DetailRow label="Тип" value={act.workType === "WORKS" ? "Роботи" : "Послуги"} />
+                  <DetailRow label="Рахунок" value={act.invoiceNumber} />
+                  <DetailRow label="Договір у базі" value={act.hasContract ? "Так" : "Ні"} />
+                  <DetailRow label="Місце складання" value={act.signingLocation} />
+                  <DetailRow label="Позиції" value={act.lineItemsPreview} />
+                  <DetailRow label="Разом (без ПДВ)" value={act.totalWithoutVat} />
+                  <DetailRow label="ПДВ 20%" value={act.vat20} />
+                  <DetailRow label="Разом з ПДВ" value={act.totalWithVat} />
+                </div>
+              </InfoDialog>
+              <a
+                className={tableActionIconClassName}
+                href={`/acceptance-acts/${act.id}`}
+                aria-label="Відкрити акт"
+                title="Відкрити"
+              >
+                <FiEdit2 aria-hidden="true" className="size-4" />
+              </a>
+              <button
+                type="button"
+                className={cn(
+                  tableActionIconClassName,
+                  "border-red-200 text-red-600 hover:bg-red-50 dark:border-red-900/50 dark:text-red-400 dark:hover:bg-red-950/40",
+                )}
+                aria-label="Видалити акт"
+                title="Видалити"
+                onClick={() => setDeleteConfirm({ id: act.id, number: act.number })}
+              >
+                <FiTrash2 aria-hidden="true" className="size-4" />
+              </button>
+            </div>
+          );
+        },
+      },
+    ],
+    [],
+  );
+
+  const table = useReactTable({
+    data: rows,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+  });
+
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+  function toggleSort(column: SortBy) {
+    if (sortBy !== column) {
+      updateParams({ sortBy: column, sortDir: "asc", page: 1 });
+      return;
+    }
+    updateParams({ sortBy: column, sortDir: sortDir === "asc" ? "desc" : "asc", page: 1 });
+  }
+
+  function isNonSortableColumn(id: string) {
+    return id === "actions" || id === "lineItems" || id === "invoiceNumber" || id === "hasContract";
+  }
+
+  if (isDatabaseEmpty) {
+    return <EmptyListState message="Поки що немає актів приймання-передачі." />;
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <Dialog
+        open={deleteConfirm !== null}
+        onOpenChange={(open) => {
+          if (!open && !deleteBusy) setDeleteConfirm(null);
+        }}
+      >
+        <DialogContent
+          onPointerDownOutside={(e) => {
+            if (deleteBusy) e.preventDefault();
+          }}
+          onEscapeKeyDown={(e) => {
+            if (deleteBusy) e.preventDefault();
+          }}
+        >
+          <DialogTitle>Видалення акту</DialogTitle>
+          <p className="text-sm text-muted-foreground">
+            {deleteConfirm
+              ? `Ви дійсно хочете видалити акт № ${deleteConfirm.number}? Цю дію не можна скасувати.`
+              : null}
+          </p>
+          <div className="mt-4 flex flex-wrap justify-end gap-2">
+            <Button type="button" variant="outline" disabled={deleteBusy} onClick={() => setDeleteConfirm(null)}>
+              Скасувати
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={deleteBusy}
+              onClick={() => void confirmDelete()}
+            >
+              {deleteBusy ? "Видалення…" : "Видалити"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <ListPageToolbar
+        queryInput={queryInput}
+        onQueryChange={setQueryInput}
+        searchPlaceholder="Пошук за номером акту, рахунку або місцем складання"
+        filters={
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
+            {dateRangeInvalid ? (
+              <p className="w-full text-sm text-destructive" role="alert">
+                «Дата від» пізніша за «Дату до». Виправте діапазон — фільтр за датою тимчасово вимкнено.
+              </p>
+            ) : null}
+            <div className="flex min-w-0 flex-col gap-1 text-sm">
+              <Label className="text-muted-foreground">Дата від</Label>
+              <Input
+                type="date"
+                className="h-10 w-full min-w-[10.5rem] sm:w-auto"
+                value={filterDateFrom ?? ""}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  updateParams({ dateFrom: v || null, page: 1 });
+                }}
+              />
+            </div>
+            <div className="flex min-w-0 flex-col gap-1 text-sm">
+              <Label className="text-muted-foreground">Дата до</Label>
+              <Input
+                type="date"
+                className="h-10 w-full min-w-[10.5rem] sm:w-auto"
+                value={filterDateTo ?? ""}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  updateParams({ dateTo: v || null, page: 1 });
+                }}
+              />
+            </div>
+            <div className="flex min-w-0 flex-col gap-1 text-sm">
+              <Label className="text-muted-foreground">Тип</Label>
+              <NativeSelect
+                className="h-10 w-full min-w-[10rem] sm:w-auto"
+                value={filterWorkType ?? ""}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  updateParams({
+                    workType: v === "WORKS" || v === "SERVICES" ? v : null,
+                    page: 1,
+                  });
+                }}
+              >
+                <option value="">Усі</option>
+                <option value="WORKS">Роботи</option>
+                <option value="SERVICES">Послуги</option>
+              </NativeSelect>
+            </div>
+            <div className="flex min-w-0 flex-col gap-1 text-sm">
+              <Label className="text-muted-foreground">Договір у базі</Label>
+              <NativeSelect
+                className="h-10 w-full min-w-[11rem] sm:w-auto"
+                value={filterHasContract ?? ""}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  updateParams({
+                    hasContract: v === "yes" || v === "no" ? v : null,
+                    page: 1,
+                  });
+                }}
+              >
+                <option value="">Усі</option>
+                <option value="yes">Так</option>
+                <option value="no">Ні</option>
+              </NativeSelect>
+            </div>
+          </div>
+        }
+      />
+
+      <Card className="overflow-hidden p-0">
+        <div className="hidden md:block">
+          <table className="w-full text-sm">
+            <thead className={listTableHeaderClass}>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <tr key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => (
+                    <th key={header.id} className={actsTableHeadClass(header.column.id)}>
+                      {header.isPlaceholder ? null : (
+                        <button
+                          type="button"
+                          className={`inline-flex items-center gap-1 ${
+                            header.column.id === "actions" ? "w-full justify-center" : ""
+                          }`}
+                          onClick={() => {
+                            if (isNonSortableColumn(header.column.id)) return;
+                            toggleSort(header.column.id as SortBy);
+                          }}
+                        >
+                          {flexRender(header.column.columnDef.header, header.getContext())}
+                          {sortBy === header.column.id ? (sortDir === "asc" ? "↑" : "↓") : ""}
+                        </button>
+                      )}
+                    </th>
+                  ))}
+                </tr>
+              ))}
+            </thead>
+            <tbody>
+              {table.getRowModel().rows.map((row) => (
+                <tr key={row.id} className="border-t">
+                  {row.getVisibleCells().map((cell) => (
+                    <td key={cell.id} className={actsTableCellClass(cell.column.id)}>
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="grid gap-3 p-3 md:hidden">
+          {table.getRowModel().rows.map((row) => {
+            const act = row.original;
+            return (
+              <div key={act.id} className="rounded-lg border p-3">
+                <div className="text-base font-medium text-foreground">{act.number}</div>
+                <div className="mt-1 text-xs text-muted-foreground">
+                  {new Date(act.date).toLocaleDateString("uk-UA")} · {act.workType === "WORKS" ? "Роботи" : "Послуги"} ·
+                  Рахунок {act.invoiceNumber}
+                </div>
+                <div className="mt-1 text-xs text-muted-foreground">
+                  Договір у базі: {act.hasContract ? "так" : "ні"}
+                </div>
+                <div className="mt-1 text-xs text-foreground/85">{act.lineItemsPreview}</div>
+                <div className="mt-1 text-sm font-medium tabular-nums text-foreground">
+                  З ПДВ: {formatMoney(Number.parseFloat(act.totalWithVat) || 0)}
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <InfoDialog
+                    title={`Акт ${act.number}`}
+                    trigger={<FiInfo aria-hidden="true" className="size-4" />}
+                    triggerAriaLabel="Інформація про акт"
+                    triggerClassName={tableActionIconClassName}
+                  >
+                    <div className="grid gap-2">
+                      <DetailRow label="Дата" value={new Date(act.date).toLocaleDateString("uk-UA")} />
+                      <DetailRow label="Тип" value={act.workType === "WORKS" ? "Роботи" : "Послуги"} />
+                      <DetailRow label="Рахунок" value={act.invoiceNumber} />
+                      <DetailRow label="Договір у базі" value={act.hasContract ? "Так" : "Ні"} />
+                      <DetailRow label="Місце складання" value={act.signingLocation} />
+                      <DetailRow label="Позиції" value={act.lineItemsPreview} />
+                      <DetailRow label="Разом (без ПДВ)" value={act.totalWithoutVat} />
+                      <DetailRow label="ПДВ 20%" value={act.vat20} />
+                      <DetailRow label="Разом з ПДВ" value={act.totalWithVat} />
+                    </div>
+                  </InfoDialog>
+                  <a
+                    className={tableActionIconClassName}
+                    href={`/acceptance-acts/${act.id}`}
+                    aria-label="Відкрити акт"
+                    title="Відкрити"
+                  >
+                    <FiEdit2 aria-hidden="true" className="size-4" />
+                  </a>
+                  <button
+                    type="button"
+                    className={cn(
+                      tableActionIconClassName,
+                      "border-red-200 text-red-600 hover:bg-red-50 dark:border-red-900/50 dark:text-red-400 dark:hover:bg-red-950/40",
+                    )}
+                    aria-label="Видалити акт"
+                    title="Видалити"
+                    onClick={() => setDeleteConfirm({ id: act.id, number: act.number })}
+                  >
+                    <FiTrash2 aria-hidden="true" className="size-4" />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+
+      <ListPagePagination
+        page={page}
+        totalPages={totalPages}
+        total={total}
+        pageSize={pageSize}
+        onPageSizeChange={(next) => updateParams({ pageSize: next, page: 1 })}
+        onPrev={() => updateParams({ page: page - 1 })}
+        onNext={() => updateParams({ page: page + 1 })}
+      />
+    </div>
+  );
+}

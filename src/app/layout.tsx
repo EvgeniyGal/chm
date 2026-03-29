@@ -35,8 +35,9 @@ export default function RootLayout({
     <html
       lang="uk"
       className={`${geistSans.variable} ${geistMono.variable} ${merriweather.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col">
+      <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <AuthSessionProvider>{children}</AuthSessionProvider>
         <AppToaster />
       </body>

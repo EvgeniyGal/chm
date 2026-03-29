@@ -1,0 +1,1 @@
+ALTER TABLE "acceptance_acts" ADD CONSTRAINT "acceptance_acts_invoice_id_unique" UNIQUE("invoice_id");

@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { invoices, lineItems } from "@/db/schema";
 import { writeAuditEvent } from "@/lib/audit";
 import { requireRole } from "@/lib/authz";
+import { syncAcceptanceActFromInvoice } from "@/lib/sync-acceptance-act-from-invoice";
 import { calcTotals } from "@/lib/totals";
 import { invoiceApiLineItemSchema } from "@/lib/invoice-api-item-schema";
 
@@ -165,6 +166,8 @@ export async function PATCH(req: Request, ctx: RouteContext<"/api/invoices/[id]"
         .where(eq(invoices.id, id))
         .returning();
 
+      await syncAcceptanceActFromInvoice(tx, id);
+
       return [row];
     });
 
@@ -267,6 +270,8 @@ export async function PATCH(req: Request, ctx: RouteContext<"/api/invoices/[id]"
       })
       .where(eq(invoices.id, id))
       .returning();
+
+    await syncAcceptanceActFromInvoice(tx, id);
 
     return [row];
   });

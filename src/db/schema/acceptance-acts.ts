@@ -18,8 +18,10 @@ export const acceptanceActs = pgTable("acceptance_acts", {
     .references(() => companies.id, { onDelete: "restrict" }),
 
   contractId: uuid("contract_id").references(() => contracts.id, { onDelete: "set null" }),
+  /** Один акт на один рахунок. */
   invoiceId: uuid("invoice_id")
     .notNull()
+    .unique()
     .references(() => invoices.id, { onDelete: "restrict" }),
 
   signerFullNameNom: text("signer_full_name_nom").notNull(),

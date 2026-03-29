@@ -23,17 +23,20 @@ type AcceptanceActValues = {
 export function AcceptanceActForm({
   invoices,
   initialInvoiceId,
+  defaultSigningLocation = "",
   onSubmit,
 }: {
   invoices: InvoiceOpt[];
   initialInvoiceId: string;
+  /** За замовчуванням — місце підпису договору в базі, якщо рахунок прив’язаний до договору. */
+  defaultSigningLocation?: string;
   onSubmit: (payload: AcceptanceActValues) => Promise<void>;
 }) {
   const form = useForm<AcceptanceActValues>({
     defaultValues: {
       invoiceId: initialInvoiceId,
       date: new Date().toISOString().slice(0, 10),
-      signingLocation: "",
+      signingLocation: defaultSigningLocation,
       completionDate: new Date().toISOString().slice(0, 10),
       signerFullNameNom: "",
       signerFullNameGen: "",
@@ -90,7 +93,8 @@ export function AcceptanceActForm({
         </div>
 
         <p className="text-xs text-zinc-500">
-          Пункти акту (перелік робіт/послуг та суми) копіюються з рахунку і не редагуються в цій формі.
+          Пункти акту (перелік робіт/послуг та суми) завжди збігаються з рахунком і не редагуються тут. Місце складання
+          можна змінити — акт можуть підписати не там, де договір.
         </p>
 
         <div className="mt-2 flex gap-3">

@@ -36,6 +36,20 @@ export async function POST(req: Request) {
 
   const invoice = await db.query.invoices.findFirst({ where: eq(invoices.id, parsed.data.invoiceId) });
   if (!invoice) return Response.json({ error: "INVOICE_NOT_FOUND" }, { status: 404 });
+
+  const actForInvoice = await db.query.acceptanceActs.findFirst({
+    where: eq(acceptanceActs.invoiceId, invoice.id),
+  });
+  if (actForInvoice) {
+    return Response.json(
+      {
+        error: "ACCEPTANCE_ACT_ALREADY_EXISTS",
+        acceptanceActId: actForInvoice.id,
+      },
+      { status: 409 },
+    );
+  }
+
   const invItems = await db.query.lineItems.findMany({ where: eq(lineItems.invoiceId, invoice.id) });
 
   const date = new Date(parsed.data.date);

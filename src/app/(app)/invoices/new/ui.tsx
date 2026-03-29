@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Controller, FormProvider, useForm } from "react-hook-form";
 import { Plus } from "lucide-react";
-import { FiFileText, FiList } from "react-icons/fi";
+import { FiClipboard, FiFileText, FiList } from "react-icons/fi";
 import { toast } from "sonner";
 
 import { CompanySearchSelect } from "@/components/forms/CompanySearchSelect";
@@ -81,6 +81,7 @@ export function InvoiceForm({
   cancelHref = "/invoices",
   readonlyInvoiceNumber,
   previewInvoiceNumberInitial,
+  existingAcceptanceActId,
   onSubmit,
 }: {
   mode?: "create" | "edit";
@@ -104,6 +105,8 @@ export function InvoiceForm({
   readonlyInvoiceNumber?: string;
   /** Попередній перегляд номера для нового рахунку (залежить від дати в формі). */
   previewInvoiceNumberInitial?: string;
+  /** Якщо для рахунку вже є акт — показуємо посилання на нього замість «Сформувати акт». */
+  existingAcceptanceActId?: string | null;
   onSubmit: (payload: InvoiceFormValues) => Promise<void>;
 }) {
   const defaultValues = useMemo((): InvoiceFormValues => {
@@ -563,15 +566,36 @@ export function InvoiceForm({
             До списку рахунків
           </a>
           {mode === "edit" && invoiceId ? (
-            <a
-              className="inline-flex h-10 items-center gap-2 rounded-md border border-border bg-background px-4 text-sm hover:bg-muted"
-              href={`/api/documents/invoice/${invoiceId}`}
-              aria-label="Завантажити рахунок (DOCX)"
-              title="Завантажити DOCX"
-            >
-              <FiFileText className="size-4 shrink-0" aria-hidden />
-              Рахунок
-            </a>
+            <>
+              <a
+                className="inline-flex h-10 items-center gap-2 rounded-md border border-border bg-background px-4 text-sm hover:bg-muted"
+                href={`/api/documents/invoice/${invoiceId}`}
+                aria-label="Завантажити рахунок (DOCX)"
+                title="Завантажити DOCX"
+              >
+                <FiFileText className="size-4 shrink-0" aria-hidden />
+                Рахунок
+              </a>
+              {existingAcceptanceActId ? (
+                <a
+                  className="inline-flex h-10 items-center gap-2 rounded-md border border-border bg-background px-4 text-sm hover:bg-muted"
+                  href={`/acceptance-acts/${existingAcceptanceActId}`}
+                  title="Для цього рахунку вже створено акт приймання-передачі"
+                >
+                  <FiClipboard className="size-4 shrink-0" aria-hidden />
+                  Відкрити акт
+                </a>
+              ) : (
+                <a
+                  className="inline-flex h-10 items-center gap-2 rounded-md border border-border bg-background px-4 text-sm hover:bg-muted"
+                  href={`/acceptance-acts/new?invoiceId=${invoiceId}`}
+                  title="Створити акт приймання-передачі на основі цього рахунку (позиції копіюються з рахунку)"
+                >
+                  <FiClipboard className="size-4 shrink-0" aria-hidden />
+                  Сформувати акт
+                </a>
+              )}
+            </>
           ) : null}
         </div>
       </form>

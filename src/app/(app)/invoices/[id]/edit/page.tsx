@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 
 import { InvoiceForm, type InvoiceFormValues } from "../../new/ui";
 import { db } from "@/db";
-import { companies, contracts, invoices, lineItems } from "@/db/schema";
+import { acceptanceActs, companies, contracts, invoices, lineItems } from "@/db/schema";
 import { requireRole } from "@/lib/authz";
 import { getContractLinesWithRemainingForInvoicing } from "@/lib/contract-invoice-remaining";
 import { DROPDOWN_SCOPE, getDropdownOptions } from "@/lib/dropdown-options";
@@ -83,6 +83,10 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ id
       : null;
   if (inv.contractId != null && !contractEntity) redirect("/invoices");
 
+  const existingAcceptanceAct = await db.query.acceptanceActs.findFirst({
+    where: eq(acceptanceActs.invoiceId, id),
+  });
+
   const lineRemaindersForEdit =
     inv.contractId != null
       ? await getContractLinesWithRemainingForInvoicing(inv.contractId, { excludeInvoiceId: id })
@@ -116,7 +120,7 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ id
   const hasContract = Boolean(inv.contractId);
 
   return (
-    <div className="max-w-5xl min-w-0">
+    <div className="w-full min-w-0">
       <div className="mb-4">
         <h1 className="page-title">Редагувати рахунок {inv.number}</h1>
         <p className="text-sm text-muted-foreground">
@@ -167,6 +171,7 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ id
           actingUnderOptions,
         }}
         readonlyInvoiceNumber={inv.number}
+        existingAcceptanceActId={existingAcceptanceAct?.id ?? null}
         onSubmit={saveInvoiceEdit.bind(null, id, hasContract)}
       />
 

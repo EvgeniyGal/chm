@@ -62,7 +62,7 @@ export default async function NewInvoicePage({
 
   if (contractId && contract && eligibleLines.length === 0 && lineRemainders.length > 0) {
     return (
-      <div className="max-w-5xl min-w-0">
+      <div className="w-full min-w-0">
         <div className="mb-4">
           <h1 className="page-title">Новий рахунок</h1>
           <p className="text-sm text-zinc-600">Договір {contract.number}</p>
@@ -81,7 +81,7 @@ export default async function NewInvoicePage({
   }
 
   return (
-    <div className="max-w-5xl min-w-0">
+    <div className="w-full min-w-0">
       <div className="mb-4">
         <h1 className="page-title">Новий рахунок</h1>
       </div>
