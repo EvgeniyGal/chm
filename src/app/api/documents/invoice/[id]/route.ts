@@ -1,9 +1,9 @@
 import { eq } from "drizzle-orm";
 
 import { db } from "@/db";
-import { invoices, lineItems } from "@/db/schema";
+import { companies, contracts, invoices, lineItems } from "@/db/schema";
 import { requireRole } from "@/lib/authz";
-import { renderDocxFromTextTemplate } from "@/lib/docx-template";
+import { buildInvoiceDocxBuffer } from "@/lib/invoice-docx";
 
 export const runtime = "nodejs";
 
@@ -13,22 +13,34 @@ export async function GET(_req: Request, ctx: RouteContext<"/api/documents/invoi
 
   const inv = await db.query.invoices.findFirst({ where: eq(invoices.id, id) });
   if (!inv) return Response.json({ error: "NOT_FOUND" }, { status: 404 });
-  const items = await db.query.lineItems.findMany({ where: eq(lineItems.invoiceId, id) });
+  const itemRows = await db.query.lineItems.findMany({ where: eq(lineItems.invoiceId, id) });
 
-  const worksOrServicesLabel = inv.workType === "SERVICES" ? "Перелік послуг:" : "Перелік робіт:";
+  const [customer, contractor] = await Promise.all([
+    db.query.companies.findFirst({ where: eq(companies.id, inv.customerCompanyId) }),
+    db.query.companies.findFirst({ where: eq(companies.id, inv.contractorCompanyId) }),
+  ]);
+  if (!customer || !contractor) {
+    return Response.json({ error: "COMPANY_NOT_FOUND" }, { status: 500 });
+  }
 
-  const buffer = renderDocxFromTextTemplate({
-    title: `Рахунок ${inv.number}`,
-    bodyLines: [
-      `Дата: ${new Date(inv.date).toLocaleDateString("uk-UA")}`,
-      "",
-      worksOrServicesLabel,
-      ...items.map((it, idx) => `${idx + 1}. ${it.title} (${it.unit}) — ${it.quantity} × ${it.price}`),
-      "",
-      `Разом (без ПДВ): ${inv.totalWithoutVat}`,
-      `ПДВ 20%: ${inv.vat20}`,
-      `Разом з ПДВ: ${inv.totalWithVat}`,
-    ],
+  const linkedContract =
+    inv.contractId != null
+      ? await db.query.contracts.findFirst({ where: eq(contracts.id, inv.contractId) })
+      : null;
+
+  const buffer = buildInvoiceDocxBuffer({
+    invoice: inv,
+    customer,
+    contractor,
+    linkedContract: linkedContract
+      ? { number: linkedContract.number, date: new Date(linkedContract.date) }
+      : null,
+    items: itemRows.map((it) => ({
+      title: it.title,
+      unit: it.unit,
+      quantity: Number(it.quantity),
+      price: Number(it.price),
+    })),
   });
   return new Response(new Uint8Array(buffer), {
     headers: {

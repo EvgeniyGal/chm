@@ -191,10 +191,10 @@ function kopiykaWordForm(n: number): string {
 }
 
 /**
- * Amount for contract text: figure + parenthetical words for hryvnias, kopiyky as digits.
- * Example: `4106.57 (Чотири тисячі сто шість гривень 57 копійок)`
+ * Amount in words only (no leading figure), sentence case.
+ * Example: `Чотири тисячі сто шість гривень 57 копійок`
  */
-export function uahAmountToWords(amount: number): string {
+export function uahAmountWordsOnly(amount: number): string {
   const rounded = Math.round((amount + Number.EPSILON) * 100) / 100;
   const hrn = Math.floor(rounded + 1e-9);
   let kop = Math.round((rounded - hrn) * 100);
@@ -202,12 +202,19 @@ export function uahAmountToWords(amount: number): string {
     kop = 0;
   }
 
-  const figure = rounded.toFixed(2);
   const hrnWords = hrn === 0 ? "нуль" : integerToUkrainianWords(hrn, "f");
   const kopStr = kop.toString().padStart(2, "0");
   const inWords = `${hrnWords} ${hryvniaWordForm(hrn)} ${kopStr} ${kopiykaWordForm(kop)}`;
-  const inWordsSentence = inWords.charAt(0).toLocaleUpperCase("uk") + inWords.slice(1);
-  return `${figure} (${inWordsSentence})`;
+  return inWords.charAt(0).toLocaleUpperCase("uk") + inWords.slice(1);
+}
+
+/**
+ * Amount for contract text: figure + parenthetical words for hryvnias, kopiyky as digits.
+ * Example: `4106.57 (Чотири тисячі сто шість гривень 57 копійок)`
+ */
+export function uahAmountToWords(amount: number): string {
+  const rounded = Math.round((amount + Number.EPSILON) * 100) / 100;
+  return `${rounded.toFixed(2)} (${uahAmountWordsOnly(amount)})`;
 }
 
 /**
@@ -215,4 +222,12 @@ export function uahAmountToWords(amount: number): string {
  */
 export function uahContractPriceLiteral(totalWithVat: number, vatAmount: number): string {
   return `${uahAmountToWords(totalWithVat)} в т. ч. ПДВ ${uahAmountToWords(vatAmount)}`;
+}
+
+/**
+ * Invoice “сума прописом”: words only, без цифр у дужках.
+ * Приклад: `Чотирнадцять тисяч … 40 копійок в т. ч. ПДВ Дві тисячі … 40 копійок`
+ */
+export function uahInvoicePriceLiteral(totalWithVat: number, vatAmount: number): string {
+  return `${uahAmountWordsOnly(totalWithVat)} в т. ч. ПДВ ${uahAmountWordsOnly(vatAmount)}`;
 }
