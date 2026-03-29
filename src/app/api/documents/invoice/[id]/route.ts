@@ -15,12 +15,14 @@ export async function GET(_req: Request, ctx: RouteContext<"/api/documents/invoi
   if (!inv) return Response.json({ error: "NOT_FOUND" }, { status: 404 });
   const items = await db.query.lineItems.findMany({ where: eq(lineItems.invoiceId, id) });
 
+  const worksOrServicesLabel = inv.workType === "SERVICES" ? "Перелік послуг:" : "Перелік робіт:";
+
   const buffer = renderDocxFromTextTemplate({
     title: `Рахунок ${inv.number}`,
     bodyLines: [
       `Дата: ${new Date(inv.date).toLocaleDateString("uk-UA")}`,
       "",
-      "Перелік робіт/послуг:",
+      worksOrServicesLabel,
       ...items.map((it, idx) => `${idx + 1}. ${it.title} (${it.unit}) — ${it.quantity} × ${it.price}`),
       "",
       `Разом (без ПДВ): ${inv.totalWithoutVat}`,

@@ -17,6 +17,8 @@ type CreatedCompany = {
   contractSignerPositionNom: string;
   contractSignerPositionGen: string;
   contractSignerActingUnder: string;
+  invoiceSignerFullNameNom: string;
+  invoiceSignerPositionNom: string;
 };
 
 const emptyForm = () => ({
@@ -175,6 +177,8 @@ export function QuickCreateCompanyModal({
         contractSignerPositionNom: String(d.contractSignerPositionNom),
         contractSignerPositionGen: String(d.contractSignerPositionGen),
         contractSignerActingUnder: String(d.contractSignerActingUnder),
+        invoiceSignerFullNameNom: String(d.invoiceSignerFullNameNom),
+        invoiceSignerPositionNom: String(d.invoiceSignerPositionNom),
       });
       onOpenChange(false);
     } catch {

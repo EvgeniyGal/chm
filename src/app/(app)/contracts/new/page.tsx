@@ -47,9 +47,11 @@ export default async function NewContractPage() {
       body: JSON.stringify(payload),
       cache: "no-store",
     });
-    const data = (await res.json().catch(() => null)) as any;
+    const data = (await res.json().catch(() => null)) as { data?: { id: string }; error?: string } | null;
     if (!res.ok) throw new Error(data?.error ?? "CREATE_FAILED");
-    redirect("/contracts");
+    const newId = data?.data?.id;
+    if (!newId) throw new Error("CREATE_FAILED");
+    redirect(`/contracts/${newId}/edit`);
   }
 
   return (

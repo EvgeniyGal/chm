@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Controller, FormProvider, useForm } from "react-hook-form";
-import { Plus } from "lucide-react";
+import { List, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import { getServerActionErrorMessage } from "@/lib/server-action-error-message";
@@ -508,8 +508,9 @@ export function ContractForm({
           >
             Зберегти
           </button>
-          <a className="inline-flex h-10 items-center rounded-md border px-4 text-sm" href="/contracts">
-            Скасувати
+          <a className="inline-flex h-10 items-center gap-2 rounded-md border px-4 text-sm" href="/contracts">
+            <List className="size-4 shrink-0" aria-hidden />
+            До списку договорів
           </a>
           <button
             type="button"

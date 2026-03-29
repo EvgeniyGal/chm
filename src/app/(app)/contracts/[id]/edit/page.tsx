@@ -1,4 +1,5 @@
 import { and, desc, eq } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { db } from "@/db";
@@ -52,7 +53,8 @@ export default async function EditContractPage({ params }: { params: Promise<{ i
     });
     const data = (await res.json().catch(() => null)) as any;
     if (!res.ok) throw new Error(data?.error ?? "UPDATE_FAILED");
-    redirect("/contracts");
+    revalidatePath(`/contracts/${id}/edit`);
+    revalidatePath("/contracts");
   }
 
   return (

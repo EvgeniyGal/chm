@@ -7,29 +7,28 @@ import { nextDocumentNumber } from "@/db/numbering";
 import { writeAuditEvent } from "@/lib/audit";
 import { requireRole } from "@/lib/authz";
 import { calcTotals } from "@/lib/totals";
+import { invoiceApiLineItemSchema } from "@/lib/invoice-api-item-schema";
 
 export const runtime = "nodejs";
 
-const itemSchema = z.object({
-  title: z.string().min(1),
-  unit: z.string().min(1),
-  quantity: z.number().min(0),
-  price: z.number().min(0),
-  sourceContractLineItemId: z.string().uuid().optional().nullable(),
-});
-
-const createSchema = z.object({
-  date: z.string().min(1),
-  customerCompanyId: z.string().uuid(),
-  contractorCompanyId: z.string().uuid(),
-  contractId: z.string().uuid().optional().nullable(),
-  isExternalContract: z.boolean().default(false),
-  externalContractNumber: z.string().optional().nullable(),
-  externalContractDate: z.string().optional().nullable(),
-  signerFullNameNom: z.string().min(1),
-  signerPositionNom: z.string().min(1),
-  items: z.array(itemSchema).min(1),
-});
+const createSchema = z
+  .object({
+    date: z.string().min(1),
+    customerCompanyId: z.string().uuid(),
+    contractorCompanyId: z.string().uuid(),
+    contractId: z.string().uuid().optional().nullable(),
+    workType: z.enum(["WORKS", "SERVICES"]).optional(),
+    isExternalContract: z.boolean().default(false),
+    externalContractNumber: z.string().optional().nullable(),
+    externalContractDate: z.string().optional().nullable(),
+    signerFullNameNom: z.string().min(1),
+    signerPositionNom: z.string().min(1),
+    items: z.array(invoiceApiLineItemSchema).min(1),
+  })
+  .refine((data) => data.customerCompanyId !== data.contractorCompanyId, {
+    message: "CUSTOMER_AND_CONTRACTOR_MUST_DIFFER",
+    path: ["contractorCompanyId"],
+  });
 
 export async function GET() {
   await requireRole("MANAGER");
@@ -54,7 +53,21 @@ export async function POST(req: Request) {
     }
   }
 
+  let workType: "WORKS" | "SERVICES" = parsed.data.workType ?? "WORKS";
+
   if (parsed.data.contractId) {
+    const linkedContract = await db.query.contracts.findFirst({ where: eq(contracts.id, parsed.data.contractId) });
+    if (!linkedContract) {
+      return Response.json({ error: "CONTRACT_NOT_FOUND" }, { status: 400 });
+    }
+    if (
+      linkedContract.customerCompanyId !== parsed.data.customerCompanyId ||
+      linkedContract.contractorCompanyId !== parsed.data.contractorCompanyId
+    ) {
+      return Response.json({ error: "INVOICE_COMPANIES_MISMATCH_CONTRACT" }, { status: 400 });
+    }
+    workType = linkedContract.workType;
+
     // Enforce remaining-quantity constraints by sourceContractLineItemId.
     const invoiceItemsBySource = new Map<string, number>();
     for (const it of parsed.data.items) {
@@ -99,6 +112,7 @@ export async function POST(req: Request) {
     .values({
       number,
       date,
+      workType,
       customerCompanyId: parsed.data.customerCompanyId,
       contractorCompanyId: parsed.data.contractorCompanyId,
       contractId: parsed.data.contractId ?? null,

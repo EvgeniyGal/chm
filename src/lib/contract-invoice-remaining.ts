@@ -15,7 +15,14 @@ export type ContractLineInvoiceRemaining = {
 /** Contract line rows (invoice_id is null) with quantities already invoiced via source_contract_line_item_id. */
 export async function getContractLinesWithRemainingForInvoicing(
   contractId: string,
+  options?: { excludeInvoiceId?: string },
 ): Promise<ContractLineInvoiceRemaining[]> {
+  const excludeInvoiceId = options?.excludeInvoiceId;
+  const excludeFilter =
+    excludeInvoiceId != null && excludeInvoiceId !== ""
+      ? sql`and ili.invoice_id <> ${excludeInvoiceId}`
+      : sql``;
+
   const result = await db.execute<{
     id: string;
     title: string;
@@ -35,6 +42,7 @@ export async function getContractLinesWithRemainingForInvoicing(
         from line_items ili
         where ili.source_contract_line_item_id = cli.id
           and ili.invoice_id is not null
+          ${excludeFilter}
       ), 0)::text as invoiced_sum
     from line_items cli
     where cli.contract_id = ${contractId}

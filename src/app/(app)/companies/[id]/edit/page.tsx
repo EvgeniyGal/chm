@@ -1,3 +1,5 @@
+import { List } from "lucide-react";
+import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -192,7 +194,8 @@ export default async function EditCompanyPage({ params }: { params: Promise<{ id
       diff: { before, after },
     });
 
-    redirect("/companies");
+    revalidatePath(`/companies/${id}/edit`);
+    revalidatePath("/companies");
   }
 
   return (
@@ -301,8 +304,9 @@ export default async function EditCompanyPage({ params }: { params: Promise<{ id
           >
             Зберегти
           </button>
-          <a className="inline-flex h-10 items-center rounded-md border px-4 text-sm" href={`/companies/${id}`}>
-            Скасувати
+          <a className="inline-flex h-10 items-center gap-2 rounded-md border px-4 text-sm" href="/companies">
+            <List className="size-4 shrink-0" aria-hidden />
+            До списку компаній
           </a>
         </div>
       </GuardedForm>

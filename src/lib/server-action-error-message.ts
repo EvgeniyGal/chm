@@ -12,6 +12,7 @@ export function getServerActionErrorMessage(e: unknown): string {
     FORBIDDEN: "Недостатньо прав для цієї дії.",
     GENERATE_FAILED: "Не вдалося сформувати документ.",
     UPLOAD_FAILED: "Не вдалося завантажити файл.",
+    VALIDATION_ERROR: "Перевірте заповнення полів (кількість і ціни — числа, обов’язкові поля заповнені).",
   };
 
   return map[m] ?? m;

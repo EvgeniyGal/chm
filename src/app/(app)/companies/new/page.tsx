@@ -1,3 +1,4 @@
+import { List } from "lucide-react";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
@@ -154,7 +155,7 @@ export default async function NewCompanyPage() {
       diff: { after: created },
     });
 
-    redirect("/companies");
+    redirect(`/companies/${created!.id}/edit`);
   }
 
   return (
@@ -258,8 +259,9 @@ export default async function NewCompanyPage() {
           >
             Зберегти
           </button>
-          <a className="inline-flex h-10 items-center rounded-md border px-4 text-sm" href="/companies">
-            Скасувати
+          <a className="inline-flex h-10 items-center gap-2 rounded-md border px-4 text-sm" href="/companies">
+            <List className="size-4 shrink-0" aria-hidden />
+            До списку компаній
           </a>
         </div>
       </GuardedForm>

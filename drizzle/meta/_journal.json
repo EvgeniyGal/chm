@@ -57,6 +57,13 @@
       "when": 1774697831883,
       "tag": "0007_lean_lilith",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1774772313652,
+      "tag": "0008_invoice_work_type",
+      "breakpoints": true
     }
   ]
 }

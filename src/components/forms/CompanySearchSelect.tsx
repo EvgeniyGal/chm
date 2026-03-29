@@ -11,6 +11,7 @@ export function CompanySearchSelect({
   value,
   onChange,
   disabledCompanyId,
+  disabled = false,
 }: {
   label?: string;
   placeholder?: string;
@@ -18,6 +19,8 @@ export function CompanySearchSelect({
   value: string;
   onChange: (nextId: string) => void;
   disabledCompanyId?: string;
+  /** Read-only: показує вибрану назву без відкриття списку (наприклад, фіксовані сторони за договором). */
+  disabled?: boolean;
 }) {
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const [open, setOpen] = useState(false);
@@ -40,6 +43,22 @@ export function CompanySearchSelect({
     document.addEventListener("mousedown", onDocMouseDown);
     return () => document.removeEventListener("mousedown", onDocMouseDown);
   }, []);
+
+  if (disabled) {
+    return (
+      <div className="flex flex-col gap-1 text-sm min-w-0">
+        {label ? <span className="text-muted-foreground">{label}</span> : null}
+        <input
+          readOnly
+          tabIndex={-1}
+          aria-readonly="true"
+          className="h-10 w-full min-w-0 cursor-default rounded-md border border-border bg-muted px-3 text-foreground"
+          value={selected?.label ?? ""}
+          placeholder={placeholder}
+        />
+      </div>
+    );
+  }
 
   return (
     <div ref={wrapperRef} className="flex flex-col gap-1 text-sm min-w-0">

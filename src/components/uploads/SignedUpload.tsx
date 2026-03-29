@@ -96,7 +96,7 @@ export function SignedUpload({
         ok += 1;
       }
 
-      input.value = "";
+      if (input) input.value = "";
       await loadScans();
 
       if (failures.length === 0) {

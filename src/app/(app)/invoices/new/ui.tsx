@@ -1,16 +1,29 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
-import { FormProvider, useForm } from "react-hook-form";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Controller, FormProvider, useForm } from "react-hook-form";
+import { Plus } from "lucide-react";
+import { FiFileText, FiList } from "react-icons/fi";
 import { toast } from "sonner";
 
+import { CompanySearchSelect } from "@/components/forms/CompanySearchSelect";
+import { QuickCreateCompanyModal } from "@/components/forms/QuickCreateCompanyModal";
+import { UnsavedChangesNavigationDialog } from "@/components/forms/UnsavedChangesNavigationDialog";
 import { useUnsavedChangesGuard } from "@/components/forms/useUnsavedChangesGuard";
 import { getServerActionErrorMessage } from "@/lib/server-action-error-message";
 import { isNextNavigationError } from "@/lib/is-next-navigation-error";
 import { invoicePartialSelectionStorageKey } from "@/lib/invoice-from-contract-session";
 import { LineItemsTable } from "@/components/line-items/LineItemsTable";
+import { SignedUpload } from "@/components/uploads/SignedUpload";
+import type { SignedScanListItem } from "@/lib/signed-scans";
 
-type CompanyOpt = { id: string; label: string };
+type InvoiceCompanyRow = {
+  id: string;
+  label: string;
+  invoiceSignerFullNameNom: string;
+  invoiceSignerPositionNom: string;
+};
 
 type ContractSeedItem = {
   id: string;
@@ -24,13 +37,25 @@ type ContractSeedItem = {
 
 type ContractSeed = {
   id: string;
+  /** Номер договору в базі. */
+  number: string;
+  /** Дата договору (YYYY-MM-DD). */
+  contractDateIso: string;
+  workType: "WORKS" | "SERVICES";
   customerCompanyId: string;
   contractorCompanyId: string;
   items: ContractSeedItem[];
 };
 
-type InvoiceFormValues = {
+function formatContractDateUk(isoDate: string) {
+  const d = new Date(`${isoDate}T12:00:00.000Z`);
+  if (Number.isNaN(d.getTime())) return isoDate;
+  return d.toLocaleDateString("uk-UA");
+}
+
+export type InvoiceFormValues = {
   date: string;
+  workType: "WORKS" | "SERVICES";
   customerCompanyId: string;
   contractorCompanyId: string;
   contractId?: string | null;
@@ -43,21 +68,49 @@ type InvoiceFormValues = {
 };
 
 export function InvoiceForm({
+  mode = "create",
   companies,
   contract,
   defaultInvoiceSigner = { signerFullNameNom: "", signerPositionNom: "" },
   lineItemUnitOptions,
   partialSelection = false,
+  quickCreateDropdowns,
+  editInitialValues,
+  invoiceId,
+  signedScansInitial,
+  cancelHref = "/invoices",
+  readonlyInvoiceNumber,
+  previewInvoiceNumberInitial,
   onSubmit,
 }: {
-  companies: CompanyOpt[];
+  mode?: "create" | "edit";
+  companies: InvoiceCompanyRow[];
   contract: ContractSeed | null;
   defaultInvoiceSigner?: { signerFullNameNom: string; signerPositionNom: string };
   lineItemUnitOptions: string[];
   partialSelection?: boolean;
+  quickCreateDropdowns: {
+    taxStatusOptions: string[];
+    signerPositionNomOptions: string[];
+    signerPositionGenOptions: string[];
+    actingUnderOptions: string[];
+  };
+  /** Full form snapshot when `mode === "edit"`. */
+  editInitialValues?: InvoiceFormValues;
+  invoiceId?: string;
+  signedScansInitial?: SignedScanListItem[];
+  cancelHref?: string;
+  /** Існуючий номер у режимі редагування (лише читання). */
+  readonlyInvoiceNumber?: string;
+  /** Попередній перегляд номера для нового рахунку (залежить від дати в формі). */
+  previewInvoiceNumberInitial?: string;
   onSubmit: (payload: InvoiceFormValues) => Promise<void>;
 }) {
   const defaultValues = useMemo((): InvoiceFormValues => {
+    if (mode === "edit" && editInitialValues) {
+      return editInitialValues;
+    }
+
     const itemsFromContract =
       contract?.items?.length && !(contract.id && partialSelection)
         ? contract.items.map((it) => ({
@@ -71,6 +124,7 @@ export function InvoiceForm({
 
     return {
       date: new Date().toISOString().slice(0, 10),
+      workType: contract?.id ? contract.workType : "WORKS",
       customerCompanyId: contract?.customerCompanyId ?? "",
       contractorCompanyId: contract?.contractorCompanyId ?? "",
       contractId: contract?.id ?? null,
@@ -83,16 +137,48 @@ export function InvoiceForm({
         ? itemsFromContract
         : [{ title: "", unit: "", quantity: 0, price: 0, sourceContractLineItemId: null }],
     };
-  }, [contract, partialSelection, defaultInvoiceSigner]);
+  }, [mode, editInitialValues, contract, partialSelection, defaultInvoiceSigner]);
 
   const form = useForm<InvoiceFormValues>({
     defaultValues,
     mode: "onBlur",
   });
+  const router = useRouter();
+
+  const formDate = form.watch("date");
+  const [invoicePreviewNumber, setInvoicePreviewNumber] = useState(
+    () => previewInvoiceNumberInitial ?? "—",
+  );
+
+  useEffect(() => {
+    if (readonlyInvoiceNumber) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch(`/api/invoices/preview-number?date=${encodeURIComponent(formDate)}`);
+        if (!res.ok || cancelled) return;
+        const json = (await res.json()) as { data?: { number: string } };
+        if (json.data?.number && !cancelled) setInvoicePreviewNumber(json.data.number);
+      } catch {
+        /* ignore preview failures */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [formDate, readonlyInvoiceNumber]);
+
+  const [companiesState, setCompaniesState] = useState(companies);
+  const [companyModalFor, setCompanyModalFor] = useState<"customer" | "contractor" | null>(null);
+
+  useEffect(() => {
+    setCompaniesState(companies);
+  }, [companies]);
 
   const partialHydratedRef = useRef(false);
 
   useEffect(() => {
+    if (mode === "edit") return;
     if (!contract?.id || !partialSelection || partialHydratedRef.current) return;
     const requestKey = invoicePartialSelectionStorageKey(contract.id);
     const raw = sessionStorage.getItem(requestKey);
@@ -136,23 +222,91 @@ export function InvoiceForm({
       ...form.getValues(),
       items: built,
     });
-  }, [contract, partialSelection, form]);
+  }, [mode, contract, partialSelection, form]);
 
-  useUnsavedChangesGuard(form.formState.isDirty);
+  const suppressBeforeUnloadOnce = useUnsavedChangesGuard(form.formState.isDirty);
 
   const isFromContract = Boolean(contract?.id);
+  const customerCompanyId = form.watch("customerCompanyId");
+  const contractorCompanyId = form.watch("contractorCompanyId");
+
+  const companiesById = useMemo(() => new Map(companiesState.map((c) => [c.id, c])), [companiesState]);
+  const selectedContractorCompany = contractorCompanyId ? companiesById.get(contractorCompanyId) : null;
+  const companyOptions = useMemo(() => companiesState.map((c) => ({ id: c.id, label: c.label })), [companiesState]);
+
+  useEffect(() => {
+    if (isFromContract) return;
+
+    if (!selectedContractorCompany) {
+      if (!contractorCompanyId) {
+        form.setValue("signerFullNameNom", "", { shouldDirty: true });
+        form.setValue("signerPositionNom", "", { shouldDirty: true });
+      }
+      return;
+    }
+
+    const setIfDifferent = (key: "signerFullNameNom" | "signerPositionNom", nextValue: string) => {
+      const currentValue = form.getValues(key);
+      if (currentValue === nextValue) return;
+      form.setValue(key, nextValue, { shouldDirty: true });
+    };
+
+    setIfDifferent("signerFullNameNom", selectedContractorCompany.invoiceSignerFullNameNom);
+    setIfDifferent("signerPositionNom", selectedContractorCompany.invoiceSignerPositionNom);
+  }, [contractorCompanyId, selectedContractorCompany, form, isFromContract]);
+
+  useEffect(() => {
+    if (isFromContract) return;
+    if (!customerCompanyId || !contractorCompanyId) return;
+    if (customerCompanyId !== contractorCompanyId) return;
+
+    form.setValue("contractorCompanyId", "", { shouldDirty: true });
+    form.setValue("signerFullNameNom", "", { shouldDirty: true });
+    form.setValue("signerPositionNom", "", { shouldDirty: true });
+  }, [customerCompanyId, contractorCompanyId, form, isFromContract]);
 
   const remainingBySourceId = useMemo(
     () => new Map(contract?.items.map((it) => [it.id, it.remaining]) ?? []),
     [contract?.items],
   );
 
+  const contractLineCatalog = useMemo(
+    () =>
+      (contract?.items ?? []).map((it) => ({
+        id: it.id,
+        title: it.title,
+        unit: it.unit,
+        price: it.price,
+        remaining: it.remaining,
+      })),
+    [contract?.items],
+  );
+
+  const lineItemsHeading = isFromContract
+    ? contract?.workType === "SERVICES"
+      ? "Перелік послуг"
+      : "Перелік робіт"
+    : form.watch("workType") === "SERVICES"
+      ? "Перелік послуг"
+      : "Перелік робіт";
+
   return (
     <FormProvider {...form}>
       <form
         className="flex flex-col gap-4 rounded-xl border bg-white p-4"
         onSubmit={form.handleSubmit(async (values) => {
+          if (!isFromContract && values.customerCompanyId === values.contractorCompanyId) {
+            toast.error("Замовник і виконавець не можуть бути однією компанією.");
+            return;
+          }
+
           if (contract?.id) {
+            for (const row of values.items) {
+              if (!row.sourceContractLineItemId) {
+                toast.error("Кожна позиція має бути прив’язана до рядка договору.");
+                return;
+              }
+            }
             const qtyBySource = new Map<string, number>();
             for (const row of values.items) {
               if (!row.sourceContractLineItemId) continue;
@@ -174,6 +328,11 @@ export function InvoiceForm({
 
           try {
             await onSubmit(values);
+            if (mode === "edit") {
+              toast.success("Рахунок збережено.");
+              router.refresh();
+              form.reset(values);
+            }
           } catch (e) {
             if (isNextNavigationError(e)) {
               toast.success("Рахунок створено.");
@@ -183,85 +342,285 @@ export function InvoiceForm({
           }
         })}
       >
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        {mode === "create" ? (
+          !isFromContract ? (
+            <p className="rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
+              Окремий рахунок без договору: оберіть сторони, тип (роботи чи послуги), підписанта та позиції. Пізніше можна
+              оформити договір окремо.
+            </p>
+          ) : (
+            <p className="rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
+              Рахунок на основі договору: сторони та тип фіксовані договором; кількість по прив’язаних позиціях не більше
+              залишку.
+            </p>
+          )
+        ) : isFromContract && contract ? (
+          <p className="rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
+            Рахунок до існуючого в базі договору №{contract.number} від{" "}
+            {formatContractDateUk(contract.contractDateIso)}.
+          </p>
+        ) : (
+          <p className="rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
+            Окремий рахунок: доступні всі поля та позиції.
+          </p>
+        )}
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <ReadOnlyField
+            label="Номер рахунку"
+            hint={
+              readonlyInvoiceNumber
+                ? undefined
+                : "Присвоюється автоматично при збереженні (залежить від дати)."
+            }
+            value={readonlyInvoiceNumber ?? invoicePreviewNumber}
+          />
           <Field label="Дата" type="date" {...form.register("date", { required: true })} />
 
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-700">Замовник</span>
+            <span className="text-zinc-700">Тип</span>
             <select
               className="h-10 rounded-md border px-3 disabled:bg-zinc-50"
               disabled={isFromContract}
-              {...form.register("customerCompanyId", { required: true })}
+              {...form.register("workType", { required: true })}
             >
-              <option value="" disabled>
-                Оберіть компанію…
-              </option>
-              {companies.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.label}
-                </option>
-              ))}
+              <option value="WORKS">Роботи</option>
+              <option value="SERVICES">Послуги</option>
             </select>
           </label>
+        </div>
 
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-700">Виконавець</span>
-            <select
-              className="h-10 rounded-md border px-3 disabled:bg-zinc-50"
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          {isFromContract ? (
+            <>
+              <Controller
+                name="customerCompanyId"
+                control={form.control}
+                rules={{ required: true }}
+                render={({ field }) => (
+                  <CompanySearchSelect
+                    label="Замовник"
+                    companies={companyOptions}
+                    value={field.value}
+                    onChange={field.onChange}
+                    disabled
+                  />
+                )}
+              />
+              <Controller
+                name="contractorCompanyId"
+                control={form.control}
+                rules={{ required: true }}
+                render={({ field }) => (
+                  <CompanySearchSelect
+                    label="Виконавець"
+                    companies={companyOptions}
+                    value={field.value}
+                    onChange={field.onChange}
+                    disabled
+                  />
+                )}
+              />
+            </>
+          ) : (
+            <>
+              <Controller
+                name="customerCompanyId"
+                control={form.control}
+                rules={{ required: true }}
+                render={({ field }) => (
+                  <div className="flex flex-col gap-1 text-sm min-w-0">
+                    <span className="text-zinc-700">Замовник</span>
+                    <div className="flex w-full flex-nowrap items-center gap-2 min-w-0">
+                      <div className="flex-1 min-w-0">
+                        <CompanySearchSelect
+                          label=""
+                          placeholder="Оберіть компанію…"
+                          companies={companyOptions}
+                          value={field.value}
+                          onChange={(nextId) => field.onChange(nextId)}
+                          disabledCompanyId={contractorCompanyId}
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        className="inline-flex h-10 w-10 items-center justify-center rounded-md border text-zinc-700 hover:bg-zinc-50"
+                        aria-label="Додати компанію для Замовника"
+                        title="Додати компанію"
+                        onClick={() => setCompanyModalFor("customer")}
+                      >
+                        <Plus className="size-4" aria-hidden="true" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              />
+
+              <Controller
+                name="contractorCompanyId"
+                control={form.control}
+                rules={{ required: true }}
+                render={({ field }) => (
+                  <div className="flex flex-col gap-1 text-sm min-w-0">
+                    <span className="text-zinc-700">Виконавець</span>
+                    <div className="flex w-full flex-nowrap items-center gap-2 min-w-0">
+                      <div className="flex-1 min-w-0">
+                        <CompanySearchSelect
+                          label=""
+                          placeholder="Оберіть компанію…"
+                          companies={companyOptions}
+                          value={field.value}
+                          onChange={(nextId) => field.onChange(nextId)}
+                          disabledCompanyId={customerCompanyId}
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        className="inline-flex h-10 w-10 items-center justify-center rounded-md border text-zinc-700 hover:bg-zinc-50"
+                        aria-label="Додати компанію для Виконавця"
+                        title="Додати компанію"
+                        onClick={() => setCompanyModalFor("contractor")}
+                      >
+                        <Plus className="size-4" aria-hidden="true" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              />
+            </>
+          )}
+
+          <label className="flex items-center gap-2 text-sm md:col-span-2">
+            <input
+              type="checkbox"
               disabled={isFromContract}
-              {...form.register("contractorCompanyId", { required: true })}
-            >
-              <option value="" disabled>
-                Оберіть компанію…
-              </option>
-              {companies.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.label}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" {...form.register("isExternalContract")} />
+              {...form.register("isExternalContract")}
+            />
             <span>Зовнішній договір</span>
           </label>
         </div>
 
         {form.watch("isExternalContract") ? (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <Field label="Номер договору (зовнішній)" {...form.register("externalContractNumber", { required: true })} />
-            <Field label="Дата договору (зовнішній)" type="date" {...form.register("externalContractDate", { required: true })} />
+            <Field
+              label="Номер договору (зовнішній)"
+              disabled={isFromContract}
+              {...form.register("externalContractNumber", { required: true })}
+            />
+            <Field
+              label="Дата договору (зовнішній)"
+              type="date"
+              disabled={isFromContract}
+              {...form.register("externalContractDate", { required: true })}
+            />
           </div>
         ) : null}
 
         <div className="grid grid-cols-1 gap-4 rounded-lg bg-muted p-4 md:grid-cols-2">
-          <div className="md:col-span-2 text-sm font-semibold text-foreground">Підписант</div>
-          <Field label="ПІБ (називний)" {...form.register("signerFullNameNom", { required: true })} />
-          <Field label="Посада (називний)" {...form.register("signerPositionNom", { required: true })} />
+          <div className="md:col-span-2 text-sm font-semibold text-foreground">Підписант (виконавець)</div>
+          <Field
+            label="ПІБ (називний)"
+            disabled={isFromContract}
+            {...form.register("signerFullNameNom", { required: true })}
+          />
+          <Field
+            label="Посада (називний)"
+            disabled={isFromContract}
+            {...form.register("signerPositionNom", { required: true })}
+          />
         </div>
 
+        {mode === "edit" && invoiceId ? (
+          <div className="flex flex-col gap-4 rounded-lg border border-border bg-card p-4">
+            <div className="text-sm font-semibold text-foreground">Документ</div>
+            <SignedUpload entityType="INVOICE" entityId={invoiceId} initialScans={signedScansInitial} />
+          </div>
+        ) : null}
+
         <div className="flex flex-col gap-2">
-          <div className="text-sm font-semibold text-foreground">Перелік робіт / послуг</div>
-          <LineItemsTable unitOptionsFromBackend={lineItemUnitOptions} />
+          <div className="text-sm font-semibold text-foreground">{lineItemsHeading}</div>
+          <LineItemsTable
+            unitOptionsFromBackend={lineItemUnitOptions}
+            contractInvoiceMode={isFromContract}
+            contractLineCatalog={contractLineCatalog}
+          />
           {isFromContract ? (
             <p className="text-xs text-zinc-500">
-              Рахунок на основі договору: кількість по кожній прив’язаній позиції не може перевищити залишок (уже з урахуванням
-              попередніх рахунків).
+              Кількість по кожній прив’язаній позиції не може перевищити залишок (уже з урахуванням попередніх рахунків).
             </p>
           ) : null}
         </div>
 
-        <div className="mt-2 flex gap-3">
+        <div className="mt-2 flex flex-wrap items-center gap-3">
           <button type="submit" className="crm-btn-primary">
             Зберегти
           </button>
-          <a className="inline-flex h-10 items-center rounded-md border px-4 text-sm" href="/invoices">
-            Скасувати
+          <a
+            className="inline-flex h-10 items-center gap-2 rounded-md border px-4 text-sm"
+            href={cancelHref}
+          >
+            <FiList className="size-4 shrink-0" aria-hidden />
+            До списку рахунків
           </a>
+          {mode === "edit" && invoiceId ? (
+            <a
+              className="inline-flex h-10 items-center gap-2 rounded-md border border-border bg-background px-4 text-sm hover:bg-muted"
+              href={`/api/documents/invoice/${invoiceId}`}
+              aria-label="Завантажити рахунок (DOCX)"
+              title="Завантажити DOCX"
+            >
+              <FiFileText className="size-4 shrink-0" aria-hidden />
+              Рахунок
+            </a>
+          ) : null}
         </div>
       </form>
+      <UnsavedChangesNavigationDialog
+        isDirty={form.formState.isDirty}
+        suppressBeforeUnloadOnce={suppressBeforeUnloadOnce}
+      />
+      <QuickCreateCompanyModal
+        open={companyModalFor !== null}
+        onOpenChange={(next) => {
+          if (!next) setCompanyModalFor(null);
+        }}
+        taxStatusOptions={quickCreateDropdowns.taxStatusOptions}
+        signerPositionNomOptions={quickCreateDropdowns.signerPositionNomOptions}
+        signerPositionGenOptions={quickCreateDropdowns.signerPositionGenOptions}
+        actingUnderOptions={quickCreateDropdowns.actingUnderOptions}
+        onCreated={(company) => {
+          const row: InvoiceCompanyRow = {
+            id: company.id,
+            label: company.label,
+            invoiceSignerFullNameNom: company.invoiceSignerFullNameNom,
+            invoiceSignerPositionNom: company.invoiceSignerPositionNom,
+          };
+          setCompaniesState((prev) => [row, ...prev.filter((c) => c.id !== row.id)]);
+          if (companyModalFor === "customer") {
+            form.setValue("customerCompanyId", company.id, { shouldDirty: true });
+          } else if (companyModalFor === "contractor") {
+            form.setValue("contractorCompanyId", company.id, { shouldDirty: true });
+          }
+          setCompanyModalFor(null);
+        }}
+      />
     </FormProvider>
+  );
+}
+
+function ReadOnlyField({ label, hint, value }: { label: string; hint?: string; value: string }) {
+  return (
+    <div className="flex min-w-0 flex-col gap-1 text-sm">
+      <span className="text-muted-foreground">{label}</span>
+      <input
+        value={value}
+        readOnly
+        tabIndex={-1}
+        aria-readonly="true"
+        className="h-10 w-full min-w-0 cursor-default rounded-md border border-border bg-muted px-3 text-foreground"
+      />
+      {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
+    </div>
   );
 }
 

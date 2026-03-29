@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Controller, FormProvider, useForm } from "react-hook-form";
-import { Plus } from "lucide-react";
+import { List, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import { useUnsavedChangesGuard } from "@/components/forms/useUnsavedChangesGuard";
@@ -135,6 +136,7 @@ export function ContractEditForm({
   linesForInvoicing: ContractLineInvoiceRemaining[];
   signedScansInitial: SignedScanListItem[];
 }) {
+  const router = useRouter();
   const form = useForm<ContractFormValues>({
     defaultValues: initial,
     mode: "onBlur",
@@ -214,18 +216,22 @@ export function ContractEditForm({
       <form
         className="flex min-w-0 flex-col gap-4 rounded-xl border bg-white p-4"
         onSubmit={form.handleSubmit(async (values) => {
+          const payload = {
+            ...values,
+            items: values.items.map((item) => ({
+              ...item,
+              quantity: toDecimal(item.quantity),
+              price: toDecimal(item.price),
+            })),
+          };
           try {
-            await onSubmit({
-              ...values,
-              items: values.items.map((item) => ({
-                ...item,
-                quantity: toDecimal(item.quantity),
-                price: toDecimal(item.price),
-              })),
-            });
+            await onSubmit(payload);
+            toast.success("Договір збережено.");
+            router.refresh();
+            form.reset(values);
           } catch (e) {
             if (isNextNavigationError(e)) {
-              toast.success("Договір оновлено.");
+              toast.success("Договір збережено.");
               throw e;
             }
             toast.error(getServerActionErrorMessage(e));
@@ -500,8 +506,9 @@ export function ContractEditForm({
           >
             Зберегти
           </button>
-          <a className="inline-flex h-10 items-center rounded-md border px-4 text-sm" href={cancelHref}>
-            Скасувати
+          <a className="inline-flex h-10 items-center gap-2 rounded-md border px-4 text-sm" href={cancelHref}>
+            <List className="size-4 shrink-0" aria-hidden />
+            До списку договорів
           </a>
           <button
             type="button"
