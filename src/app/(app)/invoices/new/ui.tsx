@@ -4,13 +4,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Controller, FormProvider, useForm } from "react-hook-form";
 import { Plus } from "lucide-react";
-import { FiClipboard, FiFileText, FiList } from "react-icons/fi";
+import { FiClipboard, FiFileText, FiList, FiSave } from "react-icons/fi";
 import { toast } from "sonner";
 
 import { CompanySearchSelect } from "@/components/forms/CompanySearchSelect";
 import { QuickCreateCompanyModal } from "@/components/forms/QuickCreateCompanyModal";
 import { UnsavedChangesNavigationDialog } from "@/components/forms/UnsavedChangesNavigationDialog";
 import { useUnsavedChangesGuard } from "@/components/forms/useUnsavedChangesGuard";
+import { SearchableDropdownOptionField } from "@/components/forms/SearchableDropdownOptionField";
 import { getServerActionErrorMessage } from "@/lib/server-action-error-message";
 import { isNextNavigationError } from "@/lib/is-next-navigation-error";
 import { invoicePartialSelectionStorageKey } from "@/lib/invoice-from-contract-session";
@@ -83,6 +84,8 @@ export function InvoiceForm({
   previewInvoiceNumberInitial,
   existingAcceptanceActId,
   onSubmit,
+  onSubmitAndCreateAcceptanceAct,
+  onSubmitAndDownloadInvoiceDocx,
 }: {
   mode?: "create" | "edit";
   companies: InvoiceCompanyRow[];
@@ -108,6 +111,8 @@ export function InvoiceForm({
   /** Якщо для рахунку вже є акт — показуємо посилання на нього замість «Сформувати акт». */
   existingAcceptanceActId?: string | null;
   onSubmit: (payload: InvoiceFormValues) => Promise<void>;
+  onSubmitAndCreateAcceptanceAct?: (payload: InvoiceFormValues) => Promise<void>;
+  onSubmitAndDownloadInvoiceDocx?: (payload: InvoiceFormValues) => Promise<void>;
 }) {
   const defaultValues = useMemo((): InvoiceFormValues => {
     if (mode === "edit" && editInitialValues) {
@@ -152,6 +157,9 @@ export function InvoiceForm({
   const [invoicePreviewNumber, setInvoicePreviewNumber] = useState(
     () => previewInvoiceNumberInitial ?? "—",
   );
+
+  const [actLoading, setActLoading] = useState(false);
+  const [docLoading, setDocLoading] = useState(false);
 
   useEffect(() => {
     if (readonlyInvoiceNumber) return;
@@ -227,9 +235,10 @@ export function InvoiceForm({
     });
   }, [mode, contract, partialSelection, form]);
 
-  const suppressBeforeUnloadOnce = useUnsavedChangesGuard(form.formState.isDirty);
-
   const isFromContract = Boolean(contract?.id);
+  const hasPreparedDraftFromContract = mode === "create" && isFromContract;
+  const shouldWarnOnLeave = form.formState.isDirty || hasPreparedDraftFromContract;
+  const suppressBeforeUnloadOnce = useUnsavedChangesGuard(shouldWarnOnLeave);
   const customerCompanyId = form.watch("customerCompanyId");
   const contractorCompanyId = form.watch("contractorCompanyId");
 
@@ -293,63 +302,67 @@ export function InvoiceForm({
       ? "Перелік послуг"
       : "Перелік робіт";
 
+  async function submitInvoice(values: InvoiceFormValues, options?: { allowRedirect?: boolean }) {
+    const allowRedirect = options?.allowRedirect ?? true;
+    if (!isFromContract && values.customerCompanyId === values.contractorCompanyId) {
+      toast.error("Замовник і виконавець не можуть бути однією компанією.");
+      throw new Error("VALIDATION_ERROR");
+    }
+
+    if (contract?.id) {
+      for (const row of values.items) {
+        if (!row.sourceContractLineItemId) {
+          toast.error("Кожна позиція має бути прив’язана до рядка договору.");
+          throw new Error("VALIDATION_ERROR");
+        }
+      }
+      const qtyBySource = new Map<string, number>();
+      for (const row of values.items) {
+        if (!row.sourceContractLineItemId) continue;
+        const id = row.sourceContractLineItemId;
+        qtyBySource.set(id, (qtyBySource.get(id) ?? 0) + row.quantity);
+      }
+      for (const [sourceId, sumQty] of qtyBySource) {
+        const max = remainingBySourceId.get(sourceId);
+        if (max === undefined) {
+          toast.error("У рахунку є позиція з прив’язкою до договору, якої немає в поточних залишках.");
+          throw new Error("VALIDATION_ERROR");
+        }
+        if (sumQty > max + 1e-9) {
+          toast.error(`Сума кількостей по одній позиції договору перевищує залишок (макс. ${max}).`);
+          throw new Error("VALIDATION_ERROR");
+        }
+      }
+    }
+
+    try {
+      await onSubmit(values);
+      if (mode === "edit") {
+        toast.success("Рахунок збережено.");
+        router.refresh();
+        form.reset(values);
+      }
+    } catch (e) {
+      if (isNextNavigationError(e)) {
+        toast.success("Рахунок створено.");
+        if (allowRedirect) throw e;
+        return;
+      }
+      toast.error(getServerActionErrorMessage(e));
+      throw e;
+    }
+  }
+
   return (
     <FormProvider {...form}>
       <form
         className="flex flex-col gap-4 rounded-xl border bg-white p-4"
-        onSubmit={form.handleSubmit(async (values) => {
-          if (!isFromContract && values.customerCompanyId === values.contractorCompanyId) {
-            toast.error("Замовник і виконавець не можуть бути однією компанією.");
-            return;
-          }
-
-          if (contract?.id) {
-            for (const row of values.items) {
-              if (!row.sourceContractLineItemId) {
-                toast.error("Кожна позиція має бути прив’язана до рядка договору.");
-                return;
-              }
-            }
-            const qtyBySource = new Map<string, number>();
-            for (const row of values.items) {
-              if (!row.sourceContractLineItemId) continue;
-              const id = row.sourceContractLineItemId;
-              qtyBySource.set(id, (qtyBySource.get(id) ?? 0) + row.quantity);
-            }
-            for (const [sourceId, sumQty] of qtyBySource) {
-              const max = remainingBySourceId.get(sourceId);
-              if (max === undefined) {
-                toast.error("У рахунку є позиція з прив’язкою до договору, якої немає в поточних залишках.");
-                return;
-              }
-              if (sumQty > max + 1e-9) {
-                toast.error(`Сума кількостей по одній позиції договору перевищує залишок (макс. ${max}).`);
-                return;
-              }
-            }
-          }
-
-          try {
-            await onSubmit(values);
-            if (mode === "edit") {
-              toast.success("Рахунок збережено.");
-              router.refresh();
-              form.reset(values);
-            }
-          } catch (e) {
-            if (isNextNavigationError(e)) {
-              toast.success("Рахунок створено.");
-              throw e;
-            }
-            toast.error(getServerActionErrorMessage(e));
-          }
-        })}
+        onSubmit={form.handleSubmit(async (values) => submitInvoice(values))}
       >
         {mode === "create" ? (
           !isFromContract ? (
             <p className="rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
-              Окремий рахунок без договору: оберіть сторони, тип (роботи чи послуги), підписанта та позиції. Пізніше можна
-              оформити договір окремо.
+              Окремий рахунок без договору або відповідно до зовнішнього договору.
             </p>
           ) : (
             <p className="rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
@@ -526,11 +539,30 @@ export function InvoiceForm({
             disabled={isFromContract}
             {...form.register("signerFullNameNom", { required: true })}
           />
-          <Field
-            label="Посада (називний)"
-            disabled={isFromContract}
-            {...form.register("signerPositionNom", { required: true })}
-          />
+          {isFromContract ? (
+            <Field
+              label="Посада (називний)"
+              disabled={isFromContract}
+              {...form.register("signerPositionNom", { required: true })}
+            />
+          ) : (
+            <Controller
+              name="signerPositionNom"
+              control={form.control}
+              rules={{ required: true }}
+              render={({ field }) => (
+                <SearchableDropdownOptionField
+                  label="Посада (називний)"
+                  scope="SIGNER_POSITION_NOM"
+                  value={field.value ?? ""}
+                  onChange={(next) => field.onChange(next)}
+                  optionsFromBackend={quickCreateDropdowns.signerPositionNomOptions}
+                  placeholder="Оберіть або введіть посаду"
+                  inputClassName="bg-zinc-50"
+                />
+              )}
+            />
+          )}
         </div>
 
         {mode === "edit" && invoiceId ? (
@@ -555,7 +587,8 @@ export function InvoiceForm({
         </div>
 
         <div className="mt-2 flex flex-wrap items-center gap-3">
-          <button type="submit" className="crm-btn-primary">
+          <button type="submit" className="crm-btn-primary inline-flex h-10 items-center gap-2">
+            <FiSave className="size-4 shrink-0" aria-hidden />
             Зберегти
           </button>
           <a
@@ -565,6 +598,54 @@ export function InvoiceForm({
             <FiList className="size-4 shrink-0" aria-hidden />
             До списку рахунків
           </a>
+          {mode === "create" && onSubmitAndDownloadInvoiceDocx ? (
+            <button
+              type="button"
+              disabled={docLoading}
+              className="inline-flex h-10 items-center gap-2 rounded-md border border-border bg-background px-4 text-sm hover:bg-muted disabled:opacity-60"
+              onClick={() => {
+                setDocLoading(true);
+                void form
+                  .handleSubmit(async (values) => {
+                    try {
+                      await onSubmitAndDownloadInvoiceDocx(values);
+                    } catch (e) {
+                      if (!isNextNavigationError(e)) toast.error(getServerActionErrorMessage(e));
+                      throw e;
+                    }
+                  })()
+                  .finally(() => setDocLoading(false));
+              }}
+              title="Зберегти рахунок і сформувати DOCX"
+            >
+              <FiFileText className="size-4 shrink-0" aria-hidden />
+              Рахунок
+            </button>
+          ) : null}
+          {mode === "create" && onSubmitAndCreateAcceptanceAct ? (
+            <button
+              type="button"
+              disabled={actLoading}
+              className="inline-flex h-10 items-center gap-2 rounded-md border border-border bg-background px-4 text-sm hover:bg-muted disabled:opacity-60"
+              onClick={() => {
+                setActLoading(true);
+                void form
+                  .handleSubmit(async (values) => {
+                    try {
+                      await onSubmitAndCreateAcceptanceAct(values);
+                    } catch (e) {
+                      if (!isNextNavigationError(e)) toast.error(getServerActionErrorMessage(e));
+                      throw e;
+                    }
+                  })()
+                  .finally(() => setActLoading(false));
+              }}
+              title="Зберегти рахунок і перейти до створення акта"
+            >
+              <FiClipboard className="size-4 shrink-0" aria-hidden />
+              Сформувати акт
+            </button>
+          ) : null}
           {mode === "edit" && invoiceId ? (
             <>
               <a
@@ -600,8 +681,16 @@ export function InvoiceForm({
         </div>
       </form>
       <UnsavedChangesNavigationDialog
-        isDirty={form.formState.isDirty}
+        isDirty={shouldWarnOnLeave}
         suppressBeforeUnloadOnce={suppressBeforeUnloadOnce}
+        onSaveAndProceed={async () => {
+          const ok = await form.trigger();
+          if (!ok) {
+            toast.error("Заповніть обов’язкові поля перед збереженням.");
+            throw new Error("VALIDATION_ERROR");
+          }
+          await form.handleSubmit(async (values) => submitInvoice(values, { allowRedirect: false }))();
+        }}
       />
       <QuickCreateCompanyModal
         open={companyModalFor !== null}
@@ -655,9 +744,12 @@ function Field({
   label: string;
 }) {
   return (
-    <label className="flex flex-col gap-1 text-sm">
+    <label className="flex flex-col gap-1 text-sm min-w-0">
       <span className="text-zinc-700">{label}</span>
-      <input {...props} className="h-10 rounded-md border px-3" />
+      <input
+        {...props}
+        className="h-10 w-full min-w-0 rounded-md border bg-zinc-50 px-3 disabled:bg-zinc-50"
+      />
     </label>
   );
 }

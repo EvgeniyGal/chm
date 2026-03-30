@@ -71,6 +71,13 @@
       "when": 1774798549580,
       "tag": "0009_acceptance_act_invoice_unique",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1774867951505,
+      "tag": "0010_outstanding_praxagora",
+      "breakpoints": true
     }
   ]
 }

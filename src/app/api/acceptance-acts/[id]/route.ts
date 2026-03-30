@@ -16,6 +16,8 @@ const patchSchema = z
     signerFullNameGen: z.string().min(1).optional(),
     signerPositionNom: z.string().min(1).optional(),
     signerPositionGen: z.string().min(1).optional(),
+    isSigned: z.boolean().optional(),
+    isArchived: z.boolean().optional(),
   })
   .refine((v) => Object.keys(v).length > 0, { message: "No fields to update" });
 

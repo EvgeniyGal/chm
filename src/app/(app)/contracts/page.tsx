@@ -47,7 +47,8 @@ export default async function ContractsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await requireRole("MANAGER");
+  const { role } = await requireRole("MANAGER");
+  const canDeleteContracts = role === "ADMIN" || role === "OWNER";
   const sp = await searchParams;
   const q = String(sp.q ?? "").trim();
   const sortByRaw = String(sp.sortBy ?? "date");
@@ -152,6 +153,7 @@ export default async function ContractsPage({
         filterDateFrom={dateFromRaw}
         filterDateTo={dateToRaw}
         dateRangeInvalid={dateRangeInvalid}
+        canDeleteContracts={canDeleteContracts}
         rows={rows.map((c) => ({
           id: c.id,
           number: c.number,

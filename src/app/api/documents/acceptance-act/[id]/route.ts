@@ -1,9 +1,9 @@
 import { eq } from "drizzle-orm";
 
 import { db } from "@/db";
-import { acceptanceActs, lineItems } from "@/db/schema";
+import { acceptanceActs, companies, contracts, invoices, lineItems } from "@/db/schema";
+import { buildAcceptanceActDocxBuffer } from "@/lib/acceptance-act-docx";
 import { requireRole } from "@/lib/authz";
-import { renderDocxFromTextTemplate } from "@/lib/docx-template";
 
 export const runtime = "nodejs";
 
@@ -13,22 +13,34 @@ export async function GET(_req: Request, ctx: RouteContext<"/api/documents/accep
 
   const act = await db.query.acceptanceActs.findFirst({ where: eq(acceptanceActs.id, id) });
   if (!act) return Response.json({ error: "NOT_FOUND" }, { status: 404 });
+  const invoice = await db.query.invoices.findFirst({ where: eq(invoices.id, act.invoiceId) });
+  if (!invoice) return Response.json({ error: "INVOICE_NOT_FOUND" }, { status: 404 });
+  const customer = await db.query.companies.findFirst({ where: eq(companies.id, invoice.customerCompanyId) });
+  const contractor = await db.query.companies.findFirst({
+    where: eq(companies.id, invoice.contractorCompanyId),
+  });
+  if (!customer || !contractor) return Response.json({ error: "COMPANY_NOT_FOUND" }, { status: 404 });
+
+  const linkedContract = invoice.contractId
+    ? await db.query.contracts.findFirst({
+        where: eq(contracts.id, invoice.contractId),
+        columns: { number: true, date: true },
+      })
+    : null;
   const items = await db.query.lineItems.findMany({ where: eq(lineItems.acceptanceActId, id) });
 
-  const buffer = renderDocxFromTextTemplate({
-    title: `Акт ${act.number}`,
-    bodyLines: [
-      `Дата: ${new Date(act.date).toLocaleDateString("uk-UA")}`,
-      `Місце складання: ${act.signingLocation}`,
-      `Дата завершення: ${new Date(act.completionDate).toLocaleDateString("uk-UA")}`,
-      "",
-      "Перелік робіт/послуг:",
-      ...items.map((it, idx) => `${idx + 1}. ${it.title} (${it.unit}) — ${it.quantity} × ${it.price}`),
-      "",
-      `Разом (без ПДВ): ${act.totalWithoutVat}`,
-      `ПДВ 20%: ${act.vat20}`,
-      `Разом з ПДВ: ${act.totalWithVat}`,
-    ],
+  const buffer = buildAcceptanceActDocxBuffer({
+    act,
+    invoice,
+    customer,
+    contractor,
+    linkedContract,
+    items: items.map((it) => ({
+      title: it.title,
+      unit: it.unit,
+      quantity: Number(it.quantity),
+      price: Number(it.price),
+    })),
   });
   return new Response(new Uint8Array(buffer), {
     headers: {

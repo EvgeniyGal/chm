@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Controller, FormProvider, useForm } from "react-hook-form";
-import { List, Plus } from "lucide-react";
+import { FileText, List, Plus, Receipt, Save } from "lucide-react";
 import { toast } from "sonner";
 
 import { useUnsavedChangesGuard } from "@/components/forms/useUnsavedChangesGuard";
@@ -211,32 +211,35 @@ export function ContractEditForm({
     setCustomerSignerActingUnder(selectedCustomerCompany.contractSignerActingUnder ?? "");
   }, [selectedCustomerCompany]);
 
+  async function submitEditedContract(values: ContractFormValues) {
+    const payload = {
+      ...values,
+      items: values.items.map((item) => ({
+        ...item,
+        quantity: toDecimal(item.quantity),
+        price: toDecimal(item.price),
+      })),
+    };
+    try {
+      await onSubmit(payload);
+      toast.success("Договір збережено.");
+      router.refresh();
+      form.reset(values);
+    } catch (e) {
+      if (isNextNavigationError(e)) {
+        toast.success("Договір збережено.");
+        throw e;
+      }
+      toast.error(getServerActionErrorMessage(e));
+      throw e;
+    }
+  }
+
   return (
     <FormProvider {...form}>
       <form
         className="flex min-w-0 flex-col gap-4 rounded-xl border bg-white p-4"
-        onSubmit={form.handleSubmit(async (values) => {
-          const payload = {
-            ...values,
-            items: values.items.map((item) => ({
-              ...item,
-              quantity: toDecimal(item.quantity),
-              price: toDecimal(item.price),
-            })),
-          };
-          try {
-            await onSubmit(payload);
-            toast.success("Договір збережено.");
-            router.refresh();
-            form.reset(values);
-          } catch (e) {
-            if (isNextNavigationError(e)) {
-              toast.success("Договір збережено.");
-              throw e;
-            }
-            toast.error(getServerActionErrorMessage(e));
-          }
-        })}
+        onSubmit={form.handleSubmit(async (values) => submitEditedContract(values))}
       >
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <Field label="Дата" type="date" {...form.register("date", { required: true })} />
@@ -502,8 +505,9 @@ export function ContractEditForm({
         <div className="mt-2 flex flex-wrap items-center gap-3">
           <button
             type="submit"
-            className="crm-btn-primary"
+            className="crm-btn-primary inline-flex h-10 items-center gap-2"
           >
+            <Save className="size-4" aria-hidden="true" />
             Зберегти
           </button>
           <a className="inline-flex h-10 items-center gap-2 rounded-md border px-4 text-sm" href={cancelHref}>
@@ -512,15 +516,16 @@ export function ContractEditForm({
           </a>
           <button
             type="button"
-            className="inline-flex h-10 items-center rounded-md border border-zinc-300 bg-white px-4 text-sm text-zinc-800 hover:bg-zinc-50"
+            className="inline-flex h-10 items-center gap-2 rounded-md border border-zinc-300 bg-white px-4 text-sm text-zinc-800 hover:bg-zinc-50"
             onClick={() => setInvoiceDialogOpen(true)}
           >
-            Створити рахунок
+            <Receipt className="size-4" aria-hidden="true" />
+            Сформувати рахунок
           </button>
           <button
             type="button"
             disabled={!!treatyLoading}
-            className="inline-flex h-10 items-center rounded-md border border-zinc-300 bg-zinc-50 px-4 text-sm text-zinc-800 hover:bg-zinc-100 disabled:opacity-50"
+            className="inline-flex h-10 items-center gap-2 rounded-md border border-zinc-300 bg-zinc-50 px-4 text-sm text-zinc-800 hover:bg-zinc-100 disabled:opacity-50"
             onClick={async () => {
               setTreatyError(null);
               const ok = await form.trigger();
@@ -551,12 +556,13 @@ export function ContractEditForm({
               }
             }}
           >
+            <FileText className="size-4" aria-hidden="true" />
             {treatyLoading === "full" ? "…" : "Повний договір"}
           </button>
           <button
             type="button"
             disabled={!!treatyLoading}
-            className="inline-flex h-10 items-center rounded-md border border-zinc-300 bg-zinc-50 px-4 text-sm text-zinc-800 hover:bg-zinc-100 disabled:opacity-50"
+            className="inline-flex h-10 items-center gap-2 rounded-md border border-zinc-300 bg-zinc-50 px-4 text-sm text-zinc-800 hover:bg-zinc-100 disabled:opacity-50"
             onClick={async () => {
               setTreatyError(null);
               const ok = await form.trigger();
@@ -587,6 +593,7 @@ export function ContractEditForm({
               }
             }}
           >
+            <FileText className="size-4" aria-hidden="true" />
             {treatyLoading === "short" ? "…" : "Скорочений договір"}
           </button>
         </div>
@@ -594,6 +601,14 @@ export function ContractEditForm({
       <UnsavedChangesNavigationDialog
         isDirty={form.formState.isDirty}
         suppressBeforeUnloadOnce={suppressBeforeUnloadOnce}
+        onSaveAndProceed={async () => {
+          const ok = await form.trigger();
+          if (!ok) {
+            toast.error("Заповніть обов’язкові поля перед збереженням.");
+            throw new Error("VALIDATION_ERROR");
+          }
+          await form.handleSubmit(async (values) => submitEditedContract(values))();
+        }}
       />
       <CreateInvoiceFromContractDialog
         open={invoiceDialogOpen}

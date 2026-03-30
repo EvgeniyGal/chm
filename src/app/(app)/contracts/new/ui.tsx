@@ -2,19 +2,23 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Controller, FormProvider, useForm } from "react-hook-form";
-import { List, Plus } from "lucide-react";
+import { FileText, List, Plus, Receipt, Save } from "lucide-react";
 import { toast } from "sonner";
 
 import { getServerActionErrorMessage } from "@/lib/server-action-error-message";
 import { isNextNavigationError } from "@/lib/is-next-navigation-error";
 
 import { LineItemsTable } from "@/components/line-items/LineItemsTable";
+import { CreateInvoiceFromContractDialog } from "@/components/contracts/CreateInvoiceFromContractDialog";
 import { useUnsavedChangesGuard } from "@/components/forms/useUnsavedChangesGuard";
 import { SigningLocationField } from "@/components/forms/SigningLocationField";
 import { CompanySearchSelect } from "@/components/forms/CompanySearchSelect";
 import { UnsavedChangesNavigationDialog } from "@/components/forms/UnsavedChangesNavigationDialog";
 import { SearchableDropdownOptionField } from "@/components/forms/SearchableDropdownOptionField";
 import { QuickCreateCompanyModal } from "@/components/forms/QuickCreateCompanyModal";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import type { ContractLineInvoiceRemaining } from "@/lib/contract-invoice-remaining";
 
 type CompanyOpt = {
   id: string;
@@ -107,6 +111,7 @@ export function ContractForm({
   lineItemUnitOptions,
   initialContractNumber,
   onSubmit,
+  onSubmitAndCreateInvoice,
 }: {
   companies: CompanyOpt[];
   signingLocationOptions: string[];
@@ -119,6 +124,9 @@ export function ContractForm({
   lineItemUnitOptions: string[];
   initialContractNumber: string;
   onSubmit: (payload: ContractFormValues) => Promise<void>;
+  onSubmitAndCreateInvoice: (
+    payload: ContractFormValues,
+  ) => Promise<{ contractId: string; lines: ContractLineInvoiceRemaining[] }>;
 }) {
   const form = useForm<ContractFormValues>({
     defaultValues: {
@@ -156,6 +164,11 @@ export function ContractForm({
   const [treatyLoading, setTreatyLoading] = useState<null | "full" | "short">(null);
   const [treatyError, setTreatyError] = useState<string | null>(null);
   const [previewContractNumber, setPreviewContractNumber] = useState(initialContractNumber);
+  const [createInvoiceConfirmOpen, setCreateInvoiceConfirmOpen] = useState(false);
+  const [submitLoading, setSubmitLoading] = useState<null | "save" | "save-and-invoice">(null);
+  const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
+  const [invoiceContractId, setInvoiceContractId] = useState<string>("");
+  const [invoiceDialogLines, setInvoiceDialogLines] = useState<ContractLineInvoiceRemaining[]>([]);
 
   const contractDate = form.watch("date");
 
@@ -229,28 +242,53 @@ export function ContractForm({
     setCustomerSignerActingUnder(selectedCustomerCompany.contractSignerActingUnder ?? "");
   }, [selectedCustomerCompany]);
 
+  async function submitContract(
+    values: ContractFormValues,
+    mode: "save" | "save-and-invoice",
+    options?: { allowRedirect?: boolean },
+  ) {
+    const allowRedirect = options?.allowRedirect ?? true;
+    const payload = {
+      ...values,
+      items: values.items.map((item) => ({
+        ...item,
+        quantity: toDecimal(item.quantity),
+        price: toDecimal(item.price),
+      })),
+    };
+    setSubmitLoading(mode);
+    try {
+      if (mode === "save-and-invoice") {
+        const res = await onSubmitAndCreateInvoice(payload);
+        setInvoiceContractId(res.contractId);
+        setInvoiceDialogLines(res.lines);
+        setInvoiceDialogOpen(true);
+        toast.success("Договір збережено. Оберіть позиції для рахунку.");
+        setCreateInvoiceConfirmOpen(false);
+        // Mark form as clean to avoid "unsaved changes" prompts when leaving to `/invoices/new`.
+        form.reset(values);
+      } else {
+        await onSubmit(payload);
+      }
+    } catch (e) {
+      if (isNextNavigationError(e)) {
+        // `onSubmit` for contract creation uses `redirect()`, so we let Next handle navigation.
+        toast.success("Договір створено.");
+        if (allowRedirect) throw e;
+        return;
+      }
+      toast.error(getServerActionErrorMessage(e));
+      throw e;
+    } finally {
+      setSubmitLoading(null);
+    }
+  }
+
   return (
     <FormProvider {...form}>
       <form
         className="flex flex-col gap-4 rounded-xl border bg-white p-4"
-        onSubmit={form.handleSubmit(async (values) => {
-          try {
-            await onSubmit({
-              ...values,
-              items: values.items.map((item) => ({
-                ...item,
-                quantity: toDecimal(item.quantity),
-                price: toDecimal(item.price),
-              })),
-            });
-          } catch (e) {
-            if (isNextNavigationError(e)) {
-              toast.success("Договір створено.");
-              throw e;
-            }
-            toast.error(getServerActionErrorMessage(e));
-          }
-        })}
+        onSubmit={form.handleSubmit(async (values) => submitContract(values, "save"))}
       >
         <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
           <ReadOnlyField
@@ -504,9 +542,30 @@ export function ContractForm({
         <div className="mt-2 flex flex-wrap items-center gap-3">
           <button
             type="submit"
-            className="crm-btn-primary"
+            disabled={submitLoading !== null}
+            className="crm-btn-primary inline-flex h-10 items-center gap-2 disabled:opacity-60"
           >
-            Зберегти
+            <Save className="size-4" aria-hidden="true" />
+            {submitLoading === "save" ? "Збереження…" : "Зберегти"}
+          </button>
+          <button
+            type="button"
+            disabled={submitLoading !== null}
+            className="inline-flex h-10 items-center gap-2 rounded-md border border-zinc-300 bg-white px-4 text-sm text-zinc-800 hover:bg-zinc-50 disabled:opacity-60"
+            onClick={async () => {
+              setTreatyError(null);
+              const ok = await form.trigger();
+              if (!ok) {
+                const msg = "Заповніть усі обов’язкові поля перед створенням рахунку.";
+                setTreatyError(msg);
+                toast.error(msg);
+                return;
+              }
+              setCreateInvoiceConfirmOpen(true);
+            }}
+          >
+            <Receipt className="size-4" aria-hidden="true" />
+            {submitLoading === "save-and-invoice" ? "Збереження…" : "Сформувати рахунок"}
           </button>
           <a className="inline-flex h-10 items-center gap-2 rounded-md border px-4 text-sm" href="/contracts">
             <List className="size-4 shrink-0" aria-hidden />
@@ -515,7 +574,7 @@ export function ContractForm({
           <button
             type="button"
             disabled={!!treatyLoading}
-            className="inline-flex h-10 items-center rounded-md border border-zinc-300 bg-zinc-50 px-4 text-sm text-zinc-800 hover:bg-zinc-100 disabled:opacity-50"
+            className="inline-flex h-10 items-center gap-2 rounded-md border border-zinc-300 bg-zinc-50 px-4 text-sm text-zinc-800 hover:bg-zinc-100 disabled:opacity-50"
             onClick={async () => {
               setTreatyError(null);
               const ok = await form.trigger();
@@ -550,12 +609,13 @@ export function ContractForm({
               }
             }}
           >
+            <FileText className="size-4" aria-hidden="true" />
             {treatyLoading === "full" ? "…" : "Повний договір"}
           </button>
           <button
             type="button"
             disabled={!!treatyLoading}
-            className="inline-flex h-10 items-center rounded-md border border-zinc-300 bg-zinc-50 px-4 text-sm text-zinc-800 hover:bg-zinc-100 disabled:opacity-50"
+            className="inline-flex h-10 items-center gap-2 rounded-md border border-zinc-300 bg-zinc-50 px-4 text-sm text-zinc-800 hover:bg-zinc-100 disabled:opacity-50"
             onClick={async () => {
               setTreatyError(null);
               const ok = await form.trigger();
@@ -590,13 +650,58 @@ export function ContractForm({
               }
             }}
           >
+            <FileText className="size-4" aria-hidden="true" />
             {treatyLoading === "short" ? "…" : "Скорочений договір"}
           </button>
         </div>
       </form>
+      <Dialog open={createInvoiceConfirmOpen} onOpenChange={setCreateInvoiceConfirmOpen}>
+        <DialogContent>
+          <DialogTitle>Підтвердження створення рахунку</DialogTitle>
+          <p className="text-sm text-muted-foreground">
+            Договір буде збережено. Після збереження відкриється меню вибору позицій і кількостей для
+            рахунку на основі цього договору.
+          </p>
+          <div className="mt-4 flex justify-end gap-2">
+            <Button type="button" variant="outline" disabled={submitLoading !== null} onClick={() => setCreateInvoiceConfirmOpen(false)}>
+              Скасувати
+            </Button>
+            <Button
+              type="button"
+              disabled={submitLoading !== null}
+              onClick={() => void form.handleSubmit(async (values) => submitContract(values, "save-and-invoice"))()}
+            >
+              {submitLoading === "save-and-invoice" ? "Збереження…" : "Підтвердити"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <CreateInvoiceFromContractDialog
+        open={invoiceDialogOpen}
+        onOpenChange={(next) => {
+          setInvoiceDialogOpen(next);
+          if (!next) {
+            setInvoiceDialogLines([]);
+            setInvoiceContractId("");
+          }
+        }}
+        contractId={invoiceContractId}
+        lines={invoiceDialogLines}
+      />
       <UnsavedChangesNavigationDialog
         isDirty={form.formState.isDirty}
         suppressBeforeUnloadOnce={suppressBeforeUnloadOnce}
+        onSaveAndProceed={async () => {
+          const ok = await form.trigger();
+          if (!ok) {
+            toast.error("Заповніть обов’язкові поля перед збереженням.");
+            throw new Error("VALIDATION_ERROR");
+          }
+          await form.handleSubmit(async (values) => {
+            await submitContract(values, "save", { allowRedirect: false });
+          })();
+        }}
       />
       <QuickCreateCompanyModal
         open={companyModalFor !== null}

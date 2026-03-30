@@ -1,3 +1,4 @@
+import { hash, compare } from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -12,6 +13,12 @@ import { sendAuthEmail } from "@/lib/email";
 const nameSchema = z.object({
   firstName: z.string().min(1),
   lastName: z.string().min(1),
+});
+
+const passwordSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: z.string().min(8),
+  confirmPassword: z.string().min(1),
 });
 
 export default async function ProfilePage({
@@ -36,6 +43,39 @@ export default async function ProfilePage({
     await db
       .update(users)
       .set({ firstName: parsed.firstName, lastName: parsed.lastName, updatedAt: new Date() })
+      .where(eq(users.id, userId));
+    redirect("/profile");
+  }
+
+  async function changePassword(formData: FormData) {
+    "use server";
+    const { userId } = await requireRole("MANAGER");
+    const parsed = passwordSchema.safeParse({
+      currentPassword: String(formData.get("currentPassword") ?? ""),
+      newPassword: String(formData.get("newPassword") ?? ""),
+      confirmPassword: String(formData.get("confirmPassword") ?? ""),
+    });
+    if (!parsed.success) {
+      throw new Error("VALIDATION_ERROR");
+    }
+    const { currentPassword, newPassword, confirmPassword } = parsed.data;
+    if (newPassword !== confirmPassword) {
+      throw new Error("Нові паролі не збігаються.");
+    }
+
+    const row = await db.query.users.findFirst({ where: eq(users.id, userId) });
+    if (!row?.passwordHash) {
+      throw new Error("Для цього акаунта не встановлено пароль.");
+    }
+    const currentOk = await compare(currentPassword, row.passwordHash);
+    if (!currentOk) {
+      throw new Error("Поточний пароль невірний.");
+    }
+
+    const nextHash = await hash(newPassword, 12);
+    await db
+      .update(users)
+      .set({ passwordHash: nextHash, updatedAt: new Date() })
       .where(eq(users.id, userId));
     redirect("/profile");
   }
@@ -88,7 +128,7 @@ export default async function ProfilePage({
           className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2"
         >
           <label className="flex flex-col gap-1">
-            <span className="text-zinc-700">First Name</span>
+            <span className="text-zinc-700">Ім'я</span>
             <input
               name="firstName"
               required
@@ -98,7 +138,7 @@ export default async function ProfilePage({
             />
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-zinc-700">Last Name</span>
+            <span className="text-zinc-700">Прізвище</span>
             <input
               name="lastName"
               required
@@ -119,12 +159,64 @@ export default async function ProfilePage({
       </div>
 
       <div className="mt-4 rounded-xl border bg-white p-4 text-sm">
+        <div className="font-semibold text-foreground">Зміна пароля</div>
+        {userRow?.passwordHash ? (
+          <FormWithToastAction
+            action={changePassword}
+            successMessage="Пароль оновлено."
+            className="mt-3 flex flex-col gap-3"
+          >
+            <label className="flex flex-col gap-1">
+              <span className="text-zinc-700">Поточний пароль</span>
+              <input
+                name="currentPassword"
+                type="password"
+                required
+                autoComplete="current-password"
+                className="h-10 rounded-md border px-3"
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-zinc-700">Новий пароль</span>
+              <input
+                name="newPassword"
+                type="password"
+                required
+                minLength={8}
+                autoComplete="new-password"
+                className="h-10 rounded-md border px-3"
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-zinc-700">Підтвердження нового пароля</span>
+              <input
+                name="confirmPassword"
+                type="password"
+                required
+                minLength={8}
+                autoComplete="new-password"
+                className="h-10 rounded-md border px-3"
+              />
+            </label>
+            <button
+              className="inline-flex h-10 items-center justify-center rounded-md border px-4 text-sm hover:bg-zinc-50"
+              type="submit"
+            >
+              Змінити пароль
+            </button>
+          </FormWithToastAction>
+        ) : (
+          <p className="mt-2 text-xs text-zinc-600">Для цього акаунта не встановлено пароль (лише зовнішній вхід).</p>
+        )}
+      </div>
+
+      <div className="mt-4 rounded-xl border bg-white p-4 text-sm">
         <div className="grid grid-cols-3 gap-3">
-          <div className="text-zinc-500">First Name</div>
+          <div className="text-zinc-500">Ім'я</div>
           <div className="col-span-2">{userRow?.firstName ?? "—"}</div>
         </div>
         <div className="mt-2 grid grid-cols-3 gap-3">
-          <div className="text-zinc-500">Last Name</div>
+          <div className="text-zinc-500">Прізвище</div>
           <div className="col-span-2">{userRow?.lastName ?? "—"}</div>
         </div>
         <div className="mt-2 grid grid-cols-3 gap-3">

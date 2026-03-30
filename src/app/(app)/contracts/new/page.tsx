@@ -8,6 +8,7 @@ import { DROPDOWN_SCOPE, getDropdownOptions } from "@/lib/dropdown-options";
 import { peekNextDocumentNumber } from "@/db/numbering";
 import { internalApiFetch } from "@/lib/internal-api-fetch";
 import { ContractForm } from "./ui";
+import { getContractLinesWithRemainingForInvoicing, type ContractLineInvoiceRemaining } from "@/lib/contract-invoice-remaining";
 
 export default async function NewContractPage() {
   await requireRole("ADMIN");
@@ -54,6 +55,25 @@ export default async function NewContractPage() {
     redirect(`/contracts/${newId}/edit`);
   }
 
+  async function createAndStartInvoice(
+    payload: any,
+  ): Promise<{ contractId: string; lines: ContractLineInvoiceRemaining[] }> {
+    "use server";
+    await requireRole("ADMIN");
+    const res = await internalApiFetch(`${process.env.APP_URL ?? "http://localhost:3000"}/api/contracts`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload),
+      cache: "no-store",
+    });
+    const data = (await res.json().catch(() => null)) as { data?: { id: string }; error?: string } | null;
+    if (!res.ok) throw new Error(data?.error ?? "CREATE_FAILED");
+    const newId = data?.data?.id;
+    if (!newId) throw new Error("CREATE_FAILED");
+    const lines = await getContractLinesWithRemainingForInvoicing(newId);
+    return { contractId: newId, lines };
+  }
+
   return (
     <div className="w-full min-w-0">
       <div className="mb-4">
@@ -79,6 +99,7 @@ export default async function NewContractPage() {
         lineItemUnitOptions={lineItemUnitOptions}
         initialContractNumber={initialContractNumber}
         onSubmit={create}
+        onSubmitAndCreateInvoice={createAndStartInvoice}
       />
     </div>
   );

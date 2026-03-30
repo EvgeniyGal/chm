@@ -8,7 +8,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { useRouter } from "next/navigation";
-import { FiArchive, FiCheckCircle, FiEdit2, FiInfo } from "react-icons/fi";
+import { FiArchive, FiCheckCircle, FiEdit2, FiInfo, FiTrash2 } from "react-icons/fi";
 import { toast } from "sonner";
 
 import { DetailRow } from "@/components/data-table/detail-row";
@@ -50,6 +50,11 @@ type PaperConfirm = {
   contractNumber: string;
   field: "isSigned" | "isArchived";
   nextValue: boolean;
+};
+
+type DeleteConfirm = {
+  contractId: string;
+  contractNumber: string;
 };
 
 function paperConfirmMessage(c: PaperConfirm): string {
@@ -122,6 +127,7 @@ export function ContractsTable({
   filterDateFrom,
   filterDateTo,
   dateRangeInvalid,
+  canDeleteContracts = false,
 }: {
   rows: ContractRow[];
   total: number;
@@ -137,11 +143,14 @@ export function ContractsTable({
   filterDateFrom: string | null;
   filterDateTo: string | null;
   dateRangeInvalid: boolean;
+  canDeleteContracts?: boolean;
 }) {
   const router = useRouter();
   const { updateParams } = useListUrlParams();
   const [paperConfirm, setPaperConfirm] = useState<PaperConfirm | null>(null);
   const [paperPendingId, setPaperPendingId] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<DeleteConfirm | null>(null);
+  const [deletePendingId, setDeletePendingId] = useState<string | null>(null);
 
   const onSearchCommit = useCallback(
     (trimmed: string) => {
@@ -178,6 +187,33 @@ export function ContractsTable({
       setPaperPendingId(null);
     }
   }, [paperConfirm, router]);
+
+  const applyDeleteContract = useCallback(async () => {
+    if (!deleteConfirm) return;
+    const { contractId } = deleteConfirm;
+    setDeletePendingId(contractId);
+    try {
+      const res = await fetch(`/api/contracts/${contractId}`, { method: "DELETE" });
+      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+      if (!res.ok) {
+        toast.error(
+          data?.error === "FORBIDDEN"
+            ? "Недостатньо прав."
+            : data?.error === "NOT_FOUND"
+              ? "Договір не знайдено."
+              : "Не вдалося видалити.",
+        );
+        return;
+      }
+      toast.success("Договір і пов’язані дані видалено.");
+      setDeleteConfirm(null);
+      router.refresh();
+    } catch {
+      toast.error("Не вдалося видалити.");
+    } finally {
+      setDeletePendingId(null);
+    }
+  }, [deleteConfirm, router]);
 
   const columns = useMemo<ColumnDef<ContractRow>[]>(
     () => [
@@ -236,7 +272,7 @@ export function ContractsTable({
         header: "Дії",
         cell: ({ row }) => {
           const c = row.original;
-          const rowBusy = paperPendingId === c.id;
+          const rowBusy = paperPendingId === c.id || deletePendingId === c.id;
           return (
             <div className="flex flex-nowrap items-center justify-center gap-1">
               <button
@@ -305,12 +341,27 @@ export function ContractsTable({
               >
                 <FiEdit2 aria-hidden="true" className="size-4" />
               </a>
+              {canDeleteContracts ? (
+                <button
+                  type="button"
+                  className={cn(
+                    tableActionIconClassName,
+                    "border-destructive/40 text-destructive hover:bg-destructive/10",
+                  )}
+                  aria-label="Видалити договір"
+                  title="Видалити договір"
+                  disabled={rowBusy}
+                  onClick={() => setDeleteConfirm({ contractId: c.id, contractNumber: c.number })}
+                >
+                  <FiTrash2 aria-hidden="true" className="size-4" />
+                </button>
+              ) : null}
             </div>
           );
         },
       },
     ],
-    [paperPendingId],
+    [paperPendingId, deletePendingId, canDeleteContracts],
   );
 
   const table = useReactTable({
@@ -373,6 +424,57 @@ export function ContractsTable({
             </Button>
             <Button type="button" disabled={paperPendingId !== null} onClick={() => void applyPaperFlag()}>
               {paperPendingId ? "Збереження…" : "Підтвердити"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={deleteConfirm !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteConfirm(null);
+        }}
+      >
+        <DialogContent
+          onPointerDownOutside={(e) => {
+            if (deletePendingId) e.preventDefault();
+          }}
+          onEscapeKeyDown={(e) => {
+            if (deletePendingId) e.preventDefault();
+          }}
+        >
+          <DialogTitle>Видалити договір?</DialogTitle>
+          <div className="space-y-2 text-sm text-muted-foreground">
+            <p>
+              Договір № <span className="font-medium text-foreground">{deleteConfirm?.contractNumber}</span> буде
+              видалено без можливості відновлення.
+            </p>
+            <p>Також буде видалено:</p>
+            <ul className="list-disc space-y-1 pl-5">
+              <li>усі рахунки, прив’язані до цього договору;</li>
+              <li>усі акти приймання-передачі, пов’язані з цими рахунками;</li>
+              <li>завантажені скани та інші файли в хмарному сховищі (Vercel Blob) для цих документів.</li>
+            </ul>
+            <p className="text-xs">
+              Згенеровані .docx завантажуються з сервера за запитом і в окремому сховищі не зберігаються.
+            </p>
+          </div>
+          <div className="mt-4 flex flex-wrap justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={deletePendingId !== null}
+              onClick={() => setDeleteConfirm(null)}
+            >
+              Скасувати
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={deletePendingId !== null}
+              onClick={() => void applyDeleteContract()}
+            >
+              {deletePendingId ? "Видалення…" : "Видалити назавжди"}
             </Button>
           </div>
         </DialogContent>
@@ -516,7 +618,7 @@ export function ContractsTable({
         <div className="grid gap-3 p-3 md:hidden">
           {table.getRowModel().rows.map((row) => {
             const c = row.original;
-            const rowBusy = paperPendingId === c.id;
+            const rowBusy = paperPendingId === c.id || deletePendingId === c.id;
             return (
               <div key={c.id} className="rounded-lg border p-3">
                 <div className="text-base font-medium text-foreground">{c.number}</div>
@@ -602,6 +704,21 @@ export function ContractsTable({
                   >
                     <FiEdit2 aria-hidden="true" className="size-4" />
                   </a>
+                  {canDeleteContracts ? (
+                    <button
+                      type="button"
+                      className={cn(
+                        tableActionIconClassName,
+                        "border-destructive/40 text-destructive hover:bg-destructive/10",
+                      )}
+                      aria-label="Видалити договір"
+                      title="Видалити договір"
+                      disabled={rowBusy}
+                      onClick={() => setDeleteConfirm({ contractId: c.id, contractNumber: c.number })}
+                    >
+                      <FiTrash2 aria-hidden="true" className="size-4" />
+                    </button>
+                  ) : null}
                 </div>
               </div>
             );

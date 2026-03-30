@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { contracts, lineItems } from "@/db/schema";
 import { writeAuditEvent } from "@/lib/audit";
 import { requireRole } from "@/lib/authz";
+import { deleteContractAndRelatedRecords } from "@/lib/contract-delete-cascade";
 import { calcTotals } from "@/lib/totals";
 import { DROPDOWN_SCOPE, saveDropdownOption } from "@/lib/dropdown-options";
 
@@ -150,8 +151,9 @@ export async function DELETE(_req: Request, ctx: RouteContext<"/api/contracts/[i
   const { userId } = await requireRole("ADMIN");
   const { id } = await ctx.params;
   const before = await db.query.contracts.findFirst({ where: eq(contracts.id, id) });
-  const [deleted] = await db.delete(contracts).where(eq(contracts.id, id)).returning();
-  if (!deleted) return Response.json({ error: "NOT_FOUND" }, { status: 404 });
+  if (!before) return Response.json({ error: "NOT_FOUND" }, { status: 404 });
+
+  await deleteContractAndRelatedRecords(id);
 
   await writeAuditEvent({
     entityType: "CONTRACT",

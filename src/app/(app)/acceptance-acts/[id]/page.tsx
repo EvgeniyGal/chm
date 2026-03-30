@@ -8,6 +8,7 @@ import { acceptanceActs, companies, contracts, invoices, lineItems } from "@/db/
 import { requireRole } from "@/lib/authz";
 import { internalApiFetch } from "@/lib/internal-api-fetch";
 import { getSignedScansForEntity } from "@/lib/signed-scans";
+import { DROPDOWN_SCOPE, getDropdownOptions } from "@/lib/dropdown-options";
 
 async function saveAcceptanceActEdit(
   actId: string,
@@ -18,6 +19,8 @@ async function saveAcceptanceActEdit(
     signerFullNameGen: string;
     signerPositionNom: string;
     signerPositionGen: string;
+    isSigned: boolean;
+    isArchived: boolean;
   },
 ) {
   "use server";
@@ -57,6 +60,12 @@ export default async function AcceptanceActInfoPage({ params }: { params: Promis
       ? await db.query.contracts.findFirst({ where: eq(contracts.id, act.contractId) })
       : null;
 
+  const [signerPositionNomOptions, signerPositionGenOptions, signingLocationOptions] = await Promise.all([
+    getDropdownOptions(DROPDOWN_SCOPE.SIGNER_POSITION_NOM),
+    getDropdownOptions(DROPDOWN_SCOPE.SIGNER_POSITION_GEN),
+    getDropdownOptions(DROPDOWN_SCOPE.SIGNING_LOCATION),
+  ]);
+
   return (
     <div className="max-w-5xl min-w-0">
       <div className="mb-4">
@@ -72,14 +81,26 @@ export default async function AcceptanceActInfoPage({ params }: { params: Promis
         actNumber={act.number}
         actDateIso={new Date(act.date).toISOString()}
         signingLocation={act.signingLocation}
+        signingLocationOptions={signingLocationOptions}
         completionDateIso={new Date(act.completionDate).toISOString()}
         customerCompanyId={act.customerCompanyId}
         contractorCompanyId={act.contractorCompanyId}
-        companies={companyRows.map((c) => ({ id: c.id, label: c.shortName }))}
+        companies={companyRows.map((c) => ({
+          id: c.id,
+          label: c.shortName,
+          actSignerFullNameNom: c.actSignerFullNameNom,
+          actSignerFullNameGen: c.actSignerFullNameGen,
+          actSignerPositionNom: c.actSignerPositionNom,
+          actSignerPositionGen: c.actSignerPositionGen,
+        }))}
         signerFullNameNom={act.signerFullNameNom}
         signerFullNameGen={act.signerFullNameGen}
         signerPositionNom={act.signerPositionNom}
         signerPositionGen={act.signerPositionGen}
+        isSigned={Boolean(act.isSigned)}
+        isArchived={Boolean(act.isArchived)}
+        signerPositionNomOptions={signerPositionNomOptions}
+        signerPositionGenOptions={signerPositionGenOptions}
         totalWithoutVat={String(act.totalWithoutVat)}
         vat20={String(act.vat20)}
         totalWithVat={String(act.totalWithVat)}

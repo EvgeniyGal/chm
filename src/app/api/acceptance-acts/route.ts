@@ -18,6 +18,8 @@ const createSchema = z.object({
   signerFullNameGen: z.string().min(1),
   signerPositionNom: z.string().min(1),
   signerPositionGen: z.string().min(1),
+  isSigned: z.boolean().optional(),
+  isArchived: z.boolean().optional(),
 });
 
 export async function GET() {
@@ -76,6 +78,8 @@ export async function POST(req: Request) {
       signerFullNameGen: parsed.data.signerFullNameGen,
       signerPositionNom: parsed.data.signerPositionNom,
       signerPositionGen: parsed.data.signerPositionGen,
+      isSigned: parsed.data.isSigned ?? false,
+      isArchived: parsed.data.isArchived ?? false,
       totalWithoutVat: invoice.totalWithoutVat,
       vat20: invoice.vat20,
       totalWithVat: invoice.totalWithVat,

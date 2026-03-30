@@ -6,12 +6,15 @@ import { useEffect, useState } from "react";
 export function UnsavedChangesNavigationDialog({
   isDirty,
   suppressBeforeUnloadOnce,
+  onSaveAndProceed,
 }: {
   isDirty: boolean;
   suppressBeforeUnloadOnce: () => void;
+  onSaveAndProceed?: () => Promise<void> | void;
 }) {
   const [pendingHref, setPendingHref] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const onClickCapture = (e: MouseEvent) => {
@@ -47,16 +50,43 @@ export function UnsavedChangesNavigationDialog({
           <Dialog.Description className="mt-2 text-sm text-zinc-700">
             Є незбережені зміни. Вийти зі сторінки без збереження?
           </Dialog.Description>
-          <div className="mt-4 flex justify-end gap-2">
-            <Dialog.Close asChild>
-              <button type="button" className="h-9 rounded-md border px-3 text-sm hover:bg-zinc-50">
-                Залишитись
-              </button>
-            </Dialog.Close>
+          <div className="mt-4 flex flex-col gap-2">
             <Dialog.Close asChild>
               <button
                 type="button"
-                className="h-9 rounded-md bg-red-600 px-3 text-sm text-white hover:bg-red-700"
+                disabled={saving}
+                className="min-h-9 w-full rounded-md border px-3 text-center text-sm leading-tight hover:bg-zinc-50 whitespace-normal disabled:opacity-60"
+              >
+                Залишитись
+              </button>
+            </Dialog.Close>
+            {onSaveAndProceed ? (
+              <button
+                type="button"
+                disabled={saving}
+                className="min-h-9 w-full rounded-md border border-emerald-600 bg-emerald-600 px-3 text-center text-sm leading-tight text-white hover:bg-emerald-700 whitespace-normal disabled:opacity-60"
+                onClick={async () => {
+                  if (!pendingHref) return;
+                  setSaving(true);
+                  try {
+                    await onSaveAndProceed();
+                    const href = pendingHref;
+                    setPendingHref(null);
+                    suppressBeforeUnloadOnce();
+                    window.location.assign(href);
+                  } finally {
+                    setSaving(false);
+                  }
+                }}
+              >
+                {saving ? "Збереження…" : "Зберегти та перейти"}
+              </button>
+            ) : null}
+            <Dialog.Close asChild>
+              <button
+                type="button"
+                disabled={saving}
+                className="min-h-9 w-full rounded-md bg-red-600 px-3 text-center text-sm leading-tight text-white hover:bg-red-700 whitespace-normal disabled:opacity-60"
                 onClick={() => {
                   const href = pendingHref;
                   setPendingHref(null);
