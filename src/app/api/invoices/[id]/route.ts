@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { invoices, lineItems } from "@/db/schema";
 import { writeAuditEvent } from "@/lib/audit";
 import { requireRole } from "@/lib/authz";
+import { deleteInvoiceAndRelatedRecords } from "@/lib/invoice-delete-cascade";
 import { syncAcceptanceActFromInvoice } from "@/lib/sync-acceptance-act-from-invoice";
 import { calcTotals } from "@/lib/totals";
 import { invoiceApiLineItemSchema } from "@/lib/invoice-api-item-schema";
@@ -291,8 +292,8 @@ export async function DELETE(_req: Request, ctx: RouteContext<"/api/invoices/[id
   const { userId } = await requireRole("ADMIN");
   const { id } = await ctx.params;
   const before = await db.query.invoices.findFirst({ where: eq(invoices.id, id) });
-  const [deleted] = await db.delete(invoices).where(eq(invoices.id, id)).returning();
-  if (!deleted) return Response.json({ error: "NOT_FOUND" }, { status: 404 });
+  if (!before) return Response.json({ error: "NOT_FOUND" }, { status: 404 });
+  await deleteInvoiceAndRelatedRecords(id);
 
   await writeAuditEvent({
     entityType: "INVOICE",

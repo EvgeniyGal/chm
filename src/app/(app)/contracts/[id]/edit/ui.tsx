@@ -502,21 +502,21 @@ export function ContractEditForm({
           </p>
         ) : null}
 
-        <div className="mt-2 flex flex-wrap items-center gap-3">
+        <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
           <button
             type="submit"
-            className="crm-btn-primary inline-flex h-10 items-center gap-2"
+            className="crm-btn-primary inline-flex h-10 w-full items-center justify-center gap-2 sm:w-auto"
           >
             <Save className="size-4" aria-hidden="true" />
             Зберегти
           </button>
-          <a className="inline-flex h-10 items-center gap-2 rounded-md border px-4 text-sm" href={cancelHref}>
+          <a className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border px-4 text-sm sm:w-auto" href={cancelHref}>
             <List className="size-4 shrink-0" aria-hidden />
             До списку договорів
           </a>
           <button
             type="button"
-            className="inline-flex h-10 items-center gap-2 rounded-md border border-zinc-300 bg-white px-4 text-sm text-zinc-800 hover:bg-zinc-50"
+            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-zinc-300 bg-white px-4 text-sm text-zinc-800 hover:bg-zinc-50 sm:w-auto"
             onClick={() => setInvoiceDialogOpen(true)}
           >
             <Receipt className="size-4" aria-hidden="true" />
@@ -525,7 +525,7 @@ export function ContractEditForm({
           <button
             type="button"
             disabled={!!treatyLoading}
-            className="inline-flex h-10 items-center gap-2 rounded-md border border-zinc-300 bg-zinc-50 px-4 text-sm text-zinc-800 hover:bg-zinc-100 disabled:opacity-50"
+            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-zinc-300 bg-zinc-50 px-4 text-sm text-zinc-800 hover:bg-zinc-100 disabled:opacity-50 sm:w-auto"
             onClick={async () => {
               setTreatyError(null);
               const ok = await form.trigger();
@@ -562,7 +562,7 @@ export function ContractEditForm({
           <button
             type="button"
             disabled={!!treatyLoading}
-            className="inline-flex h-10 items-center gap-2 rounded-md border border-zinc-300 bg-zinc-50 px-4 text-sm text-zinc-800 hover:bg-zinc-100 disabled:opacity-50"
+            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-zinc-300 bg-zinc-50 px-4 text-sm text-zinc-800 hover:bg-zinc-100 disabled:opacity-50 sm:w-auto"
             onClick={async () => {
               setTreatyError(null);
               const ok = await form.trigger();

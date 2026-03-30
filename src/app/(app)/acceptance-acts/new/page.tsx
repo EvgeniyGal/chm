@@ -117,6 +117,34 @@ export default async function NewAcceptanceActPage({
     redirect("/acceptance-acts");
   }
 
+  async function createAndDownloadActDocx(payload: any) {
+    "use server";
+    await requireRole("ADMIN");
+    const res = await internalApiFetch(`${process.env.APP_URL ?? "http://localhost:3000"}/api/acceptance-acts`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload),
+      cache: "no-store",
+    });
+    const data = (await res.json().catch(() => null)) as {
+      data?: { id: string };
+      error?: string;
+      acceptanceActId?: string;
+    } | null;
+    if (!res.ok) {
+      if (data?.error === "ACCEPTANCE_ACT_ALREADY_EXISTS" && data.acceptanceActId) {
+        redirect(`/api/documents/acceptance-act/${data.acceptanceActId}`);
+      }
+      if (data?.error === "ACCEPTANCE_ACT_ALREADY_EXISTS") {
+        throw new Error("Для цього рахунку вже створено акт.");
+      }
+      throw new Error(data?.error ?? "CREATE_FAILED");
+    }
+    const newId = data?.data?.id;
+    if (newId) redirect(`/api/documents/acceptance-act/${newId}`);
+    redirect("/acceptance-acts");
+  }
+
   return (
     <div className="max-w-4xl">
       <div className="mb-4">
@@ -143,6 +171,7 @@ export default async function NewAcceptanceActPage({
         initialInvoiceId={initialInvoiceId}
         defaultSigningLocation={defaultSigningLocation}
         onSubmit={create}
+        onSubmitAndDownloadActDocx={createAndDownloadActDocx}
         signerPositionNomOptions={signerPositionNomOptions}
         signerPositionGenOptions={signerPositionGenOptions}
         signingLocationOptions={signingLocationOptions}

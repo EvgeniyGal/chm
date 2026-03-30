@@ -1,8 +1,8 @@
-import { and, asc, count, desc, eq, gte, ilike, inArray, lte, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, ilike, inArray, lte, or, sql } from "drizzle-orm";
 
 import { ContractsTable } from "@/components/contracts/ContractsTable";
 import { db } from "@/db";
-import { contracts, lineItems } from "@/db/schema";
+import { companies, contracts, lineItems } from "@/db/schema";
 import { requireRole } from "@/lib/authz";
 
 const pageSizeOptions = new Set([25, 50, 100]);
@@ -80,9 +80,28 @@ export default async function ContractsPage({
   const dateFromRaw = parseIsoDateOnly(String(sp.dateFrom ?? ""));
   const dateToRaw = parseIsoDateOnly(String(sp.dateTo ?? ""));
   const dateRangeInvalid = Boolean(dateFromRaw && dateToRaw && dateFromRaw > dateToRaw);
-
   const searchWhere = q
-    ? or(ilike(contracts.number, `%${q}%`), ilike(contracts.signingLocation, `%${q}%`))
+    ? or(
+        ilike(contracts.number, `%${q}%`),
+        sql<boolean>`exists (
+          select 1
+          from companies c
+          where c.id = ${contracts.customerCompanyId}
+            and (c.short_name ilike ${`%${q}%`} or c.full_name ilike ${`%${q}%`})
+        )`,
+        sql<boolean>`exists (
+          select 1
+          from companies c
+          where c.id = ${contracts.contractorCompanyId}
+            and (c.short_name ilike ${`%${q}%`} or c.full_name ilike ${`%${q}%`})
+        )`,
+        sql<boolean>`exists (
+          select 1
+          from line_items li
+          where li.contract_id = ${contracts.id}
+            and li.title ilike ${`%${q}%`}
+        )`,
+      )
     : undefined;
 
   const filterParts = [];
@@ -109,6 +128,16 @@ export default async function ContractsPage({
     .orderBy(getSortColumn(sortBy, sortDir), desc(contracts.createdAt))
     .limit(pageSize)
     .offset(offset);
+
+  const companyIds = Array.from(new Set(rows.flatMap((r) => [r.customerCompanyId, r.contractorCompanyId])));
+  const companyShortById = new Map<string, string>();
+  if (companyIds.length > 0) {
+    const companyRows = await db
+      .select({ id: companies.id, shortName: companies.shortName })
+      .from(companies)
+      .where(inArray(companies.id, companyIds));
+    for (const row of companyRows) companyShortById.set(row.id, row.shortName);
+  }
 
   const ids = rows.map((r) => r.id);
   const lineItemTitlesByContract = new Map<string, string[]>();
@@ -162,6 +191,8 @@ export default async function ContractsPage({
           workType: c.workType,
           isSigned: Boolean(c.isSigned),
           isArchived: Boolean(c.isArchived),
+          customerCompanyShortName: companyShortById.get(c.customerCompanyId) ?? "—",
+          contractorCompanyShortName: companyShortById.get(c.contractorCompanyId) ?? "—",
           lineItemsPreview: formatLineItemsPreview(lineItemTitlesByContract.get(c.id) ?? []),
           totalWithoutVat: String(c.totalWithoutVat),
           vat20: String(c.vat20),

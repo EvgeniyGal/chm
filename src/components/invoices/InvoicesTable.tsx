@@ -282,7 +282,7 @@ export function InvoicesTable({
           <DialogTitle>Видалення рахунку</DialogTitle>
           <p className="text-sm text-muted-foreground">
             {deleteConfirm
-              ? `Ви дійсно хочете видалити рахунок № ${deleteConfirm.number}? Цю дію не можна скасувати.`
+              ? `Ви дійсно хочете видалити рахунок № ${deleteConfirm.number}? Будуть також видалені пов’язаний акт (якщо існує), усі завантажені скани рахунку та акту (включно з файлами у хмарному сховищі). Цю дію не можна скасувати.`
               : null}
           </p>
           <div className="mt-4 flex flex-wrap justify-end gap-2">

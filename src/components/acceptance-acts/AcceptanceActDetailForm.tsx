@@ -9,15 +9,12 @@ import { CompanySearchSelect } from "@/components/forms/CompanySearchSelect";
 import { SearchableDropdownOptionField } from "@/components/forms/SearchableDropdownOptionField";
 import { UnsavedChangesNavigationDialog } from "@/components/forms/UnsavedChangesNavigationDialog";
 import { useUnsavedChangesGuard } from "@/components/forms/useUnsavedChangesGuard";
+import { AcceptanceActReadonlyLineItems } from "@/components/acceptance-acts/AcceptanceActReadonlyLineItems";
 import { SignedUpload } from "@/components/uploads/SignedUpload";
 import { getServerActionErrorMessage } from "@/lib/server-action-error-message";
 import { isNextNavigationError } from "@/lib/is-next-navigation-error";
 import { formatMoney } from "@/lib/totals";
 import type { SignedScanListItem } from "@/lib/signed-scans";
-import { cn } from "@/lib/utils";
-
-const READONLY_CELL =
-  "box-border whitespace-normal py-2 align-middle overflow-hidden px-3 text-sm";
 
 type LineRow = {
   id: string;
@@ -307,47 +304,7 @@ export function AcceptanceActDetailForm({
 
         <div className="flex flex-col gap-2">
           <div className="text-sm font-semibold text-foreground">{lineHeading}</div>
-          <div className="min-w-0 max-w-full overflow-x-auto rounded-xl border bg-white">
-            <table className="w-full min-w-[640px] table-fixed border-collapse text-sm">
-              <colgroup>
-                <col className="w-[40px]" />
-                <col />
-                <col className="w-[100px]" />
-                <col className="w-[80px]" />
-                <col className="w-[120px]" />
-                <col className="w-[120px]" />
-              </colgroup>
-              <thead className="bg-crm-table-header text-left text-sm font-semibold text-foreground/90">
-                <tr>
-                  <th className={cn(READONLY_CELL, "w-[40px] max-w-[40px] px-2 text-center")}>#</th>
-                  <th className={cn(READONLY_CELL, "min-w-0 px-3")}>Назва</th>
-                  <th className={cn(READONLY_CELL, "w-[100px] max-w-[100px]")}>Од. вим.</th>
-                  <th className={cn(READONLY_CELL, "w-[80px] max-w-[80px]")}>К-сть</th>
-                  <th className={cn(READONLY_CELL, "w-[120px] max-w-[120px]")}>Ціна без ПДВ</th>
-                  <th className={cn(READONLY_CELL, "w-[120px] max-w-[120px] text-center")}>Сума без ПДВ</th>
-                </tr>
-              </thead>
-              <tbody>
-                {lineItems.map((it, idx) => {
-                  const q = Number(it.quantity);
-                  const p = Number(it.price);
-                  const row = Number.isFinite(q) && Number.isFinite(p) ? q * p : 0;
-                  return (
-                    <tr key={it.id} className="border-t align-middle">
-                      <td className={cn(READONLY_CELL, "text-center text-muted-foreground")}>{idx + 1}</td>
-                      <td className={cn(READONLY_CELL, "min-w-0")}>
-                        <div className="whitespace-pre-wrap break-words">{it.title}</div>
-                      </td>
-                      <td className={READONLY_CELL}>{it.unit}</td>
-                      <td className={cn(READONLY_CELL, "tabular-nums")}>{formatMoney(q)}</td>
-                      <td className={cn(READONLY_CELL, "tabular-nums")}>{formatMoney(p)}</td>
-                      <td className={cn(READONLY_CELL, "text-center tabular-nums")}>{formatMoney(row)}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <AcceptanceActReadonlyLineItems items={lineItems} />
         </div>
 
         <div className="flex min-w-0 flex-col items-end gap-1 border-t pt-3 text-sm tabular-nums text-zinc-700">
@@ -365,21 +322,24 @@ export function AcceptanceActDetailForm({
           </div>
         </div>
 
-        <div className="mt-2 flex flex-wrap items-center gap-3">
+        <div className="mt-2 flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center">
           {canEdit ? (
-            <button type="submit" className="crm-btn-primary">
+            <button
+              type="submit"
+              className="crm-btn-primary inline-flex h-10 w-full items-center justify-center md:w-auto"
+            >
               Зберегти
             </button>
           ) : null}
           <a
-            className="inline-flex h-10 items-center gap-2 rounded-md border px-4 text-sm"
+            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border px-4 text-sm md:w-auto"
             href="/acceptance-acts"
           >
             <FiList className="size-4 shrink-0" aria-hidden />
             До списку актів
           </a>
           <a
-            className="inline-flex h-10 items-center gap-2 rounded-md border border-border bg-background px-4 text-sm hover:bg-muted"
+            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-border bg-background px-4 text-sm hover:bg-muted md:w-auto"
             href={`/invoices/${invoice.id}/edit`}
             aria-label={`Перейти до рахунку №${invoice.number}`}
             title={`Рахунок №${invoice.number}`}
@@ -388,7 +348,7 @@ export function AcceptanceActDetailForm({
             До рахунку
           </a>
           <a
-            className="inline-flex h-10 items-center gap-2 rounded-md border border-border bg-background px-4 text-sm hover:bg-muted"
+            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-border bg-background px-4 text-sm hover:bg-muted md:w-auto"
             href={`/api/documents/acceptance-act/${actId}`}
             aria-label="Завантажити акт"
             title="Завантажити акт"

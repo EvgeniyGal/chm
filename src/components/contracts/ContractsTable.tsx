@@ -36,6 +36,8 @@ export type ContractRow = {
   workType: "WORKS" | "SERVICES";
   isSigned: boolean;
   isArchived: boolean;
+  customerCompanyShortName: string;
+  contractorCompanyShortName: string;
   lineItemsPreview: string;
   totalWithoutVat: string;
   vat20: string;
@@ -324,6 +326,8 @@ export function ContractsTable({
                 <div className="grid gap-2">
                   <DetailRow label="Дата" value={new Date(c.date).toLocaleDateString("uk-UA")} />
                   <DetailRow label="Тип" value={c.workType === "WORKS" ? "Роботи" : "Послуги"} />
+                  <DetailRow label="Замовник" value={c.customerCompanyShortName} />
+                  <DetailRow label="Виконавець" value={c.contractorCompanyShortName} />
                   <DetailRow label="Підписаний" value={c.isSigned ? "Так" : "Ні"} />
                   <DetailRow label="В архіві" value={c.isArchived ? "Так" : "Ні"} />
                   <DetailRow label="Місце" value={c.signingLocation} />
@@ -483,7 +487,7 @@ export function ContractsTable({
       <ListPageToolbar
         queryInput={queryInput}
         onQueryChange={setQueryInput}
-        searchPlaceholder="Пошук: номер, місце складання"
+        searchPlaceholder="Пошук: номер, назва компанії, назва робіт/послуг"
         filters={
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
             {dateRangeInvalid ? (
@@ -687,6 +691,8 @@ export function ContractsTable({
                     <div className="grid gap-2">
                       <DetailRow label="Дата" value={new Date(c.date).toLocaleDateString("uk-UA")} />
                       <DetailRow label="Тип" value={c.workType === "WORKS" ? "Роботи" : "Послуги"} />
+                      <DetailRow label="Замовник" value={c.customerCompanyShortName} />
+                      <DetailRow label="Виконавець" value={c.contractorCompanyShortName} />
                       <DetailRow label="Підписаний" value={c.isSigned ? "Так" : "Ні"} />
                       <DetailRow label="В архіві" value={c.isArchived ? "Так" : "Ні"} />
                       <DetailRow label="Місце" value={c.signingLocation} />

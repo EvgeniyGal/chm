@@ -133,6 +133,33 @@
   }
   html {
     @apply font-sans;
+    scrollbar-color: #e8c88a #fffcf5;
+    scrollbar-width: thin;
+  }
+
+  /* Custom scrollbar styling for desktop browsers */
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: #fffcf5;
+    border-radius: 9999px;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #ffd27a 0%, #e8c88a 100%);
+    border: 2px solid #fffcf5;
+    border-radius: 9999px;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #ffc14d 0%, #dcae5b 100%);
+  }
+
+  *::-webkit-scrollbar-corner {
+    background: #fffcf5;
   }
 }
 
@@ -155,4 +182,18 @@
   .crm-btn-outline {
     @apply inline-flex h-10 items-center justify-center rounded-lg border border-border bg-card px-4 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50;
   }
+}
+
+/* OverlayScrollbars custom warm theme */
+.os-theme-crm {
+  --os-size: 10px;
+  --os-padding-perpendicular: 2px;
+  --os-padding-axis: 2px;
+  --os-track-bg: #fffcf5;
+  --os-track-bg-hover: #fff7e9;
+  --os-track-bg-active: #fff3e0;
+  --os-handle-bg: #e8c88a;
+  --os-handle-bg-hover: #dcae5b;
+  --os-handle-bg-active: #c4903a;
+  --os-handle-border-radius: 9999px;
 }

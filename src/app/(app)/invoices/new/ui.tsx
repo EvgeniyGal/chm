@@ -586,13 +586,16 @@ export function InvoiceForm({
           ) : null}
         </div>
 
-        <div className="mt-2 flex flex-wrap items-center gap-3">
-          <button type="submit" className="crm-btn-primary inline-flex h-10 items-center gap-2">
+        <div className="mt-2 flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center">
+          <button
+            type="submit"
+            className="crm-btn-primary inline-flex h-10 w-full items-center justify-center gap-2 md:w-auto"
+          >
             <FiSave className="size-4 shrink-0" aria-hidden />
             Зберегти
           </button>
           <a
-            className="inline-flex h-10 items-center gap-2 rounded-md border px-4 text-sm"
+            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border px-4 text-sm md:w-auto"
             href={cancelHref}
           >
             <FiList className="size-4 shrink-0" aria-hidden />
@@ -602,7 +605,7 @@ export function InvoiceForm({
             <button
               type="button"
               disabled={docLoading}
-              className="inline-flex h-10 items-center gap-2 rounded-md border border-border bg-background px-4 text-sm hover:bg-muted disabled:opacity-60"
+              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-border bg-background px-4 text-sm hover:bg-muted disabled:opacity-60 md:w-auto"
               onClick={() => {
                 setDocLoading(true);
                 void form
@@ -626,7 +629,7 @@ export function InvoiceForm({
             <button
               type="button"
               disabled={actLoading}
-              className="inline-flex h-10 items-center gap-2 rounded-md border border-border bg-background px-4 text-sm hover:bg-muted disabled:opacity-60"
+              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-border bg-background px-4 text-sm hover:bg-muted disabled:opacity-60 md:w-auto"
               onClick={() => {
                 setActLoading(true);
                 void form
@@ -649,7 +652,7 @@ export function InvoiceForm({
           {mode === "edit" && invoiceId ? (
             <>
               <a
-                className="inline-flex h-10 items-center gap-2 rounded-md border border-border bg-background px-4 text-sm hover:bg-muted"
+                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-border bg-background px-4 text-sm hover:bg-muted md:w-auto"
                 href={`/api/documents/invoice/${invoiceId}`}
                 aria-label="Завантажити рахунок (DOCX)"
                 title="Завантажити DOCX"
@@ -659,7 +662,7 @@ export function InvoiceForm({
               </a>
               {existingAcceptanceActId ? (
                 <a
-                  className="inline-flex h-10 items-center gap-2 rounded-md border border-border bg-background px-4 text-sm hover:bg-muted"
+                  className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-border bg-background px-4 text-sm hover:bg-muted md:w-auto"
                   href={`/acceptance-acts/${existingAcceptanceActId}`}
                   title="Для цього рахунку вже створено акт приймання-передачі"
                 >
@@ -668,7 +671,7 @@ export function InvoiceForm({
                 </a>
               ) : (
                 <a
-                  className="inline-flex h-10 items-center gap-2 rounded-md border border-border bg-background px-4 text-sm hover:bg-muted"
+                  className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-border bg-background px-4 text-sm hover:bg-muted md:w-auto"
                   href={`/acceptance-acts/new?invoiceId=${invoiceId}`}
                   title="Створити акт приймання-передачі на основі цього рахунку (позиції копіюються з рахунку)"
                 >
