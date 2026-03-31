@@ -8,7 +8,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { useRouter } from "next/navigation";
-import { FiCopy, FiEdit2, FiInfo, FiTrash2 } from "react-icons/fi";
+import { FiCopy, FiDownload, FiEdit2, FiInfo, FiTrash2 } from "react-icons/fi";
 import { toast } from "sonner";
 
 import { DetailRow } from "@/components/data-table/detail-row";
@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils";
 import { useDebouncedListSearch } from "@/hooks/use-debounced-list-search";
 import { useListUrlParams } from "@/hooks/use-list-url-params";
 import { formatMoney } from "@/lib/totals";
+import { exportRowsToXlsx } from "@/lib/xlsx-export";
 
 export type InvoiceRow = {
   id: string;
@@ -56,14 +57,17 @@ function originLabel(o: InvoiceRow["origin"]): string {
 function invoicesTableHeadClass(columnId: string): string {
   const narrow = "w-0 px-2 py-3 whitespace-nowrap";
   switch (columnId) {
+    case "select":
+      return `${narrow} text-center`;
     case "actions":
       return `${narrow} text-center`;
     case "lineItems":
       return "min-w-0 px-3 py-3";
+    case "customer":
+      return "w-[120px] px-3 py-3";
     case "totalWithVat":
       return `${narrow} text-right tabular-nums`;
-    case "number":
-    case "date":
+    case "numberDate":
     case "workType":
     case "origin":
       return narrow;
@@ -76,14 +80,17 @@ function invoicesTableCellClass(columnId: string): string {
   const base = "align-top py-3";
   const narrow = `${base} w-0 px-2 whitespace-nowrap`;
   switch (columnId) {
+    case "select":
+      return narrow;
     case "actions":
       return narrow;
     case "lineItems":
       return `${base} min-w-0 px-3`;
+    case "customer":
+      return `${base} w-[120px] px-3`;
     case "totalWithVat":
       return `${narrow} text-right tabular-nums`;
-    case "number":
-    case "date":
+    case "numberDate":
     case "workType":
     case "origin":
       return narrow;
@@ -128,6 +135,7 @@ export function InvoicesTable({
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; number: string } | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [duplicatePendingId, setDuplicatePendingId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Record<string, boolean>>({});
 
   const onSearchCommit = useCallback(
     (trimmed: string) => {
@@ -182,16 +190,83 @@ export function InvoicesTable({
     [router],
   );
 
+  const visibleIds = useMemo(() => rows.map((row) => row.id), [rows]);
+  const selectedCount = useMemo(() => visibleIds.filter((id) => selectedIds[id]).length, [visibleIds, selectedIds]);
+  const allVisibleSelected = visibleIds.length > 0 && selectedCount === visibleIds.length;
+
+  const exportSelectedToXlsx = useCallback(async () => {
+    const selectedRows = rows.filter((row) => selectedIds[row.id]);
+    if (selectedRows.length === 0) return;
+    await exportRowsToXlsx(
+      selectedRows.map((row) => ({
+        number: row.number,
+        date: new Date(row.date).toLocaleDateString("uk-UA"),
+        workType: row.workType === "WORKS" ? "Роботи" : "Послуги",
+        origin: originLabel(row.origin),
+        customer: row.customerCompany,
+        lineItems: row.lineItemsPreview,
+        totalWithoutVat: Number.parseFloat(row.totalWithoutVat) || 0,
+        vat20: Number.parseFloat(row.vat20) || 0,
+        totalWithVat: Number.parseFloat(row.totalWithVat) || 0,
+      })),
+      [
+        { header: "Номер", key: "number", width: 16 },
+        { header: "Дата", key: "date", width: 14 },
+        { header: "Тип", key: "workType", width: 14 },
+        { header: "Походження", key: "origin", width: 14 },
+        { header: "Замовник", key: "customer", width: 24 },
+        { header: "Позиції", key: "lineItems", width: 36 },
+        { header: "Сума без ПДВ", key: "totalWithoutVat", type: "number", width: 16 },
+        { header: "ПДВ 20%", key: "vat20", type: "number", width: 14 },
+        { header: "Сума з ПДВ", key: "totalWithVat", type: "number", width: 16 },
+      ],
+      `invoices-${new Date().toISOString().slice(0, 10)}.xlsx`,
+      "Invoices",
+    );
+  }, [rows, selectedIds]);
+
   const columns = useMemo<ColumnDef<InvoiceRow>[]>(
     () => [
       {
-        accessorKey: "number",
-        header: "Номер",
+        id: "select",
+        header: () => (
+          <input
+            type="checkbox"
+            aria-label="Вибрати всі рахунки на сторінці"
+            checked={allVisibleSelected}
+            onChange={(e) => {
+              const checked = e.target.checked;
+              setSelectedIds((prev) => {
+                const next = { ...prev };
+                for (const id of visibleIds) next[id] = checked;
+                return next;
+              });
+            }}
+          />
+        ),
+        cell: ({ row }) => (
+          <input
+            type="checkbox"
+            aria-label={`Вибрати рахунок ${row.original.number}`}
+            checked={Boolean(selectedIds[row.original.id])}
+            onChange={(e) => {
+              const checked = e.target.checked;
+              setSelectedIds((prev) => ({ ...prev, [row.original.id]: checked }));
+            }}
+          />
+        ),
       },
       {
-        accessorKey: "date",
-        header: "Дата",
-        cell: ({ row }) => new Date(row.original.date).toLocaleDateString("uk-UA"),
+        id: "numberDate",
+        header: "Номер / Дата",
+        cell: ({ row }) => (
+          <div className="grid gap-0.5">
+            <span className="font-medium text-foreground">{row.original.number}</span>
+            <span className="text-xs text-muted-foreground">
+              {new Date(row.original.date).toLocaleDateString("uk-UA")}
+            </span>
+          </div>
+        ),
       },
       {
         accessorKey: "workType",
@@ -202,6 +277,15 @@ export function InvoicesTable({
         id: "origin",
         header: "Походження",
         cell: ({ row }) => originLabel(row.original.origin),
+      },
+      {
+        id: "customer",
+        header: "Замовник",
+        cell: ({ row }) => (
+          <span className="line-clamp-2 text-foreground/90" title={row.original.customerCompany}>
+            {row.original.customerCompany}
+          </span>
+        ),
       },
       {
         id: "lineItems",
@@ -283,7 +367,7 @@ export function InvoicesTable({
         },
       },
     ],
-    [canGenerateAnalogue, duplicateInvoice, duplicatePendingId],
+    [allVisibleSelected, canGenerateAnalogue, duplicateInvoice, duplicatePendingId, selectedIds, visibleIds],
   );
 
   const table = useReactTable({
@@ -303,7 +387,15 @@ export function InvoicesTable({
   }
 
   function isNonSortableColumn(id: string) {
-    return id === "actions" || id === "lineItems" || id === "origin";
+    return id === "actions" || id === "select" || id === "customer" || id === "lineItems" || id === "origin";
+  }
+
+  function getSortKeyByColumnId(columnId: string): SortBy | null {
+    if (columnId === "numberDate") return "number";
+    if (columnId === "workType") return "workType";
+    if (columnId === "totalWithVat") return "totalWithVat";
+    if (columnId === "number" || columnId === "date") return columnId;
+    return null;
   }
 
   if (isDatabaseEmpty) {
@@ -423,6 +515,15 @@ export function InvoicesTable({
           </div>
         }
       />
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-sm text-muted-foreground">
+          Вибрано: <span className="font-medium text-foreground">{selectedCount}</span>
+        </span>
+        <Button type="button" variant="outline" disabled={selectedCount === 0} onClick={() => void exportSelectedToXlsx()}>
+          <FiDownload aria-hidden="true" className="mr-2 size-4" />
+          Експорт XLSX
+        </Button>
+      </div>
 
       <Card className="overflow-hidden p-0">
         <div className="hidden md:block">
@@ -432,19 +533,26 @@ export function InvoicesTable({
                 <tr key={headerGroup.id}>
                   {headerGroup.headers.map((header) => (
                     <th key={header.id} className={invoicesTableHeadClass(header.column.id)}>
-                      {header.isPlaceholder ? null : (
+                      {header.isPlaceholder ? null : isNonSortableColumn(header.column.id) ? (
+                        <div className={`inline-flex items-center gap-1 ${header.column.id === "actions" ? "w-full justify-center" : ""}`}>
+                          {flexRender(header.column.columnDef.header, header.getContext())}
+                        </div>
+                      ) : (
                         <button
                           type="button"
-                          className={`inline-flex items-center gap-1 ${
-                            header.column.id === "actions" ? "w-full justify-center" : ""
-                          }`}
+                          className={`inline-flex items-center gap-1 ${header.column.id === "actions" ? "w-full justify-center" : ""}`}
                           onClick={() => {
-                            if (isNonSortableColumn(header.column.id)) return;
-                            toggleSort(header.column.id as SortBy);
+                            const sortKey = getSortKeyByColumnId(header.column.id);
+                            if (!sortKey) return;
+                            toggleSort(sortKey);
                           }}
                         >
                           {flexRender(header.column.columnDef.header, header.getContext())}
-                          {sortBy === header.column.id ? (sortDir === "asc" ? "↑" : "↓") : ""}
+                          {(() => {
+                            const sortKey = getSortKeyByColumnId(header.column.id);
+                            if (!sortKey || sortBy !== sortKey) return "";
+                            return sortDir === "asc" ? "↑" : "↓";
+                          })()}
                         </button>
                       )}
                     </th>
