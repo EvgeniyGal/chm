@@ -239,6 +239,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
   const contractorParamRaw = String(sp.contractorId ?? "").trim();
   const monthParam = selectedMonth ? `${selectedYear}-${String(selectedMonth).padStart(2, "0")}` : null;
   const period = monthParam ? monthBoundsUtc(monthParam) : yearBoundsUtc(selectedYear);
+  const periodTitle = "monthDate" in period ? monthLabelFmt.format(period.monthDate).replace(/^./, (ch) => ch.toUpperCase()) : `${selectedYear} рік`;
   const { start, end } = period;
   const contractorOptions = await loadContractorOptions();
   const contractorIds = new Set(contractorOptions.map((c) => c.id));
@@ -314,9 +315,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
       <Card>
         <CardHeader>
           <CardTitle>
-            {monthParam
-              ? `Разом за ${monthLabelFmt.format(period.monthDate).replace(/^./, (ch) => ch.toUpperCase())}`
-              : `Разом за ${selectedYear} рік`}
+            {`Разом за ${periodTitle}`}
           </CardTitle>
           <CardDescription>
             {monthParam
