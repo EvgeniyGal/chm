@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, gte, ilike, inArray, isNotNull, isNull, lte } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, ilike, inArray, isNotNull, isNull, lte, or, sql } from "drizzle-orm";
 
 import { InvoicesTable } from "@/components/invoices/InvoicesTable";
 import { db } from "@/db";
@@ -54,6 +54,7 @@ export default async function InvoicesPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { role } = await requireRole("MANAGER");
+  const canManageInvoices = role !== "MANAGER";
   const canGenerateAnalogue = role === "ADMIN" || role === "OWNER";
   const sp = await searchParams;
   const q = String(sp.q ?? "").trim();
@@ -81,7 +82,29 @@ export default async function InvoicesPage({
   const dateToRaw = parseIsoDateOnly(String(sp.dateTo ?? ""));
   const dateRangeInvalid = Boolean(dateFromRaw && dateToRaw && dateFromRaw > dateToRaw);
 
-  const searchWhere = q ? ilike(invoices.number, `%${q}%`) : undefined;
+  const searchWhere = q
+    ? or(
+        ilike(invoices.number, `%${q}%`),
+        sql<boolean>`exists (
+          select 1
+          from companies c
+          where c.id = ${invoices.customerCompanyId}
+            and (c.short_name ilike ${`%${q}%`} or c.full_name ilike ${`%${q}%`})
+        )`,
+        sql<boolean>`exists (
+          select 1
+          from companies c
+          where c.id = ${invoices.contractorCompanyId}
+            and (c.short_name ilike ${`%${q}%`} or c.full_name ilike ${`%${q}%`})
+        )`,
+        sql<boolean>`exists (
+          select 1
+          from line_items li
+          where li.invoice_id = ${invoices.id}
+            and li.title ilike ${`%${q}%`}
+        )`,
+      )
+    : undefined;
 
   const filterParts = [];
   if (searchWhere) filterParts.push(searchWhere);
@@ -146,9 +169,11 @@ export default async function InvoicesPage({
     <div className="flex flex-col gap-4">
       <div className="flex items-end justify-between gap-3">
         <h1 className="page-title">Рахунки</h1>
-        <a className="crm-btn-primary" href="/invoices/new">
-          Додати рахунок
-        </a>
+        {canManageInvoices ? (
+          <a className="crm-btn-primary" href="/invoices/new">
+            Додати рахунок
+          </a>
+        ) : null}
       </div>
 
       <InvoicesTable
@@ -164,6 +189,7 @@ export default async function InvoicesPage({
         filterDateFrom={dateFromRaw}
         filterDateTo={dateToRaw}
         dateRangeInvalid={dateRangeInvalid}
+        canManageInvoices={canManageInvoices}
         canGenerateAnalogue={canGenerateAnalogue}
         rows={rows.map((inv) => ({
           id: inv.id,

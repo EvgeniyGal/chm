@@ -225,7 +225,7 @@ function StatsCard({ title, description, stats }: { title: string; description: 
 }
 
 export default async function ReportsPage({ searchParams }: { searchParams: SearchParams }) {
-  await requireRole("MANAGER");
+  await requireRole("ADMIN");
   const sp = await searchParams;
   const rawMonth = String(sp.month ?? "").trim();
   const legacyMonthParam = parseMonth(rawMonth);

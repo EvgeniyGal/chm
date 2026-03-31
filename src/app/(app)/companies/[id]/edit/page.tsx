@@ -72,7 +72,7 @@ function parseDeletedValues(raw: FormDataEntryValue | null): string[] {
 }
 
 export default async function EditCompanyPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireRole("ADMIN");
+  await requireRole("MANAGER");
   const { id } = await params;
   const [row, taxStatusOptions, signerPositionNomOptions, signerPositionGenOptions, actingUnderOptions] = await Promise.all([
     db.query.companies.findFirst({ where: eq(companies.id, id) }),
@@ -85,7 +85,7 @@ export default async function EditCompanyPage({ params }: { params: Promise<{ id
 
   async function update(formData: FormData) {
     "use server";
-    await requireRole("ADMIN");
+    await requireRole("MANAGER");
     const before = await db.query.companies.findFirst({ where: eq(companies.id, id) });
     if (!before) redirect("/companies");
     const parsed = schema.parse({
@@ -185,7 +185,7 @@ export default async function EditCompanyPage({ params }: { params: Promise<{ id
       saveDropdownOptions(DROPDOWN_SCOPE.ACTING_UNDER, [parsed.contractSignerActingUnder]),
     ]);
 
-    const { userId } = await requireRole("ADMIN");
+    const { userId } = await requireRole("MANAGER");
     await writeAuditEvent({
       entityType: "COMPANY",
       entityId: id,

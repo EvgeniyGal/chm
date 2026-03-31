@@ -45,13 +45,15 @@ export function AppSidebarNav({ role }: { role?: string }) {
       >
         Акти
       </Link>
-      <Link
-        className={navLinkClass(pathname, "/reports")}
-        href="/reports"
-        aria-current={routeActive(pathname, "/reports") ? "page" : undefined}
-      >
-        Звіти
-      </Link>
+      {role !== "MANAGER" ? (
+        <Link
+          className={navLinkClass(pathname, "/reports")}
+          href="/reports"
+          aria-current={routeActive(pathname, "/reports") ? "page" : undefined}
+        >
+          Звіти
+        </Link>
+      ) : null}
       <Link
         className={navLinkClass(pathname, "/companies")}
         href="/companies"

@@ -48,6 +48,7 @@ export default async function ContractsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { role } = await requireRole("MANAGER");
+  const canManageContracts = role !== "MANAGER";
   const canDeleteContracts = role === "ADMIN" || role === "OWNER";
   const sp = await searchParams;
   const q = String(sp.q ?? "").trim();
@@ -160,12 +161,14 @@ export default async function ContractsPage({
     <div className="flex flex-col gap-4">
       <div className="flex items-end justify-between gap-3">
         <h1 className="page-title">Договори</h1>
-        <a
-          className="crm-btn-primary"
-          href="/contracts/new"
-        >
-          Додати договір
-        </a>
+        {canManageContracts ? (
+          <a
+            className="crm-btn-primary"
+            href="/contracts/new"
+          >
+            Додати договір
+          </a>
+        ) : null}
       </div>
 
       <ContractsTable
@@ -182,6 +185,7 @@ export default async function ContractsPage({
         filterDateFrom={dateFromRaw}
         filterDateTo={dateToRaw}
         dateRangeInvalid={dateRangeInvalid}
+        canManageContracts={canManageContracts}
         canDeleteContracts={canDeleteContracts}
         canGenerateAnalogue={canDeleteContracts}
         rows={rows.map((c) => ({

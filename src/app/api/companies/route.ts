@@ -44,7 +44,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const { userId } = await requireRole("ADMIN");
+  const { userId } = await requireRole("MANAGER");
   const json = await req.json().catch(() => null);
   const parsed = companyInput.safeParse(json);
   if (!parsed.success) {

@@ -54,7 +54,7 @@ function parseDeletedValues(raw: FormDataEntryValue | null): string[] {
 }
 
 export default async function NewCompanyPage() {
-  await requireRole("ADMIN");
+  await requireRole("MANAGER");
   const [taxStatusOptions, signerPositionNomOptions, signerPositionGenOptions, actingUnderOptions] = await Promise.all([
     getDropdownOptions(DROPDOWN_SCOPE.TAX_STATUS),
     getDropdownOptions(DROPDOWN_SCOPE.SIGNER_POSITION_NOM),
@@ -72,7 +72,7 @@ export default async function NewCompanyPage() {
     const deletedSignerPositionGen = formData
       .getAll("signerPositionGenDeletedJson")
       .flatMap((v) => parseDeletedValues(v));
-    await requireRole("ADMIN");
+    await requireRole("MANAGER");
 
     const parsed = schema.parse({
       fullName: String(formData.get("fullName") ?? ""),
@@ -146,7 +146,7 @@ export default async function NewCompanyPage() {
       saveDropdownOptions(DROPDOWN_SCOPE.ACTING_UNDER, [parsed.contractSignerActingUnder]),
     ]);
 
-    const { userId } = await requireRole("ADMIN");
+    const { userId } = await requireRole("MANAGER");
     await writeAuditEvent({
       entityType: "COMPANY",
       entityId: created!.id,

@@ -8,7 +8,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { useRouter } from "next/navigation";
-import { FiCopy, FiDownload, FiEdit2, FiInfo, FiTrash2 } from "react-icons/fi";
+import { FiCopy, FiDownload, FiEdit2, FiFileText, FiInfo, FiTrash2, FiUpload } from "react-icons/fi";
 import { toast } from "sonner";
 
 import { DetailRow } from "@/components/data-table/detail-row";
@@ -113,6 +113,7 @@ export function InvoicesTable({
   filterDateFrom,
   filterDateTo,
   dateRangeInvalid,
+  canManageInvoices = true,
   canGenerateAnalogue = false,
 }: {
   rows: InvoiceRow[];
@@ -128,6 +129,7 @@ export function InvoicesTable({
   filterDateFrom: string | null;
   filterDateTo: string | null;
   dateRangeInvalid: boolean;
+  canManageInvoices?: boolean;
   canGenerateAnalogue?: boolean;
 }) {
   const router = useRouter();
@@ -227,7 +229,9 @@ export function InvoicesTable({
 
   const columns = useMemo<ColumnDef<InvoiceRow>[]>(
     () => [
-      {
+      ...(canManageInvoices
+        ? [
+            {
         id: "select",
         header: () => (
           <input
@@ -255,7 +259,9 @@ export function InvoicesTable({
             }}
           />
         ),
-      },
+      } as ColumnDef<InvoiceRow>,
+          ]
+        : []),
       {
         id: "numberDate",
         header: "Номер / Дата",
@@ -329,14 +335,36 @@ export function InvoicesTable({
                   <DetailRow label="Разом з ПДВ" value={inv.totalWithVat} />
                 </div>
               </InfoDialog>
-              <a
-                className={tableActionIconClassName}
-                href={`/invoices/${inv.id}/edit`}
-                aria-label="Редагувати рахунок"
-                title="Редагувати"
-              >
-                <FiEdit2 aria-hidden="true" className="size-4" />
-              </a>
+              {!canManageInvoices ? (
+                <>
+                  <a
+                    className={tableActionIconClassName}
+                    href={`/api/documents/invoice/${inv.id}`}
+                    aria-label="Завантажити рахунок"
+                    title="Завантажити рахунок"
+                  >
+                    <FiFileText aria-hidden="true" className="size-4" />
+                  </a>
+                  <a
+                    className={tableActionIconClassName}
+                    href={`/invoices/${inv.id}/scans`}
+                    aria-label="Додати скан документа"
+                    title="Додати скан документа"
+                  >
+                    <FiUpload aria-hidden="true" className="size-4" />
+                  </a>
+                </>
+              ) : null}
+              {canManageInvoices ? (
+                <a
+                  className={tableActionIconClassName}
+                  href={`/invoices/${inv.id}/edit`}
+                  aria-label="Редагувати рахунок"
+                  title="Редагувати"
+                >
+                  <FiEdit2 aria-hidden="true" className="size-4" />
+                </a>
+              ) : null}
               {canGenerateAnalogue && inv.origin !== "contract" ? (
                 <button
                   type="button"
@@ -349,25 +377,27 @@ export function InvoicesTable({
                   <FiCopy aria-hidden="true" className="size-4" />
                 </button>
               ) : null}
-              <button
-                type="button"
-                className={cn(
-                  tableActionIconClassName,
-                  "border-red-200 text-red-600 hover:bg-red-50 dark:border-red-900/50 dark:text-red-400 dark:hover:bg-red-950/40",
-                )}
-                aria-label="Видалити рахунок"
-                title="Видалити"
-                onClick={() => setDeleteConfirm({ id: inv.id, number: inv.number })}
-                disabled={rowBusy}
-              >
-                <FiTrash2 aria-hidden="true" className="size-4" />
-              </button>
+              {canManageInvoices ? (
+                <button
+                  type="button"
+                  className={cn(
+                    tableActionIconClassName,
+                    "border-red-200 text-red-600 hover:bg-red-50 dark:border-red-900/50 dark:text-red-400 dark:hover:bg-red-950/40",
+                  )}
+                  aria-label="Видалити рахунок"
+                  title="Видалити"
+                  onClick={() => setDeleteConfirm({ id: inv.id, number: inv.number })}
+                  disabled={rowBusy}
+                >
+                  <FiTrash2 aria-hidden="true" className="size-4" />
+                </button>
+              ) : null}
             </div>
           );
         },
       },
     ],
-    [allVisibleSelected, canGenerateAnalogue, duplicateInvoice, duplicatePendingId, selectedIds, visibleIds],
+    [allVisibleSelected, canGenerateAnalogue, canManageInvoices, duplicateInvoice, duplicatePendingId, selectedIds, visibleIds],
   );
 
   const table = useReactTable({
@@ -443,7 +473,7 @@ export function InvoicesTable({
       <ListPageToolbar
         queryInput={queryInput}
         onQueryChange={setQueryInput}
-        searchPlaceholder="Пошук за номером рахунку"
+        searchPlaceholder="Пошук за номером, компанією або назвою позиції"
         filters={
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
             {dateRangeInvalid ? (
@@ -515,15 +545,17 @@ export function InvoicesTable({
           </div>
         }
       />
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-sm text-muted-foreground">
-          Вибрано: <span className="font-medium text-foreground">{selectedCount}</span>
-        </span>
-        <Button type="button" variant="outline" disabled={selectedCount === 0} onClick={() => void exportSelectedToXlsx()}>
-          <FiDownload aria-hidden="true" className="mr-2 size-4" />
-          Експорт XLSX
-        </Button>
-      </div>
+      {canManageInvoices ? (
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-sm text-muted-foreground">
+            Вибрано: <span className="font-medium text-foreground">{selectedCount}</span>
+          </span>
+          <Button type="button" variant="outline" disabled={selectedCount === 0} onClick={() => void exportSelectedToXlsx()}>
+            <FiDownload aria-hidden="true" className="mr-2 size-4" />
+            Експорт XLSX
+          </Button>
+        </div>
+      ) : null}
 
       <Card className="overflow-hidden p-0">
         <div className="hidden md:block">
@@ -608,14 +640,36 @@ export function InvoicesTable({
                       <DetailRow label="Разом з ПДВ" value={inv.totalWithVat} />
                     </div>
                   </InfoDialog>
-                  <a
-                    className={tableActionIconClassName}
-                    href={`/invoices/${inv.id}/edit`}
-                    aria-label="Редагувати рахунок"
-                    title="Редагувати"
-                  >
-                    <FiEdit2 aria-hidden="true" className="size-4" />
-                  </a>
+                  {!canManageInvoices ? (
+                    <>
+                      <a
+                        className={tableActionIconClassName}
+                        href={`/api/documents/invoice/${inv.id}`}
+                        aria-label="Завантажити рахунок"
+                        title="Завантажити рахунок"
+                      >
+                        <FiFileText aria-hidden="true" className="size-4" />
+                      </a>
+                      <a
+                        className={tableActionIconClassName}
+                        href={`/invoices/${inv.id}/scans`}
+                        aria-label="Додати скан документа"
+                        title="Додати скан документа"
+                      >
+                        <FiUpload aria-hidden="true" className="size-4" />
+                      </a>
+                    </>
+                  ) : null}
+                  {canManageInvoices ? (
+                    <a
+                      className={tableActionIconClassName}
+                      href={`/invoices/${inv.id}/edit`}
+                      aria-label="Редагувати рахунок"
+                      title="Редагувати"
+                    >
+                      <FiEdit2 aria-hidden="true" className="size-4" />
+                    </a>
+                  ) : null}
                   {canGenerateAnalogue && inv.origin !== "contract" ? (
                     <button
                       type="button"
@@ -628,19 +682,21 @@ export function InvoicesTable({
                       <FiCopy aria-hidden="true" className="size-4" />
                     </button>
                   ) : null}
-                  <button
-                    type="button"
-                    className={cn(
-                      tableActionIconClassName,
-                      "border-red-200 text-red-600 hover:bg-red-50 dark:border-red-900/50 dark:text-red-400 dark:hover:bg-red-950/40",
-                    )}
-                    aria-label="Видалити рахунок"
-                    title="Видалити"
-                    onClick={() => setDeleteConfirm({ id: inv.id, number: inv.number })}
-                    disabled={rowBusy}
-                  >
-                    <FiTrash2 aria-hidden="true" className="size-4" />
-                  </button>
+                  {canManageInvoices ? (
+                    <button
+                      type="button"
+                      className={cn(
+                        tableActionIconClassName,
+                        "border-red-200 text-red-600 hover:bg-red-50 dark:border-red-900/50 dark:text-red-400 dark:hover:bg-red-950/40",
+                      )}
+                      aria-label="Видалити рахунок"
+                      title="Видалити"
+                      onClick={() => setDeleteConfirm({ id: inv.id, number: inv.number })}
+                      disabled={rowBusy}
+                    >
+                      <FiTrash2 aria-hidden="true" className="size-4" />
+                    </button>
+                  ) : null}
                 </div>
               </div>
             );

@@ -8,7 +8,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { useRouter } from "next/navigation";
-import { FiArchive, FiCheckCircle, FiCopy, FiDownload, FiEdit2, FiInfo, FiTrash2 } from "react-icons/fi";
+import { FiArchive, FiCheckCircle, FiCopy, FiDownload, FiEdit2, FiFileMinus, FiFileText, FiInfo, FiTrash2, FiUpload } from "react-icons/fi";
 import { toast } from "sonner";
 
 import { DetailRow } from "@/components/data-table/detail-row";
@@ -136,6 +136,7 @@ export function ContractsTable({
   filterDateFrom,
   filterDateTo,
   dateRangeInvalid,
+  canManageContracts = true,
   canDeleteContracts = false,
   canGenerateAnalogue = false,
 }: {
@@ -153,6 +154,7 @@ export function ContractsTable({
   filterDateFrom: string | null;
   filterDateTo: string | null;
   dateRangeInvalid: boolean;
+  canManageContracts?: boolean;
   canDeleteContracts?: boolean;
   canGenerateAnalogue?: boolean;
 }) {
@@ -300,7 +302,9 @@ export function ContractsTable({
 
   const columns = useMemo<ColumnDef<ContractRow>[]>(
     () => [
-      {
+      ...(canManageContracts
+        ? [
+            {
         id: "select",
         header: () => (
           <input
@@ -328,7 +332,9 @@ export function ContractsTable({
             }}
           />
         ),
-      },
+      } as ColumnDef<ContractRow>,
+          ]
+        : []),
       {
         id: "numberDate",
         header: "Номер / Дата",
@@ -467,14 +473,44 @@ export function ContractsTable({
                   <DetailRow label="Разом з ПДВ" value={c.totalWithVat} />
                 </div>
               </InfoDialog>
-              <a
-                className={tableActionIconClassName}
-                href={`/contracts/${c.id}/edit`}
-                aria-label="Редагувати договір"
-                title="Редагувати договір"
-              >
-                <FiEdit2 aria-hidden="true" className="size-4" />
-              </a>
+              {!canManageContracts ? (
+                <>
+                  <a
+                    className={tableActionIconClassName}
+                    href={`/api/documents/contract/${c.id}?variant=short`}
+                    aria-label="Сформувати скорочений договір"
+                    title="Сформувати скорочений договір"
+                  >
+                    <FiFileMinus aria-hidden="true" className="size-4" />
+                  </a>
+                  <a
+                    className={tableActionIconClassName}
+                    href={`/api/documents/contract/${c.id}?variant=full`}
+                    aria-label="Сформувати повний договір"
+                    title="Сформувати повний договір"
+                  >
+                    <FiFileText aria-hidden="true" className="size-4" />
+                  </a>
+                  <a
+                    className={tableActionIconClassName}
+                    href={`/contracts/${c.id}/scans`}
+                    aria-label="Додати скан документа"
+                    title="Додати скан документа"
+                  >
+                    <FiUpload aria-hidden="true" className="size-4" />
+                  </a>
+                </>
+              ) : null}
+              {canManageContracts ? (
+                <a
+                  className={tableActionIconClassName}
+                  href={`/contracts/${c.id}/edit`}
+                  aria-label="Редагувати договір"
+                  title="Редагувати договір"
+                >
+                  <FiEdit2 aria-hidden="true" className="size-4" />
+                </a>
+              ) : null}
               {canGenerateAnalogue ? (
                 <button
                   type="button"
@@ -509,6 +545,7 @@ export function ContractsTable({
     ],
     [
       allVisibleSelected,
+      canManageContracts,
       canDeleteContracts,
       canGenerateAnalogue,
       applyDuplicateContract,
@@ -738,15 +775,17 @@ export function ContractsTable({
           </div>
         }
       />
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-sm text-muted-foreground">
-          Вибрано: <span className="font-medium text-foreground">{selectedCount}</span>
-        </span>
-        <Button type="button" variant="outline" disabled={selectedCount === 0} onClick={() => void exportSelectedToXlsx()}>
-          <FiDownload aria-hidden="true" className="mr-2 size-4" />
-          Експорт XLSX
-        </Button>
-      </div>
+      {canManageContracts ? (
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-sm text-muted-foreground">
+            Вибрано: <span className="font-medium text-foreground">{selectedCount}</span>
+          </span>
+          <Button type="button" variant="outline" disabled={selectedCount === 0} onClick={() => void exportSelectedToXlsx()}>
+            <FiDownload aria-hidden="true" className="mr-2 size-4" />
+            Експорт XLSX
+          </Button>
+        </div>
+      ) : null}
 
       <Card className="overflow-hidden p-0">
         <div className="hidden md:block">
@@ -880,14 +919,44 @@ export function ContractsTable({
                       <DetailRow label="Разом з ПДВ" value={c.totalWithVat} />
                     </div>
                   </InfoDialog>
-                  <a
-                    className={tableActionIconClassName}
-                    href={`/contracts/${c.id}/edit`}
-                    aria-label="Редагувати договір"
-                    title="Редагувати договір"
-                  >
-                    <FiEdit2 aria-hidden="true" className="size-4" />
-                  </a>
+                  {!canManageContracts ? (
+                    <>
+                      <a
+                        className={tableActionIconClassName}
+                        href={`/api/documents/contract/${c.id}?variant=short`}
+                        aria-label="Сформувати скорочений договір"
+                        title="Сформувати скорочений договір"
+                      >
+                        <FiFileMinus aria-hidden="true" className="size-4" />
+                      </a>
+                      <a
+                        className={tableActionIconClassName}
+                        href={`/api/documents/contract/${c.id}?variant=full`}
+                        aria-label="Сформувати повний договір"
+                        title="Сформувати повний договір"
+                      >
+                        <FiFileText aria-hidden="true" className="size-4" />
+                      </a>
+                      <a
+                        className={tableActionIconClassName}
+                        href={`/contracts/${c.id}/scans`}
+                        aria-label="Додати скан документа"
+                        title="Додати скан документа"
+                      >
+                        <FiUpload aria-hidden="true" className="size-4" />
+                      </a>
+                    </>
+                  ) : null}
+                  {canManageContracts ? (
+                    <a
+                      className={tableActionIconClassName}
+                      href={`/contracts/${c.id}/edit`}
+                      aria-label="Редагувати договір"
+                      title="Редагувати договір"
+                    >
+                      <FiEdit2 aria-hidden="true" className="size-4" />
+                    </a>
+                  ) : null}
                   {canGenerateAnalogue ? (
                     <button
                       type="button"

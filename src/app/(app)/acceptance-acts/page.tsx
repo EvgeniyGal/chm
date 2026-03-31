@@ -60,7 +60,8 @@ export default async function AcceptanceActsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await requireRole("MANAGER");
+  const { role } = await requireRole("MANAGER");
+  const canManageActs = role !== "MANAGER";
   const sp = await searchParams;
   const q = String(sp.q ?? "").trim();
   const sortByRaw = String(sp.sortBy ?? "date");
@@ -86,13 +87,37 @@ export default async function AcceptanceActsPage({
   const dateToRaw = parseIsoDateOnly(String(sp.dateTo ?? ""));
   const dateRangeInvalid = Boolean(dateFromRaw && dateToRaw && dateFromRaw > dateToRaw);
 
-  const searchWhere = q
-    ? or(
-        ilike(acceptanceActs.number, `%${q}%`),
-        ilike(acceptanceActs.signingLocation, `%${q}%`),
-        ilike(invoices.number, `%${q}%`),
-      )
-    : undefined;
+  let companyIdsMatchedByQuery: string[] = [];
+  let actIdsMatchedByLineItems: string[] = [];
+  if (q) {
+    const qLike = `%${q}%`;
+    const [companyMatches, lineItemMatches] = await Promise.all([
+      db
+        .select({ id: companies.id })
+        .from(companies)
+        .where(or(ilike(companies.shortName, qLike), ilike(companies.fullName, qLike))),
+      db
+        .select({ acceptanceActId: lineItems.acceptanceActId })
+        .from(lineItems)
+        .where(and(isNotNull(lineItems.acceptanceActId), ilike(lineItems.title, qLike))),
+    ]);
+    companyIdsMatchedByQuery = companyMatches.map((row) => row.id);
+    actIdsMatchedByLineItems = lineItemMatches
+      .map((row) => row.acceptanceActId)
+      .filter((id): id is string => Boolean(id));
+  }
+
+  const searchParts = q ? [ilike(acceptanceActs.number, `%${q}%`), ilike(invoices.number, `%${q}%`)] : [];
+  if (companyIdsMatchedByQuery.length > 0) {
+    searchParts.push(
+      inArray(acceptanceActs.customerCompanyId, companyIdsMatchedByQuery),
+      inArray(acceptanceActs.contractorCompanyId, companyIdsMatchedByQuery),
+    );
+  }
+  if (actIdsMatchedByLineItems.length > 0) {
+    searchParts.push(inArray(acceptanceActs.id, actIdsMatchedByLineItems));
+  }
+  const searchWhere = searchParts.length > 0 ? or(...searchParts) : undefined;
 
   const filterParts = [];
   if (searchWhere) filterParts.push(searchWhere);
@@ -183,9 +208,11 @@ export default async function AcceptanceActsPage({
         <div>
           <h1 className="page-title">Акти</h1>
         </div>
-        <a className="crm-btn-primary" href="/acceptance-acts/new">
-          Додати акт
-        </a>
+        {canManageActs ? (
+          <a className="crm-btn-primary" href="/acceptance-acts/new">
+            Додати акт
+          </a>
+        ) : null}
       </div>
 
       <AcceptanceActsTable
@@ -201,6 +228,7 @@ export default async function AcceptanceActsPage({
         filterDateFrom={dateFromRaw}
         filterDateTo={dateToRaw}
         dateRangeInvalid={dateRangeInvalid}
+        canManageActs={canManageActs}
         rows={rows.map((r) => ({
           id: r.id,
           number: r.number,

@@ -8,7 +8,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { useRouter } from "next/navigation";
-import { FiArchive, FiCheckCircle, FiDownload, FiEdit2, FiInfo, FiTrash2 } from "react-icons/fi";
+import { FiArchive, FiCheckCircle, FiDownload, FiEdit2, FiFileText, FiInfo, FiTrash2, FiUpload } from "react-icons/fi";
 import { toast } from "sonner";
 
 import { DetailRow } from "@/components/data-table/detail-row";
@@ -132,6 +132,7 @@ export function AcceptanceActsTable({
   filterDateFrom,
   filterDateTo,
   dateRangeInvalid,
+  canManageActs = true,
 }: {
   rows: AcceptanceActRow[];
   total: number;
@@ -146,6 +147,7 @@ export function AcceptanceActsTable({
   filterDateFrom: string | null;
   filterDateTo: string | null;
   dateRangeInvalid: boolean;
+  canManageActs?: boolean;
 }) {
   const router = useRouter();
   const { updateParams } = useListUrlParams();
@@ -253,7 +255,9 @@ export function AcceptanceActsTable({
 
   const columns = useMemo<ColumnDef<AcceptanceActRow>[]>(
     () => [
-      {
+      ...(canManageActs
+        ? [
+            {
         id: "select",
         header: () => (
           <input
@@ -281,7 +285,9 @@ export function AcceptanceActsTable({
             }}
           />
         ),
-      },
+      } as ColumnDef<AcceptanceActRow>,
+          ]
+        : []),
       {
         id: "numberDate",
         header: "Номер / Дата",
@@ -428,33 +434,57 @@ export function AcceptanceActsTable({
                   <DetailRow label="Разом з ПДВ" value={act.totalWithVat} />
                 </div>
               </InfoDialog>
-              <a
-                className={tableActionIconClassName}
-                href={`/acceptance-acts/${act.id}`}
-                aria-label="Відкрити акт"
-                title="Відкрити"
-              >
-                <FiEdit2 aria-hidden="true" className="size-4" />
-              </a>
-              <button
-                type="button"
-                className={cn(
-                  tableActionIconClassName,
-                  "border-red-200 text-red-600 hover:bg-red-50 dark:border-red-900/50 dark:text-red-400 dark:hover:bg-red-950/40",
-                )}
-                aria-label="Видалити акт"
-                title="Видалити"
-                disabled={rowBusy}
-                onClick={() => setDeleteConfirm({ id: act.id, number: act.number })}
-              >
-                <FiTrash2 aria-hidden="true" className="size-4" />
-              </button>
+              {!canManageActs ? (
+                <>
+                  <a
+                    className={tableActionIconClassName}
+                    href={`/api/documents/acceptance-act/${act.id}`}
+                    aria-label="Завантажити акт"
+                    title="Завантажити акт"
+                  >
+                    <FiFileText aria-hidden="true" className="size-4" />
+                  </a>
+                  <a
+                    className={tableActionIconClassName}
+                    href={`/acceptance-acts/${act.id}/scans`}
+                    aria-label="Додати скан документа"
+                    title="Додати скан документа"
+                  >
+                    <FiUpload aria-hidden="true" className="size-4" />
+                  </a>
+                </>
+              ) : null}
+              {canManageActs ? (
+                <a
+                  className={tableActionIconClassName}
+                  href={`/acceptance-acts/${act.id}`}
+                  aria-label="Відкрити акт"
+                  title="Відкрити"
+                >
+                  <FiEdit2 aria-hidden="true" className="size-4" />
+                </a>
+              ) : null}
+              {canManageActs ? (
+                <button
+                  type="button"
+                  className={cn(
+                    tableActionIconClassName,
+                    "border-red-200 text-red-600 hover:bg-red-50 dark:border-red-900/50 dark:text-red-400 dark:hover:bg-red-950/40",
+                  )}
+                  aria-label="Видалити акт"
+                  title="Видалити"
+                  disabled={rowBusy}
+                  onClick={() => setDeleteConfirm({ id: act.id, number: act.number })}
+                >
+                  <FiTrash2 aria-hidden="true" className="size-4" />
+                </button>
+              ) : null}
             </div>
           );
         },
       },
     ],
-    [allVisibleSelected, deleteBusy, paperPendingId, selectedIds, visibleIds],
+    [allVisibleSelected, canManageActs, deleteBusy, paperPendingId, selectedIds, visibleIds],
   );
 
   const table = useReactTable({
@@ -572,7 +602,7 @@ export function AcceptanceActsTable({
       <ListPageToolbar
         queryInput={queryInput}
         onQueryChange={setQueryInput}
-        searchPlaceholder="Пошук за номером акту, рахунку або місцем складання"
+        searchPlaceholder="Пошук за номером акту, рахунку, компанією або назвою робіт/послуг"
         filters={
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
             {dateRangeInvalid ? (
@@ -643,15 +673,17 @@ export function AcceptanceActsTable({
           </div>
         }
       />
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-sm text-muted-foreground">
-          Вибрано: <span className="font-medium text-foreground">{selectedCount}</span>
-        </span>
-        <Button type="button" variant="outline" disabled={selectedCount === 0} onClick={() => void exportSelectedToXlsx()}>
-          <FiDownload aria-hidden="true" className="mr-2 size-4" />
-          Експорт XLSX
-        </Button>
-      </div>
+      {canManageActs ? (
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-sm text-muted-foreground">
+            Вибрано: <span className="font-medium text-foreground">{selectedCount}</span>
+          </span>
+          <Button type="button" variant="outline" disabled={selectedCount === 0} onClick={() => void exportSelectedToXlsx()}>
+            <FiDownload aria-hidden="true" className="mr-2 size-4" />
+            Експорт XLSX
+          </Button>
+        </div>
+      ) : null}
 
       <Card className="overflow-hidden p-0">
         <div className="hidden md:block">
@@ -779,27 +811,51 @@ export function AcceptanceActsTable({
                       <DetailRow label="Разом з ПДВ" value={act.totalWithVat} />
                     </div>
                   </InfoDialog>
-                  <a
-                    className={tableActionIconClassName}
-                    href={`/acceptance-acts/${act.id}`}
-                    aria-label="Відкрити акт"
-                    title="Відкрити"
-                  >
-                    <FiEdit2 aria-hidden="true" className="size-4" />
-                  </a>
-                  <button
-                    type="button"
-                    className={cn(
-                      tableActionIconClassName,
-                      "border-red-200 text-red-600 hover:bg-red-50 dark:border-red-900/50 dark:text-red-400 dark:hover:bg-red-950/40",
-                    )}
-                    aria-label="Видалити акт"
-                    title="Видалити"
-                    disabled={rowBusy}
-                    onClick={() => setDeleteConfirm({ id: act.id, number: act.number })}
-                  >
-                    <FiTrash2 aria-hidden="true" className="size-4" />
-                  </button>
+                  {!canManageActs ? (
+                    <>
+                      <a
+                        className={tableActionIconClassName}
+                        href={`/api/documents/acceptance-act/${act.id}`}
+                        aria-label="Завантажити акт"
+                        title="Завантажити акт"
+                      >
+                        <FiFileText aria-hidden="true" className="size-4" />
+                      </a>
+                      <a
+                        className={tableActionIconClassName}
+                        href={`/acceptance-acts/${act.id}/scans`}
+                        aria-label="Додати скан документа"
+                        title="Додати скан документа"
+                      >
+                        <FiUpload aria-hidden="true" className="size-4" />
+                      </a>
+                    </>
+                  ) : null}
+                  {canManageActs ? (
+                    <a
+                      className={tableActionIconClassName}
+                      href={`/acceptance-acts/${act.id}`}
+                      aria-label="Відкрити акт"
+                      title="Відкрити"
+                    >
+                      <FiEdit2 aria-hidden="true" className="size-4" />
+                    </a>
+                  ) : null}
+                  {canManageActs ? (
+                    <button
+                      type="button"
+                      className={cn(
+                        tableActionIconClassName,
+                        "border-red-200 text-red-600 hover:bg-red-50 dark:border-red-900/50 dark:text-red-400 dark:hover:bg-red-950/40",
+                      )}
+                      aria-label="Видалити акт"
+                      title="Видалити"
+                      disabled={rowBusy}
+                      onClick={() => setDeleteConfirm({ id: act.id, number: act.number })}
+                    >
+                      <FiTrash2 aria-hidden="true" className="size-4" />
+                    </button>
+                  ) : null}
                 </div>
               </div>
             );

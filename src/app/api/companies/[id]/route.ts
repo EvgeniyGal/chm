@@ -45,7 +45,7 @@ export async function GET(_req: Request, ctx: RouteContext<"/api/companies/[id]"
 }
 
 export async function PATCH(req: Request, ctx: RouteContext<"/api/companies/[id]">) {
-  const { userId } = await requireRole("ADMIN");
+  const { userId } = await requireRole("MANAGER");
   const { id } = await ctx.params;
 
   const json = await req.json().catch(() => null);
@@ -75,7 +75,7 @@ export async function PATCH(req: Request, ctx: RouteContext<"/api/companies/[id]
 }
 
 export async function DELETE(_req: Request, ctx: RouteContext<"/api/companies/[id]">) {
-  const { userId } = await requireRole("ADMIN");
+  const { userId } = await requireRole("MANAGER");
   const { id } = await ctx.params;
   const [deleted] = await db.delete(companies).where(eq(companies.id, id)).returning();
   if (!deleted) return Response.json({ error: "NOT_FOUND" }, { status: 404 });

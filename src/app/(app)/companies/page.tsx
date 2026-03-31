@@ -67,7 +67,7 @@ export default async function CompaniesPage({
           className="crm-btn-primary"
           href="/companies/new"
         >
-          Додати
+          Додати компанію
         </a>
       </div>
 
