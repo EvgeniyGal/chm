@@ -29,6 +29,9 @@ export function UnsavedChangesNavigationDialog({
       if (a.target && a.target !== "_self") return;
       const href = a.getAttribute("href");
       if (!href || href.startsWith("#")) return;
+      // Ignore explicit download links and temporary blob/data links used for file export.
+      if (a.hasAttribute("download")) return;
+      if (href.startsWith("blob:") || href.startsWith("data:")) return;
       if (!a.href || a.href === window.location.href) return;
 
       e.preventDefault();

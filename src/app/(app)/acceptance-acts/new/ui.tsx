@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Controller, FormProvider, useForm } from "react-hook-form";
 import { FiArrowRight, FiFileText, FiList, FiSave } from "react-icons/fi";
 import { toast } from "sonner";
@@ -101,6 +102,7 @@ export function AcceptanceActForm({
     },
     mode: "onBlur",
   });
+  const router = useRouter();
 
   const watchedInvoiceId = form.watch("invoiceId");
   const hasPreparedDraftFromInvoice = Boolean(watchedInvoiceId);
@@ -367,7 +369,8 @@ export function AcceptanceActForm({
                       const result = await onSubmitAndDownloadActDocx(values);
                       await downloadAcceptanceActDocx(result.acceptanceActId);
                       toast.success("Акт створено та завантажено.");
-                      window.location.href = `/acceptance-acts/${result.acceptanceActId}`;
+                      form.reset(values);
+                      router.push(`/acceptance-acts/${result.acceptanceActId}`);
                     } catch (e) {
                       if (!isNextNavigationError(e)) {
                         toast.error(getServerActionErrorMessage(e));
