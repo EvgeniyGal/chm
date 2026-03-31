@@ -10,13 +10,41 @@ import { uahContractPriceLiteral } from "@/lib/uk-amount-words";
 
 export type CompanyRow = typeof companies.$inferSelect;
 
+type CompanyContact = { type: "tel" | "email"; value: string };
+
+function parseCompanyContacts(raw: string): CompanyContact[] {
+  try {
+    const parsed = JSON.parse(raw) as Array<{ type?: string; value?: string }>;
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map((item) => {
+        const type = item.type === "email" ? "email" : item.type === "tel" ? "tel" : null;
+        const value = String(item.value ?? "").trim();
+        if (!type || !value) return null;
+        return { type, value } as CompanyContact;
+      })
+      .filter((item): item is CompanyContact => item !== null);
+  } catch {
+    return [];
+  }
+}
+
+function formatCompanyContacts(raw: string): string[] {
+  const contacts = parseCompanyContacts(raw);
+  if (contacts.length === 0) return [];
+  return contacts
+    .map((contact) => `${contact.type === "tel" ? "Тел." : "Email"}: ${contact.value}`);
+}
+
 function formatCompanyDetails(c: CompanyRow): string {
+  const contactLines = formatCompanyContacts(c.contacts);
   const lines = [
     `Адреса: ${c.address}`,
     `ЄДРПОУ: ${c.edrpouCode}`,
     c.vatIdTin ? `ІПН: ${c.vatIdTin}` : null,
     `Банк: ${c.bank}`,
     `IBAN: ${c.iban}`,
+    ...contactLines,
   ].filter(Boolean);
   return lines.join("\n");
 }
