@@ -669,7 +669,16 @@ export function ContractForm({
             <Button
               type="button"
               disabled={submitLoading !== null}
-              onClick={() => void form.handleSubmit(async (values) => submitContract(values, "save-and-invoice"))()}
+              onClick={() => {
+                void form
+                  .handleSubmit(async (values) => {
+                    try {
+                      await submitContract(values, "save-and-invoice");
+                    } catch {
+                      // submitContract already shows toast; avoid unhandled rejection in dev overlay
+                    }
+                  })();
+              }}
             >
               {submitLoading === "save-and-invoice" ? "Збереження…" : "Підтвердити"}
             </Button>

@@ -89,7 +89,7 @@ export default async function NewInvoicePage({
     if (!res.ok) throw new Error(data?.error ?? "CREATE_FAILED");
     const newId = data?.data?.id;
     if (!newId) throw new Error("CREATE_FAILED");
-    redirect(`/api/documents/invoice/${newId}`);
+    return { invoiceId: newId };
   }
 
   if (contractId && contract && eligibleLines.length === 0 && lineRemainders.length > 0) {

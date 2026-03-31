@@ -112,7 +112,7 @@ export function InvoiceForm({
   existingAcceptanceActId?: string | null;
   onSubmit: (payload: InvoiceFormValues) => Promise<void>;
   onSubmitAndCreateAcceptanceAct?: (payload: InvoiceFormValues) => Promise<void>;
-  onSubmitAndDownloadInvoiceDocx?: (payload: InvoiceFormValues) => Promise<void>;
+  onSubmitAndDownloadInvoiceDocx?: (payload: InvoiceFormValues) => Promise<{ invoiceId: string }>;
 }) {
   const defaultValues = useMemo((): InvoiceFormValues => {
     if (mode === "edit" && editInitialValues) {
@@ -376,6 +376,20 @@ export function InvoiceForm({
     } finally {
       setAnalogueLoading(false);
     }
+  }
+
+  async function downloadInvoiceDocx(invoiceId: string) {
+    const res = await fetch(`/api/documents/invoice/${invoiceId}`, { method: "GET" });
+    if (!res.ok) throw new Error("DOCX_GENERATION_FAILED");
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
   }
 
   return (
@@ -646,10 +660,14 @@ export function InvoiceForm({
                 void form
                   .handleSubmit(async (values) => {
                     try {
-                      await onSubmitAndDownloadInvoiceDocx(values);
+                      const result = await onSubmitAndDownloadInvoiceDocx(values);
+                      await downloadInvoiceDocx(result.invoiceId);
+                      toast.success("Рахунок створено та завантажено.");
+                      router.push(`/invoices/${result.invoiceId}/edit`);
                     } catch (e) {
-                      if (!isNextNavigationError(e)) toast.error(getServerActionErrorMessage(e));
-                      throw e;
+                      if (!isNextNavigationError(e)) {
+                        toast.error(getServerActionErrorMessage(e));
+                      }
                     }
                   })()
                   .finally(() => setDocLoading(false));
@@ -672,8 +690,9 @@ export function InvoiceForm({
                     try {
                       await onSubmitAndCreateAcceptanceAct(values);
                     } catch (e) {
-                      if (!isNextNavigationError(e)) toast.error(getServerActionErrorMessage(e));
-                      throw e;
+                      if (!isNextNavigationError(e)) {
+                        toast.error(getServerActionErrorMessage(e));
+                      }
                     }
                   })()
                   .finally(() => setActLoading(false));

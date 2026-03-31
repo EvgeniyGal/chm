@@ -78,7 +78,7 @@ export function AcceptanceActForm({
   initialInvoiceId: string;
   defaultSigningLocation?: string;
   onSubmit: (payload: AcceptanceActValues) => Promise<void>;
-  onSubmitAndDownloadActDocx?: (payload: AcceptanceActValues) => Promise<void>;
+  onSubmitAndDownloadActDocx?: (payload: AcceptanceActValues) => Promise<{ acceptanceActId: string }>;
   signerPositionNomOptions: string[];
   signerPositionGenOptions: string[];
   signingLocationOptions: string[];
@@ -168,6 +168,20 @@ export function AcceptanceActForm({
       toast.error(getServerActionErrorMessage(e));
       throw e;
     }
+  }
+
+  async function downloadAcceptanceActDocx(acceptanceActId: string) {
+    const res = await fetch(`/api/documents/acceptance-act/${acceptanceActId}`, { method: "GET" });
+    if (!res.ok) throw new Error("DOCX_GENERATION_FAILED");
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
   }
 
   return (
@@ -350,10 +364,14 @@ export function AcceptanceActForm({
                 void form
                   .handleSubmit(async (values) => {
                     try {
-                      await onSubmitAndDownloadActDocx(values);
+                      const result = await onSubmitAndDownloadActDocx(values);
+                      await downloadAcceptanceActDocx(result.acceptanceActId);
+                      toast.success("Акт створено та завантажено.");
+                      window.location.href = `/acceptance-acts/${result.acceptanceActId}`;
                     } catch (e) {
-                      if (!isNextNavigationError(e)) toast.error(getServerActionErrorMessage(e));
-                      throw e;
+                      if (!isNextNavigationError(e)) {
+                        toast.error(getServerActionErrorMessage(e));
+                      }
                     }
                   })()
                   .finally(() => setDocLoading(false));

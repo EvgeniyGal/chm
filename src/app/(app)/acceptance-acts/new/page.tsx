@@ -133,7 +133,7 @@ export default async function NewAcceptanceActPage({
     } | null;
     if (!res.ok) {
       if (data?.error === "ACCEPTANCE_ACT_ALREADY_EXISTS" && data.acceptanceActId) {
-        redirect(`/api/documents/acceptance-act/${data.acceptanceActId}`);
+        return { acceptanceActId: data.acceptanceActId };
       }
       if (data?.error === "ACCEPTANCE_ACT_ALREADY_EXISTS") {
         throw new Error("Для цього рахунку вже створено акт.");
@@ -141,8 +141,8 @@ export default async function NewAcceptanceActPage({
       throw new Error(data?.error ?? "CREATE_FAILED");
     }
     const newId = data?.data?.id;
-    if (newId) redirect(`/api/documents/acceptance-act/${newId}`);
-    redirect("/acceptance-acts");
+    if (newId) return { acceptanceActId: newId };
+    throw new Error("CREATE_FAILED");
   }
 
   return (
