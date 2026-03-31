@@ -8,7 +8,7 @@ import { FormWithToastAction } from "@/components/forms/FormWithToastAction";
 import { db } from "@/db";
 import { emailChangeTokens, users } from "@/db/schema";
 import { requireRole } from "@/lib/authz";
-import { sendAuthEmail } from "@/lib/email";
+import { appBaseUrl, sendAuthEmail } from "@/lib/email";
 
 const nameSchema = z.object({
   firstName: z.string().min(1),
@@ -101,8 +101,7 @@ export default async function ProfilePage({
     const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 2);
     await db.insert(emailChangeTokens).values({ userId, newEmail, token, expiresAt });
 
-    const appUrl = process.env.APP_URL ?? "http://localhost:3000";
-    const confirmUrl = `${appUrl}/auth/confirm-email-change?token=${encodeURIComponent(token)}`;
+    const confirmUrl = `${appBaseUrl()}/auth/confirm-email-change?token=${encodeURIComponent(token)}`;
     try {
       await sendAuthEmail({
         to: newEmail,

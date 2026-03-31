@@ -58,6 +58,9 @@ export async function sendAuthEmail({
 }
 
 export function appBaseUrl() {
-  return env.APP_URL ?? env.NEXTAUTH_URL ?? "http://localhost:3000";
+  const raw = env.APP_URL ?? env.NEXTAUTH_URL ?? "http://localhost:3000";
+  if (/^https?:\/\//i.test(raw)) return raw;
+  if (raw.startsWith("localhost:") || raw.startsWith("127.0.0.1:")) return `http://${raw}`;
+  return `https://${raw}`;
 }
 
