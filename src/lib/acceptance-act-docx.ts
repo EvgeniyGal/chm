@@ -57,7 +57,7 @@ export function buildAcceptanceActDocxBuffer(input: AcceptanceActDocxInput): Buf
   const zip = new PizZip(readFileSync(templatePath));
 
   const basis = resolveTreatyBasis(input);
-  const actDate = new Date(input.act.date).toLocaleDateString("uk-UA");
+  const actDate = new Date(input.act.completionDate).toLocaleDateString("uk-UA");
 
   const rowItems = input.items.map((it, i) => ({
     "act-job-item-number": String(i + 1),

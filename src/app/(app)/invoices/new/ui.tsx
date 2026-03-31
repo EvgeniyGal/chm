@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Controller, FormProvider, useForm } from "react-hook-form";
 import { Plus } from "lucide-react";
-import { FiClipboard, FiFileText, FiList, FiSave } from "react-icons/fi";
+import { FiClipboard, FiCopy, FiExternalLink, FiFileText, FiList, FiSave } from "react-icons/fi";
 import { toast } from "sonner";
 
 import { CompanySearchSelect } from "@/components/forms/CompanySearchSelect";
@@ -160,6 +160,7 @@ export function InvoiceForm({
 
   const [actLoading, setActLoading] = useState(false);
   const [docLoading, setDocLoading] = useState(false);
+  const [analogueLoading, setAnalogueLoading] = useState(false);
 
   useEffect(() => {
     if (readonlyInvoiceNumber) return;
@@ -350,6 +351,30 @@ export function InvoiceForm({
       }
       toast.error(getServerActionErrorMessage(e));
       throw e;
+    }
+  }
+
+  async function generateAnalogueInvoice() {
+    if (!invoiceId) return;
+    setAnalogueLoading(true);
+    try {
+      const res = await fetch(`/api/invoices/${invoiceId}/analogue`, { method: "POST" });
+      const data = (await res.json().catch(() => null)) as { data?: { id: string }; error?: string } | null;
+      if (!res.ok) {
+        toast.error(data?.error ?? "Не вдалося створити аналог рахунку.");
+        return;
+      }
+      const newId = data?.data?.id;
+      if (!newId) {
+        toast.error("Не вдалося створити аналог рахунку.");
+        return;
+      }
+      toast.success("Створено рахунок-аналог.");
+      router.push(`/invoices/${newId}/edit`);
+    } catch {
+      toast.error("Не вдалося створити аналог рахунку.");
+    } finally {
+      setAnalogueLoading(false);
     }
   }
 
@@ -601,6 +626,16 @@ export function InvoiceForm({
             <FiList className="size-4 shrink-0" aria-hidden />
             До списку рахунків
           </a>
+          {isFromContract && contract?.id ? (
+            <a
+              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border px-4 text-sm md:w-auto"
+              href={`/contracts/${contract.id}/edit`}
+              title="Перейти до договору, на основі якого створено рахунок"
+            >
+              <FiExternalLink className="size-4 shrink-0" aria-hidden />
+              До договору
+            </a>
+          ) : null}
           {mode === "create" && onSubmitAndDownloadInvoiceDocx ? (
             <button
               type="button"
@@ -651,6 +686,18 @@ export function InvoiceForm({
           ) : null}
           {mode === "edit" && invoiceId ? (
             <>
+              {!isFromContract ? (
+                <button
+                  type="button"
+                  disabled={analogueLoading}
+                  className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-border bg-background px-4 text-sm hover:bg-muted disabled:opacity-60 md:w-auto"
+                  onClick={() => void generateAnalogueInvoice()}
+                  title="Створити новий рахунок за аналогією з поточним"
+                >
+                  <FiCopy className="size-4 shrink-0" aria-hidden />
+                  {analogueLoading ? "Створення…" : "Згенерувати аналог"}
+                </button>
+              ) : null}
               <a
                 className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-border bg-background px-4 text-sm hover:bg-muted md:w-auto"
                 href={`/api/documents/invoice/${invoiceId}`}

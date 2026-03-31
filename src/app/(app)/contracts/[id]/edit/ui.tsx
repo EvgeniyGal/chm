@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Controller, FormProvider, useForm } from "react-hook-form";
-import { FileText, List, Plus, Receipt, Save } from "lucide-react";
+import { Copy, FileText, List, Plus, Receipt, Save } from "lucide-react";
 import { toast } from "sonner";
 
 import { useUnsavedChangesGuard } from "@/components/forms/useUnsavedChangesGuard";
@@ -159,6 +159,7 @@ export function ContractEditForm({
   const [treatyLoading, setTreatyLoading] = useState<null | "full" | "short">(null);
   const [treatyError, setTreatyError] = useState<string | null>(null);
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
+  const [analogueLoading, setAnalogueLoading] = useState(false);
 
   useEffect(() => {
     if (!selectedContractorCompany) {
@@ -232,6 +233,29 @@ export function ContractEditForm({
       }
       toast.error(getServerActionErrorMessage(e));
       throw e;
+    }
+  }
+
+  async function generateAnalogueContract() {
+    setAnalogueLoading(true);
+    try {
+      const res = await fetch(`/api/contracts/${contractId}/analogue`, { method: "POST" });
+      const data = (await res.json().catch(() => null)) as { data?: { id: string }; error?: string } | null;
+      if (!res.ok) {
+        toast.error(data?.error ?? "Не вдалося створити аналог договору.");
+        return;
+      }
+      const newId = data?.data?.id;
+      if (!newId) {
+        toast.error("Не вдалося створити аналог договору.");
+        return;
+      }
+      toast.success("Створено договір-аналог.");
+      router.push(`/contracts/${newId}/edit`);
+    } catch {
+      toast.error("Не вдалося створити аналог договору.");
+    } finally {
+      setAnalogueLoading(false);
     }
   }
 
@@ -521,6 +545,16 @@ export function ContractEditForm({
           >
             <Receipt className="size-4" aria-hidden="true" />
             Сформувати рахунок
+          </button>
+          <button
+            type="button"
+            disabled={analogueLoading}
+            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-zinc-300 bg-white px-4 text-sm text-zinc-800 hover:bg-zinc-50 disabled:opacity-50 sm:w-auto"
+            onClick={() => void generateAnalogueContract()}
+            title="Створити новий договір за аналогією з поточним"
+          >
+            <Copy className="size-4" aria-hidden="true" />
+            {analogueLoading ? "Створення…" : "Згенерувати аналог"}
           </button>
           <button
             type="button"

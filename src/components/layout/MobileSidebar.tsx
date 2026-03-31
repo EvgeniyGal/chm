@@ -1,12 +1,13 @@
 "use client";
 
 import { useRef } from "react";
+import Image from "next/image";
 import { FiMenu } from "react-icons/fi";
 
 import { AppSidebarNav, ProfileSidebarLink } from "@/components/app-sidebar-nav";
 import { LogoutButton } from "@/components/logout-button";
 
-export function MobileSidebar({ email, role }: { email?: string | null; role?: string }) {
+export function MobileSidebar({ name, email, role }: { name?: string | null; email?: string | null; role?: string }) {
   const detailsRef = useRef<HTMLDetailsElement | null>(null);
 
   const closeMenu = () => {
@@ -36,7 +37,10 @@ export function MobileSidebar({ email, role }: { email?: string | null; role?: s
         }}
       >
         <div className="mb-4">
-          <div className="text-sm font-semibold text-foreground">CRM</div>
+          <div className="mb-1">
+            <Image src="/favicon.svg" alt="Логотип компанії" width={54} height={54} className="rounded-sm" />
+          </div>
+          <div className="text-sm font-medium text-foreground">{name ?? "—"}</div>
           <div className="text-xs text-muted-foreground">{email}</div>
         </div>
         <AppSidebarNav role={role} />

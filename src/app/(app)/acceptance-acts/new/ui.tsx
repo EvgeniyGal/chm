@@ -138,6 +138,8 @@ export function AcceptanceActForm({
 
   const lineHeading =
     selectedInvoice?.workType === "SERVICES" ? "Перелік послуг" : "Перелік робіт";
+  const completionDateLabel =
+    selectedInvoice?.workType === "SERVICES" ? "Дата завершення послуг" : "Дата завершення робіт";
 
   const totals = useMemo(() => {
     const items = selectedInvoice?.lineItems ?? [];
@@ -188,7 +190,7 @@ export function AcceptanceActForm({
               ))}
             </select>
           </label>
-          <Field label="Дата завершення робіт (послуг)" type="date" {...form.register("completionDate", { required: true })} />
+          <Field label={completionDateLabel} type="date" {...form.register("completionDate", { required: true })} />
           <Controller
             name="signingLocation"
             control={form.control}

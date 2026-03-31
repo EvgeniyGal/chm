@@ -2,7 +2,7 @@ import { and, asc, count, desc, eq, gte, ilike, inArray, isNotNull, isNull, lte 
 
 import { InvoicesTable } from "@/components/invoices/InvoicesTable";
 import { db } from "@/db";
-import { invoices, lineItems } from "@/db/schema";
+import { companies, invoices, lineItems } from "@/db/schema";
 import { requireRole } from "@/lib/authz";
 
 const pageSizeOptions = new Set([25, 50, 100]);
@@ -53,7 +53,8 @@ export default async function InvoicesPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await requireRole("MANAGER");
+  const { role } = await requireRole("MANAGER");
+  const canGenerateAnalogue = role === "ADMIN" || role === "OWNER";
   const sp = await searchParams;
   const q = String(sp.q ?? "").trim();
   const sortByRaw = String(sp.sortBy ?? "date");
@@ -112,6 +113,7 @@ export default async function InvoicesPage({
 
   const ids = rows.map((r) => r.id);
   const lineItemTitlesByInvoice = new Map<string, string[]>();
+  const companyNameById = new Map<string, string>();
   if (ids.length > 0) {
     const liRows = await db
       .select({ invoiceId: lineItems.invoiceId, title: lineItems.title })
@@ -124,6 +126,19 @@ export default async function InvoicesPage({
       const list = lineItemTitlesByInvoice.get(row.invoiceId) ?? [];
       list.push(row.title);
       lineItemTitlesByInvoice.set(row.invoiceId, list);
+    }
+
+    const companyIds = Array.from(
+      new Set(rows.flatMap((r) => [r.customerCompanyId, r.contractorCompanyId]).filter((id): id is string => Boolean(id))),
+    );
+    if (companyIds.length > 0) {
+      const companyRows = await db
+        .select({ id: companies.id, shortName: companies.shortName, fullName: companies.fullName })
+        .from(companies)
+        .where(inArray(companies.id, companyIds));
+      for (const company of companyRows) {
+        companyNameById.set(company.id, company.shortName || company.fullName || "—");
+      }
     }
   }
 
@@ -149,6 +164,7 @@ export default async function InvoicesPage({
         filterDateFrom={dateFromRaw}
         filterDateTo={dateToRaw}
         dateRangeInvalid={dateRangeInvalid}
+        canGenerateAnalogue={canGenerateAnalogue}
         rows={rows.map((inv) => ({
           id: inv.id,
           number: inv.number,
@@ -159,6 +175,8 @@ export default async function InvoicesPage({
             isExternalContract: Boolean(inv.isExternalContract),
           }),
           lineItemsPreview: formatLineItemsPreview(lineItemTitlesByInvoice.get(inv.id) ?? []),
+          customerCompany: companyNameById.get(inv.customerCompanyId) ?? "—",
+          contractorCompany: companyNameById.get(inv.contractorCompanyId) ?? "—",
           totalWithoutVat: String(inv.totalWithoutVat),
           vat20: String(inv.vat20),
           totalWithVat: String(inv.totalWithVat),

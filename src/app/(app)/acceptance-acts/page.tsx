@@ -15,7 +15,7 @@ import {
 
 import { AcceptanceActsTable } from "@/components/acceptance-acts/AcceptanceActsTable";
 import { db } from "@/db";
-import { acceptanceActs, invoices, lineItems } from "@/db/schema";
+import { acceptanceActs, companies, invoices, lineItems } from "@/db/schema";
 import { requireRole } from "@/lib/authz";
 
 const pageSizeOptions = new Set([25, 50, 100]);
@@ -121,7 +121,11 @@ export default async function AcceptanceActsPage({
       number: acceptanceActs.number,
       date: acceptanceActs.date,
       signingLocation: acceptanceActs.signingLocation,
+      isSigned: acceptanceActs.isSigned,
+      isArchived: acceptanceActs.isArchived,
       contractId: acceptanceActs.contractId,
+      customerCompanyId: acceptanceActs.customerCompanyId,
+      contractorCompanyId: acceptanceActs.contractorCompanyId,
       totalWithoutVat: acceptanceActs.totalWithoutVat,
       vat20: acceptanceActs.vat20,
       totalWithVat: acceptanceActs.totalWithVat,
@@ -140,6 +144,7 @@ export default async function AcceptanceActsPage({
 
   const ids = rows.map((r) => r.id);
   const lineItemTitlesByAct = new Map<string, string[]>();
+  const companyNameById = new Map<string, string>();
   if (ids.length > 0) {
     const liRows = await db
       .select({ acceptanceActId: lineItems.acceptanceActId, title: lineItems.title })
@@ -153,6 +158,23 @@ export default async function AcceptanceActsPage({
       list.push(row.title);
       lineItemTitlesByAct.set(row.acceptanceActId, list);
     }
+
+    const companyIds = Array.from(
+      new Set(
+        rows
+          .flatMap((r) => [r.customerCompanyId, r.contractorCompanyId])
+          .filter((id): id is string => Boolean(id)),
+      ),
+    );
+    if (companyIds.length > 0) {
+      const companyRows = await db
+        .select({ id: companies.id, shortName: companies.shortName, fullName: companies.fullName })
+        .from(companies)
+        .where(inArray(companies.id, companyIds));
+      for (const company of companyRows) {
+        companyNameById.set(company.id, company.shortName || company.fullName || "—");
+      }
+    }
   }
 
   return (
@@ -160,9 +182,6 @@ export default async function AcceptanceActsPage({
       <div className="flex items-end justify-between gap-3">
         <div>
           <h1 className="page-title">Акти</h1>
-          <p className="text-sm text-muted-foreground">
-            Акти приймання-передачі на основі рахунків. Пошук, фільтри та пагінація — як у списках рахунків і договорів.
-          </p>
         </div>
         <a className="crm-btn-primary" href="/acceptance-acts/new">
           Додати акт
@@ -187,9 +206,13 @@ export default async function AcceptanceActsPage({
           number: r.number,
           date: r.date instanceof Date ? r.date.toISOString() : String(r.date),
           workType: r.workType,
+          isSigned: Boolean(r.isSigned),
+          isArchived: Boolean(r.isArchived),
           invoiceNumber: r.invoiceNumber,
           hasContract: r.contractId != null,
           signingLocation: r.signingLocation,
+          customerCompany: companyNameById.get(r.customerCompanyId) ?? "—",
+          contractorCompany: companyNameById.get(r.contractorCompanyId) ?? "—",
           lineItemsPreview: formatLineItemsPreview(lineItemTitlesByAct.get(r.id) ?? []),
           totalWithoutVat: String(r.totalWithoutVat),
           vat20: String(r.vat20),

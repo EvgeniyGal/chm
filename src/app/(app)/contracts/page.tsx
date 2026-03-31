@@ -183,6 +183,7 @@ export default async function ContractsPage({
         filterDateTo={dateToRaw}
         dateRangeInvalid={dateRangeInvalid}
         canDeleteContracts={canDeleteContracts}
+        canGenerateAnalogue={canDeleteContracts}
         rows={rows.map((c) => ({
           id: c.id,
           number: c.number,

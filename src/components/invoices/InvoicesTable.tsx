@@ -8,7 +8,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { useRouter } from "next/navigation";
-import { FiEdit2, FiInfo, FiTrash2 } from "react-icons/fi";
+import { FiCopy, FiEdit2, FiInfo, FiTrash2 } from "react-icons/fi";
 import { toast } from "sonner";
 
 import { DetailRow } from "@/components/data-table/detail-row";
@@ -35,6 +35,8 @@ export type InvoiceRow = {
   workType: "WORKS" | "SERVICES";
   origin: "standalone" | "contract" | "external";
   lineItemsPreview: string;
+  customerCompany: string;
+  contractorCompany: string;
   totalWithoutVat: string;
   vat20: string;
   totalWithVat: string;
@@ -104,6 +106,7 @@ export function InvoicesTable({
   filterDateFrom,
   filterDateTo,
   dateRangeInvalid,
+  canGenerateAnalogue = false,
 }: {
   rows: InvoiceRow[];
   total: number;
@@ -118,11 +121,13 @@ export function InvoicesTable({
   filterDateFrom: string | null;
   filterDateTo: string | null;
   dateRangeInvalid: boolean;
+  canGenerateAnalogue?: boolean;
 }) {
   const router = useRouter();
   const { updateParams } = useListUrlParams();
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; number: string } | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
+  const [duplicatePendingId, setDuplicatePendingId] = useState<string | null>(null);
 
   const onSearchCommit = useCallback(
     (trimmed: string) => {
@@ -150,6 +155,32 @@ export function InvoicesTable({
       setDeleteBusy(false);
     }
   }, [deleteConfirm, deleteBusy, router]);
+
+  const duplicateInvoice = useCallback(
+    async (invoiceId: string) => {
+      setDuplicatePendingId(invoiceId);
+      try {
+        const res = await fetch(`/api/invoices/${invoiceId}/analogue`, { method: "POST" });
+        const data = (await res.json().catch(() => null)) as { data?: { id: string }; error?: string } | null;
+        if (!res.ok) {
+          toast.error(data?.error === "NOT_FOUND" ? "Рахунок не знайдено." : "Не вдалося створити аналог.");
+          return;
+        }
+        const newId = data?.data?.id;
+        if (!newId) {
+          toast.error("Не вдалося створити аналог.");
+          return;
+        }
+        toast.success("Створено рахунок-аналог.");
+        router.push(`/invoices/${newId}/edit`);
+      } catch {
+        toast.error("Не вдалося створити аналог.");
+      } finally {
+        setDuplicatePendingId(null);
+      }
+    },
+    [router],
+  );
 
   const columns = useMemo<ColumnDef<InvoiceRow>[]>(
     () => [
@@ -193,6 +224,7 @@ export function InvoicesTable({
         header: "Дії",
         cell: ({ row }) => {
           const inv = row.original;
+          const rowBusy = duplicatePendingId === inv.id;
           return (
             <div className="flex flex-nowrap items-center justify-center gap-1">
               <InfoDialog
@@ -205,6 +237,8 @@ export function InvoicesTable({
                   <DetailRow label="Дата" value={new Date(inv.date).toLocaleDateString("uk-UA")} />
                   <DetailRow label="Тип" value={inv.workType === "WORKS" ? "Роботи" : "Послуги"} />
                   <DetailRow label="Походження" value={originLabel(inv.origin)} />
+                  <DetailRow label="Замовник" value={inv.customerCompany} />
+                  <DetailRow label="Виконавець" value={inv.contractorCompany} />
                   <DetailRow label="Позиції" value={inv.lineItemsPreview} />
                   <DetailRow label="Разом (без ПДВ)" value={inv.totalWithoutVat} />
                   <DetailRow label="ПДВ 20%" value={inv.vat20} />
@@ -219,6 +253,18 @@ export function InvoicesTable({
               >
                 <FiEdit2 aria-hidden="true" className="size-4" />
               </a>
+              {canGenerateAnalogue && inv.origin !== "contract" ? (
+                <button
+                  type="button"
+                  className={tableActionIconClassName}
+                  aria-label="Створити рахунок-аналог"
+                  title="Згенерувати аналог"
+                  disabled={rowBusy}
+                  onClick={() => void duplicateInvoice(inv.id)}
+                >
+                  <FiCopy aria-hidden="true" className="size-4" />
+                </button>
+              ) : null}
               <button
                 type="button"
                 className={cn(
@@ -228,6 +274,7 @@ export function InvoicesTable({
                 aria-label="Видалити рахунок"
                 title="Видалити"
                 onClick={() => setDeleteConfirm({ id: inv.id, number: inv.number })}
+                disabled={rowBusy}
               >
                 <FiTrash2 aria-hidden="true" className="size-4" />
               </button>
@@ -236,7 +283,7 @@ export function InvoicesTable({
         },
       },
     ],
-    [],
+    [canGenerateAnalogue, duplicateInvoice, duplicatePendingId],
   );
 
   const table = useReactTable({
@@ -422,6 +469,7 @@ export function InvoicesTable({
         <div className="grid gap-3 p-3 md:hidden">
           {table.getRowModel().rows.map((row) => {
             const inv = row.original;
+            const rowBusy = duplicatePendingId === inv.id;
             return (
               <div key={inv.id} className="rounded-lg border p-3">
                 <div className="text-base font-medium text-foreground">{inv.number}</div>
@@ -444,6 +492,8 @@ export function InvoicesTable({
                       <DetailRow label="Дата" value={new Date(inv.date).toLocaleDateString("uk-UA")} />
                       <DetailRow label="Тип" value={inv.workType === "WORKS" ? "Роботи" : "Послуги"} />
                       <DetailRow label="Походження" value={originLabel(inv.origin)} />
+                      <DetailRow label="Замовник" value={inv.customerCompany} />
+                      <DetailRow label="Виконавець" value={inv.contractorCompany} />
                       <DetailRow label="Позиції" value={inv.lineItemsPreview} />
                       <DetailRow label="Разом (без ПДВ)" value={inv.totalWithoutVat} />
                       <DetailRow label="ПДВ 20%" value={inv.vat20} />
@@ -458,6 +508,18 @@ export function InvoicesTable({
                   >
                     <FiEdit2 aria-hidden="true" className="size-4" />
                   </a>
+                  {canGenerateAnalogue && inv.origin !== "contract" ? (
+                    <button
+                      type="button"
+                      className={tableActionIconClassName}
+                      aria-label="Створити рахунок-аналог"
+                      title="Згенерувати аналог"
+                      disabled={rowBusy}
+                      onClick={() => void duplicateInvoice(inv.id)}
+                    >
+                      <FiCopy aria-hidden="true" className="size-4" />
+                    </button>
+                  ) : null}
                   <button
                     type="button"
                     className={cn(
@@ -467,6 +529,7 @@ export function InvoicesTable({
                     aria-label="Видалити рахунок"
                     title="Видалити"
                     onClick={() => setDeleteConfirm({ id: inv.id, number: inv.number })}
+                    disabled={rowBusy}
                   >
                     <FiTrash2 aria-hidden="true" className="size-4" />
                   </button>

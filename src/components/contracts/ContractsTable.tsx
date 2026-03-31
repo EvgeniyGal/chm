@@ -8,7 +8,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { useRouter } from "next/navigation";
-import { FiArchive, FiCheckCircle, FiEdit2, FiInfo, FiTrash2 } from "react-icons/fi";
+import { FiArchive, FiCheckCircle, FiCopy, FiEdit2, FiInfo, FiTrash2 } from "react-icons/fi";
 import { toast } from "sonner";
 
 import { DetailRow } from "@/components/data-table/detail-row";
@@ -130,6 +130,7 @@ export function ContractsTable({
   filterDateTo,
   dateRangeInvalid,
   canDeleteContracts = false,
+  canGenerateAnalogue = false,
 }: {
   rows: ContractRow[];
   total: number;
@@ -146,6 +147,7 @@ export function ContractsTable({
   filterDateTo: string | null;
   dateRangeInvalid: boolean;
   canDeleteContracts?: boolean;
+  canGenerateAnalogue?: boolean;
 }) {
   const router = useRouter();
   const { updateParams } = useListUrlParams();
@@ -153,6 +155,7 @@ export function ContractsTable({
   const [paperPendingId, setPaperPendingId] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<DeleteConfirm | null>(null);
   const [deletePendingId, setDeletePendingId] = useState<string | null>(null);
+  const [duplicatePendingId, setDuplicatePendingId] = useState<string | null>(null);
 
   const onSearchCommit = useCallback(
     (trimmed: string) => {
@@ -217,6 +220,38 @@ export function ContractsTable({
     }
   }, [deleteConfirm, router]);
 
+  const applyDuplicateContract = useCallback(
+    async (contractId: string) => {
+      setDuplicatePendingId(contractId);
+      try {
+        const res = await fetch(`/api/contracts/${contractId}/analogue`, { method: "POST" });
+        const data = (await res.json().catch(() => null)) as { data?: { id: string }; error?: string } | null;
+        if (!res.ok) {
+          toast.error(
+            data?.error === "FORBIDDEN"
+              ? "Недостатньо прав."
+              : data?.error === "NOT_FOUND"
+                ? "Договір не знайдено."
+                : "Не вдалося створити аналог.",
+          );
+          return;
+        }
+        const newId = data?.data?.id;
+        if (!newId) {
+          toast.error("Не вдалося створити аналог.");
+          return;
+        }
+        toast.success("Створено договір-аналог.");
+        router.push(`/contracts/${newId}/edit`);
+      } catch {
+        toast.error("Не вдалося створити аналог.");
+      } finally {
+        setDuplicatePendingId(null);
+      }
+    },
+    [router],
+  );
+
   const columns = useMemo<ColumnDef<ContractRow>[]>(
     () => [
       {
@@ -274,7 +309,7 @@ export function ContractsTable({
         header: "Дії",
         cell: ({ row }) => {
           const c = row.original;
-          const rowBusy = paperPendingId === c.id || deletePendingId === c.id;
+          const rowBusy = paperPendingId === c.id || deletePendingId === c.id || duplicatePendingId === c.id;
           return (
             <div className="flex flex-nowrap items-center justify-center gap-1">
               <button
@@ -345,6 +380,18 @@ export function ContractsTable({
               >
                 <FiEdit2 aria-hidden="true" className="size-4" />
               </a>
+              {canGenerateAnalogue ? (
+                <button
+                  type="button"
+                  className={tableActionIconClassName}
+                  aria-label="Створити договір-аналог"
+                  title="Згенерувати аналог"
+                  disabled={rowBusy}
+                  onClick={() => void applyDuplicateContract(c.id)}
+                >
+                  <FiCopy aria-hidden="true" className="size-4" />
+                </button>
+              ) : null}
               {canDeleteContracts ? (
                 <button
                   type="button"
@@ -365,7 +412,7 @@ export function ContractsTable({
         },
       },
     ],
-    [paperPendingId, deletePendingId, canDeleteContracts],
+    [paperPendingId, deletePendingId, duplicatePendingId, canDeleteContracts, canGenerateAnalogue, applyDuplicateContract],
   );
 
   const table = useReactTable({
@@ -622,7 +669,7 @@ export function ContractsTable({
         <div className="grid gap-3 p-3 md:hidden">
           {table.getRowModel().rows.map((row) => {
             const c = row.original;
-            const rowBusy = paperPendingId === c.id || deletePendingId === c.id;
+            const rowBusy = paperPendingId === c.id || deletePendingId === c.id || duplicatePendingId === c.id;
             return (
               <div key={c.id} className="rounded-lg border p-3">
                 <div className="text-base font-medium text-foreground">{c.number}</div>
@@ -710,6 +757,18 @@ export function ContractsTable({
                   >
                     <FiEdit2 aria-hidden="true" className="size-4" />
                   </a>
+                  {canGenerateAnalogue ? (
+                    <button
+                      type="button"
+                      className={tableActionIconClassName}
+                      aria-label="Створити договір-аналог"
+                      title="Згенерувати аналог"
+                      disabled={rowBusy}
+                      onClick={() => void applyDuplicateContract(c.id)}
+                    >
+                      <FiCopy aria-hidden="true" className="size-4" />
+                    </button>
+                  ) : null}
                   {canDeleteContracts ? (
                     <button
                       type="button"

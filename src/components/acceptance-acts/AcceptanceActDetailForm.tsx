@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Controller, FormProvider, useForm } from "react-hook-form";
 import { FiArrowRight, FiFileText, FiList } from "react-icons/fi";
@@ -101,6 +102,8 @@ export function AcceptanceActDetailForm({
 }) {
   const router = useRouter();
   const lineHeading = workType === "SERVICES" ? "Перелік послуг" : "Перелік робіт";
+  const completionDateLabel =
+    workType === "SERVICES" ? "Дата завершення послуг" : "Дата завершення робіт";
   const companiesById = new Map(companies.map((c) => [c.id, c]));
   const customerSigner = companiesById.get(customerCompanyId);
 
@@ -120,6 +123,7 @@ export function AcceptanceActDetailForm({
 
   const { register } = form;
   const suppressBeforeUnloadOnce = useUnsavedChangesGuard(canEdit && form.formState.isDirty);
+  const [docLoading, setDocLoading] = useState(false);
 
   return (
     <FormProvider {...form}>
@@ -148,7 +152,7 @@ export function AcceptanceActDetailForm({
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <ReadOnlyField label="Номер акту" value={actNumber} />
           <Field
-            label="Дата завершення робіт (послуг)"
+            label={completionDateLabel}
             type="date"
             disabled={!canEdit}
             {...register("completionDate", { required: true })}
@@ -347,15 +351,37 @@ export function AcceptanceActDetailForm({
             <FiArrowRight className="size-4 shrink-0" aria-hidden />
             До рахунку
           </a>
-          <a
-            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-border bg-background px-4 text-sm hover:bg-muted md:w-auto"
-            href={`/api/documents/acceptance-act/${actId}`}
-            aria-label="Завантажити акт"
-            title="Завантажити акт"
+          <button
+            type="button"
+            disabled={docLoading}
+            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-border bg-background px-4 text-sm hover:bg-muted disabled:opacity-60 md:w-auto"
+            onClick={() => {
+              setDocLoading(true);
+              if (!canEdit) {
+                window.location.href = `/api/documents/acceptance-act/${actId}`;
+                setDocLoading(false);
+                return;
+              }
+              void form
+                .handleSubmit(async (values) => {
+                  try {
+                    await onSave(values);
+                    toast.success("Акт збережено.");
+                    form.reset(values);
+                    window.location.href = `/api/documents/acceptance-act/${actId}`;
+                  } catch (e) {
+                    if (!isNextNavigationError(e)) toast.error(getServerActionErrorMessage(e));
+                    throw e;
+                  }
+                })()
+                .finally(() => setDocLoading(false));
+            }}
+            aria-label="Зберегти та завантажити акт"
+            title="Зберегти та завантажити акт"
           >
             <FiFileText className="size-4 shrink-0" aria-hidden />
             Акт
-          </a>
+          </button>
         </div>
       </form>
       <UnsavedChangesNavigationDialog

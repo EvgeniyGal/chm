@@ -8,7 +8,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { useRouter } from "next/navigation";
-import { FiEdit2, FiInfo, FiTrash2 } from "react-icons/fi";
+import { FiArchive, FiCheckCircle, FiEdit2, FiInfo, FiTrash2 } from "react-icons/fi";
 import { toast } from "sonner";
 
 import { DetailRow } from "@/components/data-table/detail-row";
@@ -33,9 +33,13 @@ export type AcceptanceActRow = {
   number: string;
   date: string;
   workType: "WORKS" | "SERVICES";
+  isSigned: boolean;
+  isArchived: boolean;
   invoiceNumber: string;
   hasContract: boolean;
   signingLocation: string;
+  customerCompany: string;
+  contractorCompany: string;
   lineItemsPreview: string;
   totalWithoutVat: string;
   vat20: string;
@@ -44,6 +48,23 @@ export type AcceptanceActRow = {
 
 type SortBy = "number" | "date" | "workType" | "totalWithVat";
 type SortDir = "asc" | "desc";
+type PaperConfirm = {
+  actId: string;
+  actNumber: string;
+  field: "isSigned" | "isArchived";
+  nextValue: boolean;
+};
+
+function paperConfirmMessage(c: PaperConfirm): string {
+  if (c.field === "isSigned") {
+    return c.nextValue
+      ? `Позначити акт № ${c.actNumber} як підписаний?`
+      : `Зняти статус «підписаний» з акту № ${c.actNumber}?`;
+  }
+  return c.nextValue
+    ? `Позначити акт № ${c.actNumber} як такий, що в архіві?`
+    : `Зняти позначку «в архіві» з акту № ${c.actNumber}?`;
+}
 
 function actsTableHeadClass(columnId: string): string {
   const narrow = "w-0 px-2 py-3 whitespace-nowrap";
@@ -119,6 +140,8 @@ export function AcceptanceActsTable({
 }) {
   const router = useRouter();
   const { updateParams } = useListUrlParams();
+  const [paperConfirm, setPaperConfirm] = useState<PaperConfirm | null>(null);
+  const [paperPendingId, setPaperPendingId] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; number: string } | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
 
@@ -130,6 +153,32 @@ export function AcceptanceActsTable({
   );
 
   const [queryInput, setQueryInput] = useDebouncedListSearch(q, onSearchCommit);
+
+  const applyPaperFlag = useCallback(async () => {
+    if (!paperConfirm) return;
+    const { actId, field, nextValue } = paperConfirm;
+    setPaperPendingId(actId);
+    try {
+      const body = field === "isSigned" ? { isSigned: nextValue } : { isArchived: nextValue };
+      const res = await fetch(`/api/acceptance-acts/${actId}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+      if (!res.ok) {
+        toast.error(data?.error === "FORBIDDEN" ? "Недостатньо прав." : data?.error ?? "Не вдалося зберегти.");
+        return;
+      }
+      toast.success("Зміни збережено.");
+      setPaperConfirm(null);
+      router.refresh();
+    } catch {
+      toast.error("Не вдалося зберегти.");
+    } finally {
+      setPaperPendingId(null);
+    }
+  }, [paperConfirm, router]);
 
   const confirmDelete = useCallback(async () => {
     if (!deleteConfirm || deleteBusy) return;
@@ -208,8 +257,49 @@ export function AcceptanceActsTable({
         header: "Дії",
         cell: ({ row }) => {
           const act = row.original;
+          const rowBusy = paperPendingId === act.id || deleteBusy;
           return (
             <div className="flex flex-nowrap items-center justify-center gap-1">
+              <button
+                type="button"
+                className={cn(
+                  tableActionIconClassName,
+                  act.isSigned && "border-emerald-600/60 bg-emerald-50 text-emerald-900",
+                )}
+                aria-label={act.isSigned ? "Зняти статус «підписаний»" : "Позначити як підписаний"}
+                title={act.isSigned ? "Зняти «підписаний»" : "Підписаний"}
+                disabled={rowBusy}
+                onClick={() =>
+                  setPaperConfirm({
+                    actId: act.id,
+                    actNumber: act.number,
+                    field: "isSigned",
+                    nextValue: !act.isSigned,
+                  })
+                }
+              >
+                <FiCheckCircle aria-hidden="true" className="size-4" />
+              </button>
+              <button
+                type="button"
+                className={cn(
+                  tableActionIconClassName,
+                  act.isArchived && "border-sky-600/60 bg-sky-50 text-sky-900",
+                )}
+                aria-label={act.isArchived ? "Зняти з архіву" : "Позначити як в архіві"}
+                title={act.isArchived ? "Зняти «в архіві»" : "В архіві"}
+                disabled={rowBusy}
+                onClick={() =>
+                  setPaperConfirm({
+                    actId: act.id,
+                    actNumber: act.number,
+                    field: "isArchived",
+                    nextValue: !act.isArchived,
+                  })
+                }
+              >
+                <FiArchive aria-hidden="true" className="size-4" />
+              </button>
               <InfoDialog
                 title={`Акт ${act.number}`}
                 trigger={<FiInfo aria-hidden="true" className="size-4" />}
@@ -221,6 +311,8 @@ export function AcceptanceActsTable({
                   <DetailRow label="Тип" value={act.workType === "WORKS" ? "Роботи" : "Послуги"} />
                   <DetailRow label="Рахунок" value={act.invoiceNumber} />
                   <DetailRow label="Договір у базі" value={act.hasContract ? "Так" : "Ні"} />
+                  <DetailRow label="Замовник" value={act.customerCompany} />
+                  <DetailRow label="Виконавець" value={act.contractorCompany} />
                   <DetailRow label="Місце складання" value={act.signingLocation} />
                   <DetailRow label="Позиції" value={act.lineItemsPreview} />
                   <DetailRow label="Разом (без ПДВ)" value={act.totalWithoutVat} />
@@ -244,6 +336,7 @@ export function AcceptanceActsTable({
                 )}
                 aria-label="Видалити акт"
                 title="Видалити"
+                disabled={rowBusy}
                 onClick={() => setDeleteConfirm({ id: act.id, number: act.number })}
               >
                 <FiTrash2 aria-hidden="true" className="size-4" />
@@ -253,7 +346,7 @@ export function AcceptanceActsTable({
         },
       },
     ],
-    [],
+    [paperPendingId, deleteBusy],
   );
 
   const table = useReactTable({
@@ -282,6 +375,40 @@ export function AcceptanceActsTable({
 
   return (
     <div className="flex flex-col gap-3">
+      <Dialog
+        open={paperConfirm !== null}
+        onOpenChange={(open) => {
+          if (!open) setPaperConfirm(null);
+        }}
+      >
+        <DialogContent
+          onPointerDownOutside={(e) => {
+            if (paperPendingId) e.preventDefault();
+          }}
+          onEscapeKeyDown={(e) => {
+            if (paperPendingId) e.preventDefault();
+          }}
+        >
+          <DialogTitle>Підтвердження</DialogTitle>
+          <p className="text-sm text-muted-foreground">
+            {paperConfirm ? paperConfirmMessage(paperConfirm) : null}
+          </p>
+          <div className="mt-4 flex flex-wrap justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={paperPendingId !== null}
+              onClick={() => setPaperConfirm(null)}
+            >
+              Скасувати
+            </Button>
+            <Button type="button" disabled={paperPendingId !== null} onClick={() => void applyPaperFlag()}>
+              {paperPendingId ? "Збереження…" : "Підтвердити"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <Dialog
         open={deleteConfirm !== null}
         onOpenChange={(open) => {
@@ -438,6 +565,7 @@ export function AcceptanceActsTable({
         <div className="grid gap-3 p-3 md:hidden">
           {table.getRowModel().rows.map((row) => {
             const act = row.original;
+            const rowBusy = paperPendingId === act.id || deleteBusy;
             return (
               <div key={act.id} className="rounded-lg border p-3">
                 <div className="text-base font-medium text-foreground">{act.number}</div>
@@ -453,6 +581,44 @@ export function AcceptanceActsTable({
                   З ПДВ: {formatMoney(Number.parseFloat(act.totalWithVat) || 0)}
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    className={cn(
+                      tableActionIconClassName,
+                      act.isSigned && "border-emerald-600/60 bg-emerald-50 text-emerald-900",
+                    )}
+                    aria-label={act.isSigned ? "Зняти статус «підписаний»" : "Позначити як підписаний"}
+                    disabled={rowBusy}
+                    onClick={() =>
+                      setPaperConfirm({
+                        actId: act.id,
+                        actNumber: act.number,
+                        field: "isSigned",
+                        nextValue: !act.isSigned,
+                      })
+                    }
+                  >
+                    <FiCheckCircle aria-hidden="true" className="size-4" />
+                  </button>
+                  <button
+                    type="button"
+                    className={cn(
+                      tableActionIconClassName,
+                      act.isArchived && "border-sky-600/60 bg-sky-50 text-sky-900",
+                    )}
+                    aria-label={act.isArchived ? "Зняти з архіву" : "Позначити як в архіві"}
+                    disabled={rowBusy}
+                    onClick={() =>
+                      setPaperConfirm({
+                        actId: act.id,
+                        actNumber: act.number,
+                        field: "isArchived",
+                        nextValue: !act.isArchived,
+                      })
+                    }
+                  >
+                    <FiArchive aria-hidden="true" className="size-4" />
+                  </button>
                   <InfoDialog
                     title={`Акт ${act.number}`}
                     trigger={<FiInfo aria-hidden="true" className="size-4" />}
@@ -464,6 +630,8 @@ export function AcceptanceActsTable({
                       <DetailRow label="Тип" value={act.workType === "WORKS" ? "Роботи" : "Послуги"} />
                       <DetailRow label="Рахунок" value={act.invoiceNumber} />
                       <DetailRow label="Договір у базі" value={act.hasContract ? "Так" : "Ні"} />
+                      <DetailRow label="Замовник" value={act.customerCompany} />
+                      <DetailRow label="Виконавець" value={act.contractorCompany} />
                       <DetailRow label="Місце складання" value={act.signingLocation} />
                       <DetailRow label="Позиції" value={act.lineItemsPreview} />
                       <DetailRow label="Разом (без ПДВ)" value={act.totalWithoutVat} />
@@ -487,6 +655,7 @@ export function AcceptanceActsTable({
                     )}
                     aria-label="Видалити акт"
                     title="Видалити"
+                    disabled={rowBusy}
                     onClick={() => setDeleteConfirm({ id: act.id, number: act.number })}
                   >
                     <FiTrash2 aria-hidden="true" className="size-4" />

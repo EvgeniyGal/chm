@@ -12,9 +12,21 @@ import { ManageLineItemUnitsDialog } from "@/components/line-items/ManageLineIte
 import { calcTotals, formatMoney } from "@/lib/totals";
 import { cn } from "@/lib/utils";
 
+function parseDecimalOrNull(raw: unknown): number | null {
+  const n = Number.parseFloat(String(raw ?? "").replace(",", ".").trim());
+  return Number.isFinite(n) ? n : null;
+}
+
+function sanitizeDecimalText(raw: string): string {
+  // Keep only digits, one leading minus, and decimal separators.
+  let out = raw.replace(/[^\d,.\-]/g, "");
+  out = out.replace(/(?!^)-/g, "");
+  return out;
+}
+
 function formatPriceTwoDecimals(raw: string) {
-  const n = Number.parseFloat(String(raw).replace(",", ".").trim());
-  if (!Number.isFinite(n)) return raw;
+  const n = parseDecimalOrNull(raw);
+  if (n == null) return raw;
   return n.toFixed(2);
 }
 
@@ -53,7 +65,7 @@ function maxQtyForContractLineOnRow(
   for (let k = 0; k < items.length; k++) {
     if (k === rowIdx) continue;
     if (items[k]?.sourceContractLineItemId === lineId) {
-      usedElsewhere += Number(items[k]?.quantity ?? 0);
+      usedElsewhere += parseDecimalOrNull(items[k]?.quantity) ?? 0;
     }
   }
   return Math.max(0, L.remaining - usedElsewhere);
@@ -105,13 +117,34 @@ function LineItemTitleField({ idx }: { idx: number }) {
 }
 
 function LineItemQuantityInput({ idx }: { idx: number }) {
-  const { register } = useFormContext<LineItemForm>();
+  const { register, setValue } = useFormContext<LineItemForm>();
+  const quantityReg = register(`items.${idx}.quantity`, {
+    required: true,
+    validate: (v) => parseDecimalOrNull(v) !== null || "Введіть число",
+    onBlur: (e) => {
+      const nextRaw = sanitizeDecimalText(e.target.value);
+      if (nextRaw !== e.target.value) {
+        e.target.value = nextRaw;
+      }
+      const n = parseDecimalOrNull(nextRaw);
+      if (n === null) return;
+      const next = String(n);
+      if (next !== nextRaw) {
+        setValue(`items.${idx}.quantity`, next, { shouldValidate: true, shouldDirty: true });
+      }
+    },
+  });
   return (
     <input
       type="text"
       inputMode="decimal"
       className="h-10 w-full min-w-0 max-w-full rounded-md border px-3"
-      {...register(`items.${idx}.quantity`, { required: true })}
+      {...quantityReg}
+      onInput={(e) => {
+        const el = e.currentTarget;
+        const next = sanitizeDecimalText(el.value);
+        if (next !== el.value) el.value = next;
+      }}
     />
   );
 }
@@ -164,31 +197,42 @@ function LineItemUnitDesktopCell({ idx }: { idx: number }) {
 
 function LineItemPriceField({ idx }: { idx: number }) {
   const { register, setValue } = useFormContext<LineItemForm>();
+  const priceReg = register(`items.${idx}.price`, {
+    required: true,
+    validate: (v) => parseDecimalOrNull(v) !== null || "Введіть число",
+    onBlur: (e) => {
+      const nextRaw = sanitizeDecimalText(e.target.value);
+      if (nextRaw !== e.target.value) {
+        e.target.value = nextRaw;
+      }
+      const next = formatPriceTwoDecimals(nextRaw);
+      if (next !== nextRaw) {
+        setValue(`items.${idx}.price`, next, {
+          shouldValidate: true,
+          shouldDirty: true,
+        });
+      }
+    },
+  });
   return (
     <input
       type="text"
       inputMode="decimal"
       className="h-10 w-full min-w-0 max-w-full rounded-md border px-3"
-      {...register(`items.${idx}.price`, {
-        required: true,
-        onBlur: (e) => {
-          const next = formatPriceTwoDecimals(e.target.value);
-          if (next !== e.target.value) {
-            setValue(`items.${idx}.price`, next, {
-              shouldValidate: true,
-              shouldDirty: true,
-            });
-          }
-        },
-      })}
+      {...priceReg}
+      onInput={(e) => {
+        const el = e.currentTarget;
+        const next = sanitizeDecimalText(el.value);
+        if (next !== el.value) el.value = next;
+      }}
     />
   );
 }
 
 function LineItemSumCell({ idx }: { idx: number }) {
   const row = useWatch({ name: `items.${idx}` });
-  const q = Number(row?.quantity ?? 0);
-  const p = Number(row?.price ?? 0);
+  const q = parseDecimalOrNull(row?.quantity) ?? 0;
+  const p = parseDecimalOrNull(row?.price) ?? 0;
   const rowTotal = q * p;
   return (
     <td className={cn(lineItemDesktopColClass("sum", "td"), "text-center tabular-nums break-words")}>
@@ -276,16 +320,29 @@ function ContractQuantityCell({
         className="h-10 w-full min-w-0 max-w-full rounded-md border px-3"
         {...register(`items.${idx}.quantity`, {
           required: true,
+          validate: (v) => parseDecimalOrNull(v) !== null || "Введіть число",
           onBlur: (e) => {
+            const normalized = parseDecimalOrNull(e.target.value);
+            if (normalized !== null) {
+              const next = String(normalized);
+              if (next !== e.target.value) {
+                setValue(`items.${idx}.quantity`, next, { shouldValidate: true, shouldDirty: true });
+              }
+            }
             if (!lineId) return;
             const max = maxQtyForContractLineOnRow(idx, lineId, contractLineCatalog, getValues("items") ?? []);
-            const v = Number.parseFloat(String(e.target.value).replace(",", "."));
-            if (Number.isFinite(v) && v > max + 1e-9) {
+            const v = normalized;
+            if (v !== null && v > max + 1e-9) {
               setValue(`items.${idx}.quantity`, max, { shouldDirty: true });
               toast.error(`Максимальна кількість для цієї позиції: ${max.toFixed(2)}.`);
             }
           },
         })}
+        onInput={(e) => {
+          const el = e.currentTarget;
+          const next = sanitizeDecimalText(el.value);
+          if (next !== el.value) el.value = next;
+        }}
       />
     </td>
   );
@@ -360,8 +417,8 @@ export function LineItemsTable({
   const items = watch("items") ?? [];
   const totals = calcTotals(
     items.map((it) => ({
-      quantity: Number(it?.quantity ?? 0),
-      price: Number(it?.price ?? 0),
+      quantity: parseDecimalOrNull(it?.quantity) ?? 0,
+      price: parseDecimalOrNull(it?.price) ?? 0,
     })),
   );
 
@@ -401,7 +458,7 @@ export function LineItemsTable({
         price: line.price,
       };
       const maxQ = maxQtyForContractLineOnRow(idx, lineId, contractLineCatalog, nextItems);
-      const q = Number(nextItems[idx]?.quantity ?? 0);
+      const q = parseDecimalOrNull(nextItems[idx]?.quantity) ?? 0;
       if (q > maxQ) setValue(`items.${idx}.quantity`, maxQ, { shouldDirty: true });
     },
     [contractLineCatalog, getValues, setValue],
@@ -510,8 +567,8 @@ export function LineItemsTable({
         {!isDesktop
           ? data.map((row) => {
               const idx = row.idx;
-              const q = Number(items[idx]?.quantity ?? 0);
-              const p = Number(items[idx]?.price ?? 0);
+              const q = parseDecimalOrNull(items[idx]?.quantity) ?? 0;
+              const p = parseDecimalOrNull(items[idx]?.price) ?? 0;
               const rowTotal = q * p;
               const lineId = items[idx]?.sourceContractLineItemId;
               const maxQ =
@@ -586,7 +643,18 @@ export function LineItemsTable({
                               className="h-10 w-full rounded-md border px-3"
                               {...register(`items.${idx}.quantity`, {
                                 required: true,
+                                validate: (v) => parseDecimalOrNull(v) !== null || "Введіть число",
                                 onBlur: (e) => {
+                                  const normalized = parseDecimalOrNull(e.target.value);
+                                  if (normalized !== null) {
+                                    const next = String(normalized);
+                                    if (next !== e.target.value) {
+                                      setValue(`items.${idx}.quantity`, next, {
+                                        shouldValidate: true,
+                                        shouldDirty: true,
+                                      });
+                                    }
+                                  }
                                   if (!lineId) return;
                                   const max = maxQtyForContractLineOnRow(
                                     idx,
@@ -594,13 +662,18 @@ export function LineItemsTable({
                                     contractLineCatalog,
                                     getValues("items") ?? [],
                                   );
-                                  const v = Number.parseFloat(String(e.target.value).replace(",", "."));
-                                  if (Number.isFinite(v) && v > max + 1e-9) {
+                                  const v = normalized;
+                                  if (v !== null && v > max + 1e-9) {
                                     setValue(`items.${idx}.quantity`, max, { shouldDirty: true });
                                     toast.error(`Максимальна кількість для цієї позиції: ${max.toFixed(2)}.`);
                                   }
                                 },
                               })}
+                              onInput={(e) => {
+                                const el = e.currentTarget;
+                                const next = sanitizeDecimalText(el.value);
+                                if (next !== el.value) el.value = next;
+                              }}
                             />
                           </label>
 
@@ -663,7 +736,26 @@ export function LineItemsTable({
                               type="text"
                               inputMode="decimal"
                               className="h-10 w-full rounded-md border px-3"
-                              {...register(`items.${idx}.quantity`, { required: true })}
+                              {...register(`items.${idx}.quantity`, {
+                                required: true,
+                                validate: (v) => parseDecimalOrNull(v) !== null || "Введіть число",
+                                onBlur: (e) => {
+                                  const n = parseDecimalOrNull(e.target.value);
+                                  if (n === null) return;
+                                  const next = String(n);
+                                  if (next !== e.target.value) {
+                                    setValue(`items.${idx}.quantity`, next, {
+                                      shouldValidate: true,
+                                      shouldDirty: true,
+                                    });
+                                  }
+                                },
+                              })}
+                              onInput={(e) => {
+                                const el = e.currentTarget;
+                                const next = sanitizeDecimalText(el.value);
+                                if (next !== el.value) el.value = next;
+                              }}
                             />
                           </label>
 
@@ -675,6 +767,7 @@ export function LineItemsTable({
                               className="h-10 w-full rounded-md border px-3"
                               {...register(`items.${idx}.price`, {
                                 required: true,
+                                validate: (v) => parseDecimalOrNull(v) !== null || "Введіть число",
                                 onBlur: (e) => {
                                   const next = formatPriceTwoDecimals(e.target.value);
                                   if (next !== e.target.value) {
@@ -685,6 +778,11 @@ export function LineItemsTable({
                                   }
                                 },
                               })}
+                              onInput={(e) => {
+                                const el = e.currentTarget;
+                                const next = sanitizeDecimalText(el.value);
+                                if (next !== el.value) el.value = next;
+                              }}
                             />
                           </label>
                         </div>
