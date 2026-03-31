@@ -47,7 +47,7 @@ export default async function NewInvoicePage({
   async function create(payload: any) {
     "use server";
     await requireRole("ADMIN");
-    const res = await internalApiFetch(`${process.env.APP_URL ?? "http://localhost:3000"}/api/invoices`, {
+    const res = await internalApiFetch("/api/invoices", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(payload),
@@ -63,7 +63,7 @@ export default async function NewInvoicePage({
   async function createAndStartAcceptanceAct(payload: any) {
     "use server";
     await requireRole("ADMIN");
-    const res = await internalApiFetch(`${process.env.APP_URL ?? "http://localhost:3000"}/api/invoices`, {
+    const res = await internalApiFetch("/api/invoices", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(payload),
@@ -79,7 +79,7 @@ export default async function NewInvoicePage({
   async function createAndDownloadInvoiceDocx(payload: any) {
     "use server";
     await requireRole("ADMIN");
-    const res = await internalApiFetch(`${process.env.APP_URL ?? "http://localhost:3000"}/api/invoices`, {
+    const res = await internalApiFetch("/api/invoices", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(payload),

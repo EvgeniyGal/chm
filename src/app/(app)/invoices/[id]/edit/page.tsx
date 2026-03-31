@@ -27,7 +27,6 @@ function mapLineItem(it: InvoiceFormValues["items"][number]) {
 async function saveInvoiceEdit(invoiceId: string, hasContract: boolean, values: InvoiceFormValues) {
   "use server";
   await requireRole("ADMIN");
-  const baseUrl = process.env.APP_URL ?? "http://localhost:3000";
   const items = values.items.map(mapLineItem);
 
   const body: Record<string, unknown> = hasContract
@@ -45,7 +44,7 @@ async function saveInvoiceEdit(invoiceId: string, hasContract: boolean, values: 
         items,
       };
 
-  const res = await internalApiFetch(`${baseUrl}/api/invoices/${invoiceId}`, {
+  const res = await internalApiFetch(`/api/invoices/${invoiceId}`, {
     method: "PATCH",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),

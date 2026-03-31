@@ -25,8 +25,7 @@ async function saveAcceptanceActEdit(
 ) {
   "use server";
   await requireRole("ADMIN");
-  const baseUrl = process.env.APP_URL ?? "http://localhost:3000";
-  const res = await internalApiFetch(`${baseUrl}/api/acceptance-acts/${actId}`, {
+  const res = await internalApiFetch(`/api/acceptance-acts/${actId}`, {
     method: "PATCH",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(values),

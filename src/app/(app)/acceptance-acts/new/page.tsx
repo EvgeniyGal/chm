@@ -92,7 +92,7 @@ export default async function NewAcceptanceActPage({
   async function create(payload: any) {
     "use server";
     await requireRole("ADMIN");
-    const res = await internalApiFetch(`${process.env.APP_URL ?? "http://localhost:3000"}/api/acceptance-acts`, {
+    const res = await internalApiFetch("/api/acceptance-acts", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(payload),
@@ -120,7 +120,7 @@ export default async function NewAcceptanceActPage({
   async function createAndDownloadActDocx(payload: any) {
     "use server";
     await requireRole("ADMIN");
-    const res = await internalApiFetch(`${process.env.APP_URL ?? "http://localhost:3000"}/api/acceptance-acts`, {
+    const res = await internalApiFetch("/api/acceptance-acts", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(payload),

@@ -42,7 +42,7 @@ export default async function NewContractPage() {
   async function create(payload: any) {
     "use server";
     await requireRole("ADMIN");
-    const res = await internalApiFetch(`${process.env.APP_URL ?? "http://localhost:3000"}/api/contracts`, {
+    const res = await internalApiFetch("/api/contracts", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(payload),
@@ -60,7 +60,7 @@ export default async function NewContractPage() {
   ): Promise<{ contractId: string; lines: ContractLineInvoiceRemaining[] }> {
     "use server";
     await requireRole("ADMIN");
-    const res = await internalApiFetch(`${process.env.APP_URL ?? "http://localhost:3000"}/api/contracts`, {
+    const res = await internalApiFetch("/api/contracts", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(payload),

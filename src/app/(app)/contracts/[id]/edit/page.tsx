@@ -45,7 +45,7 @@ export default async function EditContractPage({ params }: { params: Promise<{ i
   async function update(payload: any) {
     "use server";
     await requireRole("ADMIN");
-    const res = await internalApiFetch(`${process.env.APP_URL ?? "http://localhost:3000"}/api/contracts/${id}`, {
+    const res = await internalApiFetch(`/api/contracts/${id}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(payload),
