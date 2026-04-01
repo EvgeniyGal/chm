@@ -66,7 +66,7 @@ export default async function AcceptanceActInfoPage({ params }: { params: Promis
   ]);
 
   return (
-    <div className="max-w-5xl min-w-0">
+    <div className="min-w-0">
       <div className="mb-4">
         <h1 className="page-title">Акт {act.number}</h1>
         <p className="text-sm text-muted-foreground">

@@ -146,7 +146,7 @@ export default async function NewAcceptanceActPage({
   }
 
   return (
-    <div className="max-w-4xl">
+    <div className="min-w-0">
       <div className="mb-4">
         <h1 className="page-title">Новий акт</h1>
       </div>
