@@ -1,8 +1,8 @@
-/** Vercel Blob read/write token (SDK default name + legacy alias). */
+/** Vercel Blob read/write token — prefer `VERCEL_BLOB_READ_WRITE_TOKEN`, then `BLOB_READ_WRITE_TOKEN`. */
 export function blobReadWriteToken(): string | undefined {
-  const a = process.env.BLOB_READ_WRITE_TOKEN?.trim();
-  if (a) return a;
-  return process.env.VERCEL_BLOB_READ_WRITE_TOKEN?.trim() || undefined;
+  const vercel = process.env.VERCEL_BLOB_READ_WRITE_TOKEN?.trim();
+  if (vercel) return vercel;
+  return process.env.BLOB_READ_WRITE_TOKEN?.trim() || undefined;
 }
 
 /**

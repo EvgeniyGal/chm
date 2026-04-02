@@ -23,53 +23,88 @@ export function AppSidebarNav({ role }: { role?: string }) {
   const pathname = usePathname() ?? "";
 
   return (
-    <nav className="flex flex-col gap-1 text-sm" aria-label="Головна навігація">
-      <Link
-        className={navLinkClass(pathname, "/contracts")}
-        href="/contracts"
-        aria-current={routeActive(pathname, "/contracts") ? "page" : undefined}
-      >
-        Договори
-      </Link>
-      <Link
-        className={navLinkClass(pathname, "/invoices")}
-        href="/invoices"
-        aria-current={routeActive(pathname, "/invoices") ? "page" : undefined}
-      >
-        Рахунки
-      </Link>
-      <Link
-        className={navLinkClass(pathname, "/acceptance-acts")}
-        href="/acceptance-acts"
-        aria-current={routeActive(pathname, "/acceptance-acts") ? "page" : undefined}
-      >
-        Акти
-      </Link>
-      {role !== "MANAGER" ? (
+    <nav className="flex flex-col gap-3 text-sm" aria-label="Головна навігація">
+      <div>
+        <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Фінанси</div>
+        <div className="flex flex-col gap-1">
+          <Link
+            className={navLinkClass(pathname, "/contracts")}
+            href="/contracts"
+            aria-current={routeActive(pathname, "/contracts") ? "page" : undefined}
+          >
+            Договори
+          </Link>
+          <Link
+            className={navLinkClass(pathname, "/invoices")}
+            href="/invoices"
+            aria-current={routeActive(pathname, "/invoices") ? "page" : undefined}
+          >
+            Рахунки
+          </Link>
+          <Link
+            className={navLinkClass(pathname, "/acceptance-acts")}
+            href="/acceptance-acts"
+            aria-current={routeActive(pathname, "/acceptance-acts") ? "page" : undefined}
+          >
+            Акти
+          </Link>
+          {role !== "MANAGER" ? (
+            <Link
+              className={navLinkClass(pathname, "/reports")}
+              href="/reports"
+              aria-current={routeActive(pathname, "/reports") ? "page" : undefined}
+            >
+              Звіти
+            </Link>
+          ) : null}
+        </div>
+      </div>
+
+      <div>
+        <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Атестація</div>
+        <div className="flex flex-col gap-1">
+          <Link
+            className={navLinkClass(pathname, "/attestation/groups")}
+            href="/attestation/groups"
+            aria-current={routeActive(pathname, "/attestation/groups") ? "page" : undefined}
+          >
+            Групи
+          </Link>
+          <Link
+            className={navLinkClass(pathname, "/attestation/welders")}
+            href="/attestation/welders"
+            aria-current={routeActive(pathname, "/attestation/welders") ? "page" : undefined}
+          >
+            Зварники
+          </Link>
+          <Link
+            className={navLinkClass(pathname, "/attestation/settings")}
+            href="/attestation/settings"
+            aria-current={routeActive(pathname, "/attestation/settings") ? "page" : undefined}
+          >
+            Налаштування
+          </Link>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-1 border-t border-sidebar-border pt-2">
         <Link
-          className={navLinkClass(pathname, "/reports")}
-          href="/reports"
-          aria-current={routeActive(pathname, "/reports") ? "page" : undefined}
+          className={navLinkClass(pathname, "/companies")}
+          href="/companies"
+          aria-current={routeActive(pathname, "/companies") ? "page" : undefined}
         >
-          Звіти
+          Компанії
         </Link>
-      ) : null}
-      <Link
-        className={navLinkClass(pathname, "/companies")}
-        href="/companies"
-        aria-current={routeActive(pathname, "/companies") ? "page" : undefined}
-      >
-        Компанії
-      </Link>
-      {role === "OWNER" ? (
-        <Link
-          className={navLinkClass(pathname, "/users")}
-          href="/users"
-          aria-current={routeActive(pathname, "/users") ? "page" : undefined}
-        >
-          Користувачі
-        </Link>
-      ) : null}
+        {role === "OWNER" ? (
+          <Link
+            className={navLinkClass(pathname, "/users")}
+            href="/users"
+            aria-current={routeActive(pathname, "/users") ? "page" : undefined}
+          >
+            Користувачі
+          </Link>
+        ) : null}
+      </div>
     </nav>
   );
 }

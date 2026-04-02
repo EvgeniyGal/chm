@@ -15,20 +15,48 @@ const DialogOverlay = React.forwardRef<
   React.ComponentRef<typeof DialogPrimitive.Overlay>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay>
 >(function DialogOverlay({ className, ...props }, ref) {
-  return <DialogPrimitive.Overlay ref={ref} className={cn("fixed inset-0 z-50 bg-black/40", className)} {...props} />;
+  return (
+    <DialogPrimitive.Overlay
+      ref={ref}
+      className={cn("fixed inset-0 bg-black/40", className ?? "z-50")}
+      {...props}
+    />
+  );
 });
 
 const DialogContent = React.forwardRef<
   React.ComponentRef<typeof DialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(function DialogContent({ className, children, onInteractOutside, onFocusOutside, ...props }, ref) {
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
+    /** e.g. nested confirm dialogs: `z-[190]` so overlay sits above another dialog */
+    overlayClassName?: string;
+    /**
+     * `center` — default, vertically centered. `viewport` — pinned with top/bottom insets so height
+     * stays within the window (use with flex + scroll inside for tall content).
+     */
+    contentPosition?: "center" | "viewport";
+  }
+>(function DialogContent({
+  className,
+  children,
+  onInteractOutside,
+  onFocusOutside,
+  overlayClassName,
+  contentPosition = "center",
+  ...props
+}, ref) {
+  const positionClass =
+    contentPosition === "viewport"
+      ? "top-4 bottom-4 max-h-[calc(100dvh-2rem)] min-h-0 -translate-x-1/2 translate-y-0 flex flex-col overflow-hidden"
+      : "top-1/2 -translate-x-1/2 -translate-y-1/2";
+
   return (
     <DialogPortal>
-      <DialogOverlay />
+      <DialogOverlay className={cn("z-50", overlayClassName)} />
       <DialogPrimitive.Content
         ref={ref}
         className={cn(
-          "fixed left-1/2 top-1/2 z-50 w-[min(640px,calc(100vw-24px))] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border bg-card p-4 text-card-foreground shadow-lg outline-none",
+          "fixed left-1/2 z-50 w-[min(640px,calc(100vw-24px))] rounded-xl border border-border bg-card p-4 text-card-foreground shadow-lg outline-none",
+          positionClass,
           className,
         )}
         {...props}

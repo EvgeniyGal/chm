@@ -10,4 +10,5 @@ export * from "./invoices";
 export * from "./acceptance-acts";
 export * from "./line-items";
 export * from "./dropdown-options";
+export * from "./attestation";
 

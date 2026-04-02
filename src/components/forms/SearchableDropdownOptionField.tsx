@@ -20,7 +20,8 @@ type Scope =
   | "SIGNING_LOCATION"
   | "PROJECT_TIMELINE"
   | "CONTRACT_DURATION"
-  | "LINE_ITEM_UNIT";
+  | "LINE_ITEM_UNIT"
+  | "CERTIFICATE_ISSUE_LOCATION";
 
 export function SearchableDropdownOptionField({
   label,

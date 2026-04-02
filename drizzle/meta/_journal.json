@@ -85,6 +85,13 @@
       "when": 1775110837366,
       "tag": "0011_yielding_cyclops",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1775125780110,
+      "tag": "0012_slippery_scarlet_witch",
+      "breakpoints": true
     }
   ]
 }
