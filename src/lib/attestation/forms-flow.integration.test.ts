@@ -29,8 +29,32 @@ describe("attestation critical path (validation + domain)", () => {
     expect(parsed.success).toBe(true);
     if (parsed.success) {
       expect(parsed.data.lastName).toBe("Іванов");
+      expect(parsed.data.workExperienceYears).toBe("5");
       expect(parsed.data.regulatoryDocumentIds).toHaveLength(1);
     }
+  });
+
+  it("rejects non-integer work experience years", () => {
+    const fd = new FormData();
+    fd.set("groupId", "00000000-0000-4000-8000-000000000001");
+    fd.set("lastName", "Іванов");
+    fd.set("firstName", "Іван");
+    fd.set("workExperienceYears", "3.5");
+    fd.set("companyId", "00000000-0000-4000-8000-000000000002");
+    fd.set("certificationType", "primary");
+    fd.set("weldingMethod1", "111");
+    fd.set("weldedPartsType", "plate");
+    fd.set("jointType", "BW");
+    fd.set("jointCharacteristics", "ss_nb");
+    fd.set("weldingPosition1", "PA");
+    fd.set("sampleMaterialId", "00000000-0000-4000-8000-000000000003");
+    fd.set("thickness1", "12");
+    fd.set("consumable1Id", "00000000-0000-4000-8000-000000000004");
+    fd.set("sampleMark", "A-1");
+    fd.set("theoryScore", "passed");
+    fd.append("regulatoryDocumentId", "00000000-0000-4000-8000-000000000005");
+
+    expect(parseWelderCertificationForm(fd).success).toBe(false);
   });
 
   it("validates certification group payload", () => {

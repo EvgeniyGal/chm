@@ -46,7 +46,9 @@ const DialogContent = React.forwardRef<
 }, ref) {
   const positionClass =
     contentPosition === "viewport"
-      ? "top-4 bottom-4 max-h-[calc(100dvh-2rem)] min-h-0 -translate-x-1/2 translate-y-0 flex flex-col overflow-hidden"
+      ? // No `overflow-hidden` here: tailwind-merge keeps both `overflow-hidden` and `overflow-y-auto` from
+        // consumers, and whichever rule wins in CSS can block inner scrolling entirely.
+        "top-4 bottom-4 max-h-[calc(100dvh-2rem)] min-h-0 -translate-x-1/2 translate-y-0"
       : "top-1/2 -translate-x-1/2 -translate-y-1/2";
 
   return (

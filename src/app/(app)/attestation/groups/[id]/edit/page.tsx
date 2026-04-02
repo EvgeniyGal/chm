@@ -1,8 +1,9 @@
-import { ArrowLeft, List, Save } from "lucide-react";
+import { BarChart3, List, Pencil, Save } from "lucide-react";
 import Link from "next/link";
-import { and, desc, eq, inArray, ne } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, ne } from "drizzle-orm";
 import { notFound, redirect } from "next/navigation";
 
+import { tableActionIconClassName } from "@/components/data-table/list-styles";
 import { ArchiveAttestationGroupButton } from "@/components/attestation/ArchiveAttestationGroupButton";
 import { CommissionGroupPickers } from "@/components/attestation/CommissionGroupPickers";
 import { CertificateIssueLocationField } from "@/components/attestation/CertificateIssueLocationField";
@@ -12,6 +13,7 @@ import {
   certificationGroupMembers,
   certificationGroups,
   commissionMembers,
+  welderCertifications,
 } from "@/db/schema/attestation";
 import { requireRole } from "@/lib/authz";
 import { certificationGroupStatusLabelUa } from "@/lib/attestation/labels-uk";
@@ -27,7 +29,7 @@ export default async function EditAttestationGroupPage({ params }: { params: Pro
   });
   if (!group) notFound();
   if (group.status === "completed" || group.status === "archived") {
-    redirect(`/attestation/groups/${id}`);
+    redirect("/attestation/groups");
   }
 
   const commissionAllRows = await db.select().from(commissionMembers).orderBy(desc(commissionMembers.createdAt));
@@ -57,6 +59,12 @@ export default async function EditAttestationGroupPage({ params }: { params: Pro
   const selectedMemberIds = new Set(memberRows.map((r) => r.memberId));
 
   const certificateIssueLocationOptions = await getDropdownOptions(DROPDOWN_SCOPE.CERTIFICATE_ISSUE_LOCATION);
+
+  const welders = await db
+    .select()
+    .from(welderCertifications)
+    .where(eq(welderCertifications.groupId, id))
+    .orderBy(asc(welderCertifications.orderInGroup));
 
   async function update(formData: FormData) {
     "use server";
@@ -158,7 +166,7 @@ export default async function EditAttestationGroupPage({ params }: { params: Pro
 
     await saveDropdownOption(DROPDOWN_SCOPE.CERTIFICATE_ISSUE_LOCATION, parsed.data.certificateIssueLocation.trim());
 
-    redirect(`/attestation/groups/${id}`);
+    redirect("/attestation/groups");
   }
 
   async function markActive() {
@@ -173,7 +181,7 @@ export default async function EditAttestationGroupPage({ params }: { params: Pro
       .update(certificationGroups)
       .set({ status: "active", updatedAt: new Date() })
       .where(eq(certificationGroups.id, id));
-    redirect(`/attestation/groups/${id}`);
+    redirect("/attestation/groups");
   }
 
   async function revertToDraft() {
@@ -188,7 +196,7 @@ export default async function EditAttestationGroupPage({ params }: { params: Pro
       .update(certificationGroups)
       .set({ status: "draft", updatedAt: new Date() })
       .where(eq(certificationGroups.id, id));
-    redirect(`/attestation/groups/${id}`);
+    redirect("/attestation/groups");
   }
 
   async function markCompleted() {
@@ -203,7 +211,7 @@ export default async function EditAttestationGroupPage({ params }: { params: Pro
       .update(certificationGroups)
       .set({ status: "completed", updatedAt: new Date() })
       .where(eq(certificationGroups.id, id));
-    redirect(`/attestation/groups/${id}`);
+    redirect("/attestation/groups");
   }
 
   async function archiveGroup() {
@@ -282,13 +290,14 @@ export default async function EditAttestationGroupPage({ params }: { params: Pro
             <Save className="size-4" aria-hidden="true" />
             Зберегти зміни
           </button>
-          <Link
-            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border px-4 text-sm sm:w-auto"
-            href={`/attestation/groups/${id}`}
+          <a
+            className="crm-btn-outline inline-flex h-10 w-full items-center justify-center gap-2 sm:w-auto"
+            href={`/api/attestation/documents/report?groupId=${id}`}
+            title="Згенерувати звіт по групі"
           >
-            <ArrowLeft className="size-4 shrink-0" aria-hidden />
-            До картки групи
-          </Link>
+            <BarChart3 className="size-4 shrink-0" aria-hidden />
+            Згенерувати звіт
+          </a>
           <Link
             className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border px-4 text-sm sm:w-auto"
             href="/attestation/groups"
@@ -299,28 +308,76 @@ export default async function EditAttestationGroupPage({ params }: { params: Pro
         </div>
       </GuardedForm>
 
+      <div className="mt-6">
+        <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="text-base font-semibold text-foreground">Зварники у групі</h2>
+          <Link className="crm-btn-primary w-full shrink-0 sm:w-auto" href={`/attestation/welders/new?groupId=${id}`}>
+            Додати зварника
+          </Link>
+        </div>
+        <div className="overflow-x-auto rounded-md border border-border bg-card">
+          <table className="w-full min-w-[480px] border-collapse text-sm">
+            <thead>
+              <tr className="border-b border-border bg-muted/50 text-left">
+                <th className="p-2 font-medium">№ у групі</th>
+                <th className="p-2 font-medium">ПІБ</th>
+                <th className="p-2 text-right font-medium">Дія</th>
+              </tr>
+            </thead>
+            <tbody>
+              {welders.length === 0 ? (
+                <tr>
+                  <td className="p-4 text-muted-foreground" colSpan={3}>
+                    Немає записів атестації. Додайте зварника кнопкою вище або зі списку «Зварники».
+                  </td>
+                </tr>
+              ) : (
+                welders.map((w) => (
+                  <tr key={w.id} className="border-b border-border last:border-b-0">
+                    <td className="p-2 tabular-nums">{w.orderInGroup}</td>
+                    <td className="p-2">
+                      {w.lastName} {w.firstName} {w.middleName ?? ""}
+                    </td>
+                    <td className="p-2 text-right align-middle">
+                      <Link
+                        className={tableActionIconClassName}
+                        href={`/attestation/welders/${w.id}/edit`}
+                        title="Редагувати атестацію"
+                        aria-label="Редагувати атестацію"
+                      >
+                        <Pencil className="size-4 shrink-0" aria-hidden />
+                      </Link>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <div className="mt-4 flex flex-col gap-3 rounded-lg border border-border bg-muted/40 p-4 text-sm">
         <div className="font-semibold text-foreground">Статус групи</div>
         <p className="text-muted-foreground">
           Поточний статус: <strong>{certificationGroupStatusLabelUa(group.status)}</strong>. Після завершення або архівації редагування групи та зварників буде заблоковано.
         </p>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap">
           {group.status === "draft" ? (
-            <GuardedForm action={markActive} className="inline">
-              <button type="submit" className="crm-btn-outline">
+            <GuardedForm action={markActive} className="contents">
+              <button type="submit" className="crm-btn-outline w-full sm:w-auto">
                 Позначити як активну
               </button>
             </GuardedForm>
           ) : null}
           {group.status === "active" ? (
-            <GuardedForm action={revertToDraft} className="inline">
-              <button type="submit" className="crm-btn-outline">
+            <GuardedForm action={revertToDraft} className="contents">
+              <button type="submit" className="crm-btn-outline w-full sm:w-auto">
                 Повернути до чернетки
               </button>
             </GuardedForm>
           ) : null}
-          <GuardedForm action={markCompleted} className="inline">
-            <button type="submit" className="crm-btn-outline">
+          <GuardedForm action={markCompleted} className="contents">
+            <button type="submit" className="crm-btn-outline w-full sm:w-auto">
               Позначити як завершену
             </button>
           </GuardedForm>

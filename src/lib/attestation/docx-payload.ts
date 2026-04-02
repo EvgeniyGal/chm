@@ -8,6 +8,7 @@ import {
   welderCertifications,
 } from "@/db/schema/attestation";
 
+import { buildAdmissionScopeFields } from "@/lib/attestation/admission-scope";
 import { buildCertificationCodeString } from "@/lib/attestation/certification-code";
 import {
   computeCertificateBlankNumber,
@@ -42,7 +43,11 @@ export type WelderDocContext = {
   regulatoryDocs: (typeof regulatoryDocuments.$inferSelect)[];
 };
 
-/** Payload keys aligned with `forms/certificate.docx` / `forms/report.docx` placeholders. */
+/**
+ * Payload keys for docxtemplater (`forms/certificate.docx`, `forms/protocol.docx`, `forms/report.docx`).
+ * Додатково: `admission-welded-parts-type` (`p` / `T`), короткі `admission-thickness-scope` (напр. `3≤t≤20`),
+ * `admission-diameter-scope` (табл. 3 або `D>500` / `D>150` для пластини п.6.2.2–6.2.3), інші `admission-*`.
+ */
 export function buildCertificateDocxPayload(ctx: WelderDocContext): Record<string, unknown> {
   const { welder, group, company, head, sampleMaterial, consumable1, consumable2, regulatoryDocs } = ctx;
   const protocolDate = new Date(group.protocolDate);
@@ -73,7 +78,7 @@ export function buildCertificateDocxPayload(ctx: WelderDocContext): Record<strin
   });
 
   const standardsList = regulatoryDocs.map((r) => r.code).join(", ");
-  const standardsAdmission = regulatoryDocs.map((r) => r.admissionText.trim()).join("\n");
+  const standardsAdmission = regulatoryDocs.map((r) => r.admissionText.trim()).join(", ");
 
   const electrodeOrWire = welder.isCombined
     ? `${consumable1.materialGrade} / ${consumable2?.materialGrade ?? ""}`
@@ -87,6 +92,25 @@ export function buildCertificateDocxPayload(ctx: WelderDocContext): Record<strin
   const weldingPosition = [welder.weldingPosition1, welder.weldingPosition2].filter(Boolean).join(", ");
 
   const birthdayStr = welder.birthday ? fmtDate(new Date(welder.birthday)) : "—";
+
+  const admissionScope = buildAdmissionScopeFields({
+    weldedPartsType: welder.weldedPartsType,
+    jointType: welder.jointType,
+    sampleMaterialGroupCode: sampleMaterial.groupCode,
+    weldingMethod1: welder.weldingMethod1,
+    weldingMethod2: welder.weldingMethod2,
+    isCombined: welder.isCombined,
+    weldingPosition1: welder.weldingPosition1,
+    weldingPosition2: welder.weldingPosition2,
+    thickness1: welder.thickness1,
+    thickness2: welder.thickness2,
+    thickness3: welder.thickness3,
+    pipeDiameter1: welder.pipeDiameter1,
+    pipeDiameter2: welder.pipeDiameter2,
+    pipeDiameter3: welder.pipeDiameter3,
+    consumableCoating1: consumable1.coatingType,
+    consumableCoating2: consumable2?.coatingType ?? null,
+  });
 
   const base: Record<string, unknown> = {
     "last-name": welder.lastName,
@@ -122,20 +146,19 @@ export function buildCertificateDocxPayload(ctx: WelderDocContext): Record<strin
     "work-company": company.shortName,
     "certificate-valid-until": fmtDate(certificateValidUntil),
     "blank-number": blankNum,
+    ...admissionScope,
   };
 
-  // Admission block mirrors (MVP: repeat technical scope text; detailed rules tables can refine later)
-  const admission = (suffix: string) => base[suffix] ?? "—";
+  const coatingAdmission = admissionScope["admission-coating-scope"];
   Object.assign(base, {
-    "admission-electrode-or-wire": admission("electrode-or-wire"),
-    "admission-pipe-outer-diameter": admission("pipe-outer-diameter"),
-    "admission-sample-thickness": admission("sample-thickness"),
-    "admission-shielding-gas-or-flux": admission("shielding-gas-or-flux"),
-    "admission-welding-position": admission("welding-position"),
-    "admission-sample-material-grade": admission("sample-material-grade"),
-    "admission-welded-parts-type": admission("welded-parts-type"),
-    "admission-welding-method": admission("welding-method"),
-    "admission-seam-type": jointTypeLabelUa(welder.jointType),
+    "admission-electrode-or-wire": `${electrodeOrWire}. ${coatingAdmission}`,
+    "admission-pipe-outer-diameter": admissionScope["admission-diameter-scope"],
+    "admission-sample-thickness": admissionScope["admission-thickness-scope"],
+    "admission-shielding-gas-or-flux": welder.shieldingGasFlux ?? "—",
+    "admission-welding-position": weldingPosition,
+    "admission-sample-material-grade": `${sampleMaterial.steelGrade} (${admissionScope["admission-material-groups-scope"]})`,
+    "admission-welding-method": base["welding-method"],
+    "admission-seam-type": `${jointTypeLabelUa(welder.jointType)}; ${admissionScope["admission-joint-scope"]}`,
     "seam-type": jointTypeLabelUa(welder.jointType),
     "performing-weld": certificationTypeLabelUa(welder.certificationType),
   });

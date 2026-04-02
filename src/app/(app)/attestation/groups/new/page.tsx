@@ -126,7 +126,7 @@ export default async function NewAttestationGroupPage() {
 
     await saveDropdownOption(DROPDOWN_SCOPE.CERTIFICATE_ISSUE_LOCATION, parsed.data.certificateIssueLocation.trim());
 
-    redirect(`/attestation/groups/${group.id}`);
+    redirect("/attestation/groups");
   }
 
   const inputClass =

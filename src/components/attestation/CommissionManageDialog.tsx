@@ -16,6 +16,9 @@ import { getServerActionErrorMessage } from "@/lib/server-action-error-message";
 
 export type { CommissionRosterRow };
 
+/** Fits on screen with margin; inner roster scrolls. Centered dialog (not viewport/top-pinned). */
+const PANEL_HEIGHT = "min(85vh, calc(100dvh - 2rem))";
+
 export function CommissionManageDialog({
   open,
   onOpenChange,
@@ -56,29 +59,51 @@ export function CommissionManageDialog({
           router.refresh();
         }}
       >
-        <DialogContent contentPosition="viewport" className="p-0 sm:max-w-lg">
-          <div className="shrink-0 space-y-3 p-4 pb-2">
-            <DialogTitle>Члени комісії</DialogTitle>
+        <DialogContent className="flex max-h-[min(85vh,calc(100dvh-2rem))] flex-col gap-0 overflow-hidden p-0 sm:max-w-lg">
+          {/*
+            Inline layout: flex items default to min-height:auto (table won’t shrink).
+            minHeight:0 + flex 1 1 0% on the roster forces inner scroll.
+          */}
+          <div
+            className="flex w-full min-w-0 flex-col"
+            style={{
+              height: PANEL_HEIGHT,
+              maxHeight: PANEL_HEIGHT,
+              minHeight: 0,
+              overflow: "hidden",
+            }}
+          >
+            <div className="shrink-0 space-y-3 p-4 pb-2">
+              <DialogTitle>Члени комісії</DialogTitle>
 
-            <GuardedForm
-              action={addCommissionMemberAction}
-              className="flex flex-col gap-2 rounded-md border border-border p-3"
+              <GuardedForm
+                action={addCommissionMemberAction}
+                className="flex flex-col gap-2 rounded-md border border-border p-3"
+              >
+                <div className="text-sm font-medium">Додати члена</div>
+                <input name="fullName" required placeholder="ПІБ" className="h-10 rounded-md border border-border bg-white px-3 text-sm" />
+                <input name="position" placeholder="Посада (для протоколу)" className="h-10 rounded-md border border-border bg-white px-3 text-sm" />
+                <select name="role" className="h-10 rounded-md border border-border bg-white px-3 text-sm" defaultValue="member">
+                  <option value="member">Член комісії</option>
+                  <option value="head">Голова комісії</option>
+                </select>
+                <button type="submit" className="crm-btn-primary w-fit">
+                  Додати
+                </button>
+              </GuardedForm>
+            </div>
+
+            <div
+              className="min-w-0 px-4 pb-4"
+              style={{
+                flex: "1 1 0%",
+                minHeight: 0,
+                overflowY: "auto",
+                WebkitOverflowScrolling: "touch",
+              }}
             >
-              <div className="text-sm font-medium">Додати члена</div>
-              <input name="fullName" required placeholder="ПІБ" className="h-10 rounded-md border border-border bg-white px-3 text-sm" />
-              <input name="position" placeholder="Посада (для протоколу)" className="h-10 rounded-md border border-border bg-white px-3 text-sm" />
-              <select name="role" className="h-10 rounded-md border border-border bg-white px-3 text-sm" defaultValue="member">
-                <option value="member">Член комісії</option>
-                <option value="head">Голова комісії</option>
-              </select>
-              <button type="submit" className="crm-btn-primary w-fit">
-                Додати
-              </button>
-            </GuardedForm>
-          </div>
-
-          <div className="min-h-0 flex-1 basis-0 overflow-y-auto overscroll-contain px-4 pb-4">
-            <CommissionRosterTable rosterRows={rosterRows} onRequestArchive={setPendingArchive} />
+              <CommissionRosterTable rosterRows={rosterRows} onRequestArchive={setPendingArchive} />
+            </div>
           </div>
         </DialogContent>
       </Dialog>

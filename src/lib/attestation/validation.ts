@@ -1,5 +1,22 @@
 import { z } from "zod";
 
+/** Довжина префікса з трьох полів: послідовно заповнені з першого (без «дірки»). */
+function prefixLen3(vals: (string | undefined)[]): number {
+  let k = 0;
+  for (let i = 0; i < 3; i++) {
+    if (vals[i]?.trim()) k++;
+    else break;
+  }
+  return k;
+}
+
+function isValidMmDecimal(s: string | undefined): boolean {
+  const t = s?.trim();
+  if (!t) return true;
+  const n = t.replace(",", ".").replace(/\.$/, "");
+  return /^\d+(\.\d{1,2})?$/.test(n);
+}
+
 export const certificationGroupCreateSchema = z.object({
   groupNumber: z.string().min(1, "Вкажіть номер групи"),
   protocolDate: z.string().min(1),
@@ -21,7 +38,20 @@ export const welderCertificationCreateSchema = z
     birthLocation: z.string().max(255).optional(),
     birthday: z.string().optional(),
     prevQualificationDoc: z.string().max(255).optional(),
-    workExperienceYears: z.string().min(1),
+    workExperienceYears: z
+      .string()
+      .transform((s) => s.trim())
+      .pipe(
+        z
+          .string()
+          .min(1, "Вкажіть стаж зварника")
+          .regex(/^\d+$/, "Стаж має бути цілим числом років (0–999)")
+          .refine((s) => {
+            const n = Number.parseInt(s, 10);
+            return n >= 0 && n <= 999;
+          }, "Стаж має бути від 0 до 999 років")
+          .transform((s) => String(Number.parseInt(s, 10))),
+      ),
     companyId: z.string().uuid("Оберіть компанію"),
     certificationType: z.enum(["primary", "additional", "periodic", "extraordinary"]),
     isCombined: z.boolean(),
@@ -63,10 +93,50 @@ export const welderCertificationCreateSchema = z
         ctx.addIssue({ code: "custom", message: "Для комбінованого зварювання вкажіть другий матеріал", path: ["consumable2Id"] });
       }
     }
-    if (data.weldedPartsType === "pipe" && !data.pipeDiameter1?.trim()) {
-      ctx.addIssue({ code: "custom", message: "Вкажіть діаметр труби", path: ["pipeDiameter1"] });
-    }
     if (!data.thickness1?.trim()) {
       ctx.addIssue({ code: "custom", message: "Вкажіть товщину зразка", path: ["thickness1"] });
+    }
+
+    const tFields: [string, string | undefined][] = [
+      ["thickness1", data.thickness1],
+      ["thickness2", data.thickness2],
+      ["thickness3", data.thickness3],
+    ];
+    for (const [key, val] of tFields) {
+      if (!isValidMmDecimal(val)) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Вкажіть число в мм (до двох знаків після коми).",
+          path: [key],
+        });
+      }
+    }
+
+    if (data.weldedPartsType === "pipe") {
+      const pFields: [string, string | undefined][] = [
+        ["pipeDiameter1", data.pipeDiameter1],
+        ["pipeDiameter2", data.pipeDiameter2],
+        ["pipeDiameter3", data.pipeDiameter3],
+      ];
+      for (const [key, val] of pFields) {
+        if (!isValidMmDecimal(val)) {
+          ctx.addIssue({
+            code: "custom",
+            message: "Вкажіть число в мм (до двох знаків після коми).",
+            path: [key],
+          });
+        }
+      }
+
+      const tn = prefixLen3([data.thickness1, data.thickness2, data.thickness3]);
+      const pn = prefixLen3([data.pipeDiameter1, data.pipeDiameter2, data.pipeDiameter3]);
+      if (tn !== pn) {
+        ctx.addIssue({
+          code: "custom",
+          message:
+            "Для труби кількість зазначених товщин має збігатися з кількістю зазначених діаметрів (послідовно: 1 з 1, 2 з 2, 3 з 3).",
+          path: ["pipeDiameter1"],
+        });
+      }
     }
   });

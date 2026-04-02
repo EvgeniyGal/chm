@@ -19,27 +19,44 @@ import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { useDebouncedListSearch } from "@/hooks/use-debounced-list-search";
 import { useListUrlParams } from "@/hooks/use-list-url-params";
-import { AttestationGroupRowActions } from "@/components/attestation/AttestationGroupRowActions";
 import { certificationGroupStatusLabelUa } from "@/lib/attestation/labels-uk";
 
-export type AttestationGroupListRow = {
+import type { ShowFilter } from "@/components/attestation/AttestationGroupsTable";
+import { WelderListRowActions } from "@/components/attestation/WelderListRowActions";
+
+export type WelderListRow = {
   id: string;
   groupNumber: string;
   protocolDate: string;
-  certificateIssueLocation: string;
-  status: string;
+  orderInGroup: number;
+  lastName: string;
+  firstName: string;
+  middleName: string | null;
+  groupStatus: string;
 };
 
-export type ShowFilter = "active" | "all" | "archived";
-export type SortBy = "groupNumber" | "protocolDate" | "status";
+export type WeldersSortBy =
+  | "groupNumber"
+  | "protocolDate"
+  | "orderInGroup"
+  | "lastName"
+  | "createdAt"
+  | "groupStatus";
 
 type SortDir = "asc" | "desc";
 
-const DEFAULT_SORT_DIR: Record<SortBy, SortDir> = {
+const DEFAULT_SORT_DIR: Record<WeldersSortBy, SortDir> = {
   protocolDate: "desc",
   groupNumber: "asc",
-  status: "asc",
+  orderInGroup: "asc",
+  lastName: "asc",
+  createdAt: "desc",
+  groupStatus: "asc",
 };
+
+function fullName(w: Pick<WelderListRow, "lastName" | "firstName" | "middleName">): string {
+  return [w.lastName, w.firstName, w.middleName ?? ""].filter(Boolean).join(" ");
+}
 
 function SortableHeader({
   label,
@@ -49,10 +66,10 @@ function SortableHeader({
   onSort,
 }: {
   label: string;
-  column: SortBy;
-  sortBy: SortBy;
+  column: WeldersSortBy;
+  sortBy: WeldersSortBy;
   sortDir: SortDir;
-  onSort: (column: SortBy) => void;
+  onSort: (column: WeldersSortBy) => void;
 }) {
   const active = sortBy === column;
   return (
@@ -77,7 +94,7 @@ function SortableHeader({
   );
 }
 
-export function AttestationGroupsTable({
+export function AttestationWeldersTable({
   rows,
   total,
   page,
@@ -92,12 +109,12 @@ export function AttestationGroupsTable({
   dateRangeInvalid,
   isDatabaseEmpty,
 }: {
-  rows: AttestationGroupListRow[];
+  rows: WelderListRow[];
   total: number;
   page: number;
   pageSize: number;
   q: string;
-  sortBy: SortBy;
+  sortBy: WeldersSortBy;
   sortDir: SortDir;
   show: ShowFilter;
   statusFilter: string | null;
@@ -118,7 +135,7 @@ export function AttestationGroupsTable({
   const [queryInput, setQueryInput] = useDebouncedListSearch(q, onSearchCommit);
 
   const onHeaderSort = useCallback(
-    (column: SortBy) => {
+    (column: WeldersSortBy) => {
       if (sortBy === column) {
         updateParams({ sortDir: sortDir === "asc" ? "desc" : "asc", page: 1 });
       } else {
@@ -128,13 +145,13 @@ export function AttestationGroupsTable({
     [sortBy, sortDir, updateParams],
   );
 
-  const columns = useMemo<ColumnDef<AttestationGroupListRow>[]>(
+  const columns = useMemo<ColumnDef<WelderListRow>[]>(
     () => [
       {
         id: "groupNumber",
         accessorKey: "groupNumber",
         header: "№ групи",
-        cell: ({ row }) => <span className="font-medium">{row.original.groupNumber}</span>,
+        cell: ({ row }) => <span className="font-medium">№{row.original.groupNumber}</span>,
       },
       {
         id: "protocolDate",
@@ -145,26 +162,27 @@ export function AttestationGroupsTable({
         ),
       },
       {
-        id: "certificateIssueLocation",
-        accessorKey: "certificateIssueLocation",
-        header: "Місце видачі",
-        cell: ({ row }) => (
-          <span className="line-clamp-2 text-foreground/90" title={row.original.certificateIssueLocation}>
-            {row.original.certificateIssueLocation}
-          </span>
-        ),
+        id: "orderInGroup",
+        accessorKey: "orderInGroup",
+        header: "№ у групі",
+        cell: ({ row }) => <span className="tabular-nums">{row.original.orderInGroup}</span>,
       },
       {
-        id: "status",
-        accessorKey: "status",
-        header: "Статус",
-        cell: ({ row }) => <span>{certificationGroupStatusLabelUa(row.original.status)}</span>,
+        id: "fullName",
+        header: "ПІБ",
+        cell: ({ row }) => <span className="text-foreground/90">{fullName(row.original)}</span>,
+      },
+      {
+        id: "groupStatus",
+        accessorKey: "groupStatus",
+        header: "Статус групи",
+        cell: ({ row }) => <span>{certificationGroupStatusLabelUa(row.original.groupStatus)}</span>,
       },
       {
         id: "actions",
         header: () => <span className="font-semibold">Дії</span>,
         cell: ({ row }) => (
-          <AttestationGroupRowActions groupId={row.original.id} status={row.original.status} />
+          <WelderListRowActions welderId={row.original.id} groupStatus={row.original.groupStatus} />
         ),
       },
     ],
@@ -182,7 +200,7 @@ export function AttestationGroupsTable({
   const emptyMessage = "Нічого не знайдено. Змініть пошук або фільтри.";
 
   if (isDatabaseEmpty) {
-    return <EmptyListState message="Поки що немає груп. Створіть першу." />;
+    return <EmptyListState message="Поки що немає атестацій зварників. Додайте запис." />;
   }
 
   return (
@@ -190,7 +208,7 @@ export function AttestationGroupsTable({
       <ListPageToolbar
         queryInput={queryInput}
         onQueryChange={setQueryInput}
-        searchPlaceholder="Пошук: номер групи, місце видачі посвідчень"
+        searchPlaceholder="Пошук: прізвище, імʼя, по батькові, номер групи"
         filters={
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
             {dateRangeInvalid ? (
@@ -223,7 +241,7 @@ export function AttestationGroupsTable({
               />
             </div>
             <div className="flex min-w-0 flex-col gap-1 text-sm">
-              <Label className="text-muted-foreground">Статус</Label>
+              <Label className="text-muted-foreground">Статус групи</Label>
               <NativeSelect
                 className="h-10 w-full min-w-[11rem] sm:w-auto"
                 value={statusFilter ?? ""}
@@ -256,9 +274,9 @@ export function AttestationGroupsTable({
                   });
                 }}
               >
-                <option value="active">Без архівних</option>
-                <option value="all">Усі статуси</option>
-                <option value="archived">Лише архівні</option>
+                <option value="active">Без архівних груп</option>
+                <option value="all">Усі статуси груп</option>
+                <option value="archived">Лише архівні групи</option>
               </NativeSelect>
             </div>
           </div>
@@ -274,8 +292,15 @@ export function AttestationGroupsTable({
             onChange={(e) => {
               const v = e.target.value;
               const [sb, sd] = v.split(":");
-              const nextSortBy: SortBy =
-                sb === "groupNumber" || sb === "protocolDate" || sb === "status" ? sb : "protocolDate";
+              const nextSortBy: WeldersSortBy =
+                sb === "groupNumber" ||
+                sb === "protocolDate" ||
+                sb === "orderInGroup" ||
+                sb === "lastName" ||
+                sb === "createdAt" ||
+                sb === "groupStatus"
+                  ? sb
+                  : "protocolDate";
               const nextSortDir: SortDir = sd === "asc" || sd === "desc" ? sd : "desc";
               updateParams({ sortBy: nextSortBy, sortDir: nextSortDir, page: 1 });
             }}
@@ -284,15 +309,21 @@ export function AttestationGroupsTable({
             <option value="protocolDate:asc">Дата протоколу (спочатку старі)</option>
             <option value="groupNumber:asc">№ групи (А → Я)</option>
             <option value="groupNumber:desc">№ групи (Я → А)</option>
-            <option value="status:asc">Статус (А → Я)</option>
-            <option value="status:desc">Статус (Я → А)</option>
+            <option value="orderInGroup:asc">№ у групі (зростання)</option>
+            <option value="orderInGroup:desc">№ у групі (спадання)</option>
+            <option value="lastName:asc">Прізвище (А → Я)</option>
+            <option value="lastName:desc">Прізвище (Я → А)</option>
+            <option value="createdAt:desc">Додано (спочатку нові)</option>
+            <option value="createdAt:asc">Додано (спочатку старі)</option>
+            <option value="groupStatus:asc">Статус групи (А → Я)</option>
+            <option value="groupStatus:desc">Статус групи (Я → А)</option>
           </NativeSelect>
         </div>
       </div>
 
       <Card className="overflow-hidden p-0">
         <div className="hidden overflow-x-auto md:block">
-          <table className="w-full min-w-[880px] border-collapse text-sm">
+          <table className="w-full min-w-[960px] border-collapse text-sm">
             <thead className={listTableHeaderClass}>
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>
@@ -322,12 +353,36 @@ export function AttestationGroupsTable({
                         />
                       );
                     }
-                    if (id === "status") {
+                    if (id === "orderInGroup") {
                       return (
                         <SortableHeader
                           key={header.id}
-                          label="Статус"
-                          column="status"
+                          label="№ у групі"
+                          column="orderInGroup"
+                          sortBy={sortBy}
+                          sortDir={sortDir}
+                          onSort={onHeaderSort}
+                        />
+                      );
+                    }
+                    if (id === "fullName") {
+                      return (
+                        <SortableHeader
+                          key={header.id}
+                          label="ПІБ"
+                          column="lastName"
+                          sortBy={sortBy}
+                          sortDir={sortDir}
+                          onSort={onHeaderSort}
+                        />
+                      );
+                    }
+                    if (id === "groupStatus") {
+                      return (
+                        <SortableHeader
+                          key={header.id}
+                          label="Статус групи"
+                          column="groupStatus"
                           sortBy={sortBy}
                           sortDir={sortDir}
                           onSort={onHeaderSort}
@@ -346,7 +401,7 @@ export function AttestationGroupsTable({
             <tbody>
               {rows.length === 0 ? (
                 <tr>
-                  <td className="border-t border-border px-3 py-8 text-center text-muted-foreground" colSpan={5}>
+                  <td className="border-t border-border px-3 py-8 text-center text-muted-foreground" colSpan={6}>
                     {emptyMessage}
                   </td>
                 </tr>
@@ -356,7 +411,7 @@ export function AttestationGroupsTable({
                     {row.getVisibleCells().map((cell) => (
                       <td
                         key={cell.id}
-                        className={`px-3 py-3 align-top ${cell.column.id === "certificateIssueLocation" ? "min-w-0 max-w-[min(24rem,40vw)]" : ""} ${cell.column.id === "actions" ? "text-right" : ""}`}
+                        className={`px-3 py-3 align-top ${cell.column.id === "fullName" ? "min-w-0 max-w-[min(24rem,40vw)]" : ""} ${cell.column.id === "actions" ? "text-right" : ""}`}
                       >
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </td>
@@ -373,27 +428,29 @@ export function AttestationGroupsTable({
             <p className="py-6 text-center text-sm text-muted-foreground">{emptyMessage}</p>
           ) : (
             table.getRowModel().rows.map((row) => {
-              const g = row.original;
+              const w = row.original;
               return (
                 <div
-                  key={g.id}
+                  key={w.id}
                   className="rounded-lg border border-border bg-card px-3 py-3 text-card-foreground shadow-sm"
                 >
                   <div className="flex flex-col gap-3">
                     <div className="min-w-0 space-y-2">
-                      <div className="text-base font-semibold leading-tight text-foreground">№ {g.groupNumber}</div>
+                      <div className="text-base font-semibold leading-tight text-foreground">№{w.groupNumber}</div>
                       <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-sm">
                         <dt className="text-muted-foreground">Дата протоколу</dt>
                         <dd className="tabular-nums text-foreground">
-                          {new Date(g.protocolDate).toLocaleDateString("uk-UA")}
+                          {new Date(w.protocolDate).toLocaleDateString("uk-UA")}
                         </dd>
-                        <dt className="text-muted-foreground">Місце видачі</dt>
-                        <dd className="min-w-0 break-words text-foreground">{g.certificateIssueLocation}</dd>
-                        <dt className="text-muted-foreground">Статус</dt>
-                        <dd>{certificationGroupStatusLabelUa(g.status)}</dd>
+                        <dt className="text-muted-foreground">№ у групі</dt>
+                        <dd className="tabular-nums text-foreground">{w.orderInGroup}</dd>
+                        <dt className="text-muted-foreground">ПІБ</dt>
+                        <dd className="min-w-0 break-words text-foreground">{fullName(w)}</dd>
+                        <dt className="text-muted-foreground">Статус групи</dt>
+                        <dd>{certificationGroupStatusLabelUa(w.groupStatus)}</dd>
                       </dl>
                     </div>
-                    <AttestationGroupRowActions groupId={g.id} status={g.status} />
+                    <WelderListRowActions welderId={w.id} groupStatus={w.groupStatus} />
                   </div>
                 </div>
               );

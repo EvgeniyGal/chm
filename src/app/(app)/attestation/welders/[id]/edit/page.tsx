@@ -16,6 +16,7 @@ import {
 } from "@/db/schema/attestation";
 import { requireRole } from "@/lib/authz";
 import { parseWelderCertificationForm } from "@/lib/attestation/parse-welder-form";
+import { DROPDOWN_SCOPE, getDropdownOptions } from "@/lib/dropdown-options";
 
 export default async function EditWelderCertificationPage({ params }: { params: Promise<{ id: string }> }) {
   await requireRole("MANAGER");
@@ -33,7 +34,7 @@ export default async function EditWelderCertificationPage({ params }: { params: 
   });
   if (!group) notFound();
   if (group.status === "completed" || group.status === "archived") {
-    redirect(`/attestation/welders/${id}`);
+    redirect("/attestation/welders");
   }
 
   const regRows = await db
@@ -42,13 +43,20 @@ export default async function EditWelderCertificationPage({ params }: { params: 
     .where(eq(welderCertificationRegulatoryDocuments.welderCertificationId, id));
   const selectedRegulatoryIds = regRows.map((r) => r.regulatoryDocumentId);
 
-  const [groups, companyRows, samples, consumables, regDocs] = await Promise.all([
+  const [groups, companyRows, samples, consumables, regDocs, dropdownStuff] = await Promise.all([
     db.select().from(certificationGroups),
     db.select().from(companies).orderBy(companies.shortName),
     db.select().from(sampleMaterials).where(eq(sampleMaterials.isActive, true)).orderBy(sampleMaterials.steelGrade),
     db.select().from(weldingConsumables).where(eq(weldingConsumables.isActive, true)).orderBy(weldingConsumables.materialGrade),
     db.select().from(regulatoryDocuments).where(eq(regulatoryDocuments.isActive, true)).orderBy(regulatoryDocuments.sortOrder, regulatoryDocuments.code),
+    Promise.all([
+      getDropdownOptions(DROPDOWN_SCOPE.TAX_STATUS),
+      getDropdownOptions(DROPDOWN_SCOPE.SIGNER_POSITION_NOM),
+      getDropdownOptions(DROPDOWN_SCOPE.SIGNER_POSITION_GEN),
+      getDropdownOptions(DROPDOWN_SCOPE.ACTING_UNDER),
+    ]),
   ]);
+  const [taxStatusOptions, signerPositionNomOptions, signerPositionGenOptions, actingUnderOptions] = dropdownStuff;
 
   async function updateWelder(formData: FormData) {
     "use server";
@@ -131,22 +139,32 @@ export default async function EditWelderCertificationPage({ params }: { params: 
       );
     }
 
-    redirect(`/attestation/welders/${id}`);
+    redirect("/attestation/welders");
   }
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-4">
-      <div>
-        <Link className="text-sm text-muted-foreground underline" href={`/attestation/welders/${id}`}>
-          ← До картки зварника
+    <div className="w-full min-w-0">
+      <div className="mb-4">
+        <Link className="text-sm text-muted-foreground underline" href="/attestation/welders">
+          ← До списку зварників
         </Link>
         <h1 className="page-title mt-2">Редагування атестації</h1>
       </div>
 
-      <GuardedForm action={updateWelder} className="flex flex-col gap-4">
+      <GuardedForm
+        action={updateWelder}
+        className="flex min-w-0 flex-col gap-4 rounded-xl border bg-white p-4"
+      >
         <WelderCertificationFormFields
+          key={id}
           groups={groups}
           companies={companyRows}
+          quickCreateCompanyDropdowns={{
+            taxStatusOptions,
+            signerPositionNomOptions,
+            signerPositionGenOptions,
+            actingUnderOptions,
+          }}
           sampleMaterials={samples}
           consumables={consumables}
           regulatoryDocs={regDocs}
@@ -155,9 +173,11 @@ export default async function EditWelderCertificationPage({ params }: { params: 
           lockGroupId
           selectedRegulatoryIds={selectedRegulatoryIds}
         />
-        <button type="submit" className="crm-btn-primary w-fit">
-          Зберегти
-        </button>
+        <div className="mt-2 flex gap-3">
+          <button type="submit" className="crm-btn-primary">
+            Зберегти
+          </button>
+        </div>
       </GuardedForm>
     </div>
   );

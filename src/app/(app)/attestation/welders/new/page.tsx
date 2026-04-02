@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { desc, eq, inArray, max } from "drizzle-orm";
+import { desc, eq, inArray } from "drizzle-orm";
 import { redirect } from "next/navigation";
 
 import { WelderCertificationFormFields } from "@/components/attestation/WelderCertificationFormFields";
@@ -14,19 +14,53 @@ import {
   welderCertificationRegulatoryDocuments,
   welderCertifications,
 } from "@/db/schema/attestation";
+import { allocateNextFreeOrderInGroup } from "@/lib/attestation/allocate-next-free-order-in-group";
+import { buildDuplicateWelderTemplate } from "@/lib/attestation/build-duplicate-welder-template";
 import { requireRole } from "@/lib/authz";
 import { parseWelderCertificationForm } from "@/lib/attestation/parse-welder-form";
+import { DROPDOWN_SCOPE, getDropdownOptions } from "@/lib/dropdown-options";
 
 export default async function NewWelderCertificationPage({
   searchParams,
 }: {
-  searchParams: Promise<{ groupId?: string }>;
+  searchParams: Promise<{ groupId?: string; from?: string }>;
 }) {
   await requireRole("MANAGER");
   const sp = await searchParams;
-  const defaultGroupId = String(sp.groupId ?? "").trim();
+  const explicitGroupId = String(sp.groupId ?? "").trim();
+  const fromId = String(sp.from ?? "").trim();
 
-  const [groups, companyRows, samples, consumables, regDocs] = await Promise.all([
+  let defaultGroupId = explicitGroupId;
+  let duplicateInitial: (typeof welderCertifications.$inferSelect) | undefined;
+  let selectedRegulatoryIds: string[] = [];
+
+  if (fromId) {
+    const source = await db.query.welderCertifications.findFirst({
+      where: eq(welderCertifications.id, fromId),
+    });
+    if (source) {
+      const g = await db.query.certificationGroups.findFirst({
+        where: eq(certificationGroups.id, source.groupId),
+      });
+      if (g) {
+        const groupActive = g.status === "active";
+        if (!explicitGroupId) {
+          defaultGroupId = groupActive ? source.groupId : "";
+        }
+        duplicateInitial = buildDuplicateWelderTemplate(source, groupActive);
+        if (explicitGroupId) {
+          duplicateInitial = { ...duplicateInitial, groupId: explicitGroupId };
+        }
+        const regRows = await db
+          .select({ regulatoryDocumentId: welderCertificationRegulatoryDocuments.regulatoryDocumentId })
+          .from(welderCertificationRegulatoryDocuments)
+          .where(eq(welderCertificationRegulatoryDocuments.welderCertificationId, fromId));
+        selectedRegulatoryIds = regRows.map((r) => r.regulatoryDocumentId);
+      }
+    }
+  }
+
+  const [groups, companyRows, samples, consumables, regDocs, dropdownStuff] = await Promise.all([
     db
       .select()
       .from(certificationGroups)
@@ -36,7 +70,14 @@ export default async function NewWelderCertificationPage({
     db.select().from(sampleMaterials).where(eq(sampleMaterials.isActive, true)).orderBy(sampleMaterials.steelGrade),
     db.select().from(weldingConsumables).where(eq(weldingConsumables.isActive, true)).orderBy(weldingConsumables.materialGrade),
     db.select().from(regulatoryDocuments).where(eq(regulatoryDocuments.isActive, true)).orderBy(regulatoryDocuments.sortOrder, regulatoryDocuments.code),
+    Promise.all([
+      getDropdownOptions(DROPDOWN_SCOPE.TAX_STATUS),
+      getDropdownOptions(DROPDOWN_SCOPE.SIGNER_POSITION_NOM),
+      getDropdownOptions(DROPDOWN_SCOPE.SIGNER_POSITION_GEN),
+      getDropdownOptions(DROPDOWN_SCOPE.ACTING_UNDER),
+    ]),
   ]);
+  const [taxStatusOptions, signerPositionNomOptions, signerPositionGenOptions, actingUnderOptions] = dropdownStuff;
 
   async function createWelder(formData: FormData) {
     "use server";
@@ -56,11 +97,7 @@ export default async function NewWelderCertificationPage({
       throw new Error("Редагування заборонено: група завершена або в архіві");
     }
 
-    const [{ m }] = await db
-      .select({ m: max(welderCertifications.orderInGroup) })
-      .from(welderCertifications)
-      .where(eq(welderCertifications.groupId, d.groupId));
-    const nextOrder = (m ?? 0) + 1;
+    const nextOrder = await allocateNextFreeOrderInGroup(d.groupId);
 
     const pipeNull = d.weldedPartsType === "plate";
 
@@ -126,30 +163,49 @@ export default async function NewWelderCertificationPage({
       );
     }
 
-    redirect(`/attestation/welders/${row.id}`);
+    redirect("/attestation/welders");
   }
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-4">
-      <div>
+    <div className="w-full min-w-0">
+      <div className="mb-4">
         <Link className="text-sm text-muted-foreground underline" href="/attestation/welders">
           ← До списку зварників
         </Link>
         <h1 className="page-title mt-2">Нова атестація зварника</h1>
+        {duplicateInitial ? (
+          <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+            Заповнено за шаблоном іншого запису: прізвище, імʼя, по батькові, місце народження, дати, попереднє посвідчення, стаж і компанію потрібно ввести заново. Група атестації залишена лише якщо вона була в статусі «Активна».
+          </p>
+        ) : null}
       </div>
 
-      <GuardedForm action={createWelder} className="flex flex-col gap-4">
+      <GuardedForm
+        action={createWelder}
+        className="flex min-w-0 flex-col gap-4 rounded-xl border bg-white p-4"
+      >
         <WelderCertificationFormFields
+          key={fromId ? `dup-${fromId}` : "new-welder"}
           groups={groups}
           companies={companyRows}
+          quickCreateCompanyDropdowns={{
+            taxStatusOptions,
+            signerPositionNomOptions,
+            signerPositionGenOptions,
+            actingUnderOptions,
+          }}
           sampleMaterials={samples}
           consumables={consumables}
           regulatoryDocs={regDocs}
           defaultGroupId={defaultGroupId}
+          initial={duplicateInitial}
+          selectedRegulatoryIds={selectedRegulatoryIds}
         />
-        <button type="submit" className="crm-btn-primary w-fit">
-          Зберегти
-        </button>
+        <div className="mt-2 flex gap-3">
+          <button type="submit" className="crm-btn-primary">
+            Зберегти
+          </button>
+        </div>
       </GuardedForm>
     </div>
   );

@@ -71,18 +71,21 @@ export function GuardedForm({
     <>
       <form
         ref={formRef}
-        action={async (formData) => {
+        onSubmit={async (e) => {
+          e.preventDefault();
+          const formData = new FormData(e.currentTarget);
           try {
             await action(formData);
             setIsDirty(false);
             if (successMessage) toast.success(successMessage);
-          } catch (e) {
-            if (isNextNavigationError(e)) {
+          } catch (err) {
+            if (isNextNavigationError(err)) {
               if (successMessage) toast.success(successMessage);
               setIsDirty(false);
-              throw e;
+              throw err;
             }
-            toast.error(getServerActionErrorMessage(e));
+            toast.error(getServerActionErrorMessage(err));
+            // Без атрибута action: React не скидає форму; без повторного throw — немає runtime overlay.
           }
         }}
         className={className}

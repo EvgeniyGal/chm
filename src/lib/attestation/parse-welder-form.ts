@@ -7,7 +7,8 @@ function opt(s: string | undefined): string | undefined {
 
 function optDec(s: string | undefined): string | undefined {
   const t = opt(s);
-  return t ?? undefined;
+  if (!t) return undefined;
+  return t.replace(",", ".").replace(/\.$/, "").trim() || undefined;
 }
 
 export function parseWelderCertificationForm(formData: FormData) {

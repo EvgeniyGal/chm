@@ -32,7 +32,7 @@ export function ArchiveAttestationGroupButton({ archiveGroup, groupNumber }: Pro
     <>
       <button
         type="button"
-        className="rounded-md border border-destructive px-3 py-1.5 text-destructive"
+        className="inline-flex h-10 w-full items-center justify-center rounded-md border border-destructive px-3 text-sm font-medium text-destructive hover:bg-destructive/10 sm:w-auto"
         onClick={() => setOpen(true)}
       >
         Архівувати групу
