@@ -8,7 +8,8 @@ export const acceptanceActs = pgTable("acceptance_acts", {
   number: text("number").notNull().unique(), // {seq}/{MM}-{YYYY}
   date: timestamp("date", { withTimezone: true }).notNull(),
   signingLocation: text("signing_location").notNull(),
-  completionDate: timestamp("completion_date", { withTimezone: true }).notNull(),
+  /** When null, generated DOCX uses a handwritten-date placeholder. */
+  completionDate: timestamp("completion_date", { withTimezone: true }),
 
   customerCompanyId: uuid("customer_company_id")
     .notNull()

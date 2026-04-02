@@ -51,13 +51,24 @@ function resolveTreatyBasis(input: AcceptanceActDocxInput): {
   };
 }
 
+/** Nominative line for act preamble: посада, коротка назва компанії, ПІБ підписанта. */
+function actHeaderPartyLine(positionNom: string, companyShortName: string, signerFullNameNom: string): string {
+  return [positionNom, companyShortName, signerFullNameNom]
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0)
+    .join(" ");
+}
+
 export function buildAcceptanceActDocxBuffer(input: AcceptanceActDocxInput): Buffer {
   const wt = input.invoice.workType === "WORKS" ? "work" : "service";
   const templatePath = path.join(process.cwd(), "forms", `act-${wt}.docx`);
   const zip = new PizZip(readFileSync(templatePath));
 
   const basis = resolveTreatyBasis(input);
-  const actDate = new Date(input.act.completionDate).toLocaleDateString("uk-UA");
+  const actDate =
+    input.act.completionDate == null
+      ? "«___» ______________ 20___ р."
+      : new Date(input.act.completionDate).toLocaleDateString("uk-UA");
 
   const rowItems = input.items.map((it, i) => ({
     "act-job-item-number": String(i + 1),
@@ -75,8 +86,16 @@ export function buildAcceptanceActDocxBuffer(input: AcceptanceActDocxInput): Buf
     "act-number": input.act.number,
     "act-date": actDate,
     "act-place": input.act.signingLocation,
-    "act-header-contractor": input.contractor.fullName,
-    "act-header-customer": input.customer.fullName,
+    "act-header-contractor": actHeaderPartyLine(
+      input.act.signerPositionNom,
+      input.contractor.shortName,
+      input.act.signerFullNameNom,
+    ),
+    "act-header-customer": actHeaderPartyLine(
+      input.customer.actSignerPositionNom,
+      input.customer.shortName,
+      input.customer.actSignerFullNameNom,
+    ),
     "act-treaty": basis.treatyWord,
     "act-treaty-number": basis.treatyNumber,
     "act-treaty-date": basis.treatyDate,

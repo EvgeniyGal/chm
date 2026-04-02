@@ -81,7 +81,9 @@ export default async function AcceptanceActInfoPage({ params }: { params: Promis
         actDateIso={new Date(act.date).toISOString()}
         signingLocation={act.signingLocation}
         signingLocationOptions={signingLocationOptions}
-        completionDateIso={new Date(act.completionDate).toISOString()}
+        completionDateIso={
+          act.completionDate ? new Date(act.completionDate).toISOString() : null
+        }
         customerCompanyId={act.customerCompanyId}
         contractorCompanyId={act.contractorCompanyId}
         companies={companyRows.map((c) => ({

@@ -36,6 +36,14 @@ function formatCompanyContacts(raw: string): string[] {
     .map((contact) => `${contact.type === "tel" ? "Тел." : "Email"}: ${contact.value}`);
 }
 
+/** "в особі Директора Івана ІВАНЕНКА" — посада + ПІБ у родовому відмінку */
+function treatyHeaderPersonLine(positionGen: string, fullNameGen: string): string {
+  const p = positionGen.trim();
+  const n = fullNameGen.trim();
+  if (p && n) return `${p} ${n}`;
+  return n || p;
+}
+
 function formatCompanyDetails(c: CompanyRow): string {
   const contactLines = formatCompanyContacts(c.contacts);
   const lines = [
@@ -101,11 +109,17 @@ export function buildTreatyDocxBuffer(input: TreatyGeneratePayload): Buffer {
     "treaty-date": dateStr,
     "treaty-header-customer": input.customer.fullName,
     "treaty-header-customer-tax-status": input.customer.taxStatus,
-    "treaty-header-customer-person": input.customer.contractSignerFullNameGen,
+    "treaty-header-customer-person": treatyHeaderPersonLine(
+      input.customer.contractSignerPositionGen,
+      input.customer.contractSignerFullNameGen,
+    ),
     "treaty-header-customer-person-mandate": input.customer.contractSignerActingUnder,
     "treaty-header-contractor": input.contractor.fullName,
     "treaty-header-contractor-tax-status": input.contractor.taxStatus,
-    "treaty-header-contractor-person": input.signerFullNameGen,
+    "treaty-header-contractor-person": treatyHeaderPersonLine(
+      input.signerPositionGen,
+      input.signerFullNameGen,
+    ),
     "treaty-header-contractor-person-mandate": input.signerActingUnder,
     items: rowItems,
     "treaty-jobs-price-without-tax": formatMoney(totals.totalWithoutVat),

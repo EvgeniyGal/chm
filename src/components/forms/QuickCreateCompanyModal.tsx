@@ -4,6 +4,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import { isSearchableDropdownPortalTarget } from "@/lib/searchable-dropdown-portal";
 import { ActingUnderField } from "@/components/forms/ActingUnderField";
 import { ContactsField } from "@/components/forms/ContactsField";
 import { SignerPositionField } from "@/components/forms/SignerPositionField";
@@ -194,7 +195,19 @@ export function QuickCreateCompanyModal({
       <Dialog.Root open={open} onOpenChange={(next) => (next ? onOpenChange(true) : requestClose())}>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 bg-black/40" />
-          <Dialog.Content className="fixed left-1/2 top-1/2 flex max-h-[min(90vh,calc(100vh-24px))] w-[min(960px,calc(100vw-24px))] -translate-x-1/2 -translate-y-1/2 flex-col rounded-xl border border-border bg-card p-4 text-card-foreground shadow-lg outline-none">
+          <Dialog.Content
+            className="fixed left-1/2 top-1/2 flex max-h-[min(90vh,calc(100vh-24px))] w-[min(960px,calc(100vw-24px))] -translate-x-1/2 -translate-y-1/2 flex-col rounded-xl border border-border bg-card p-4 text-card-foreground shadow-lg outline-none"
+            onInteractOutside={(event) => {
+              if (isSearchableDropdownPortalTarget(event.target)) {
+                event.preventDefault();
+              }
+            }}
+            onFocusOutside={(event) => {
+              if (isSearchableDropdownPortalTarget(event.target)) {
+                event.preventDefault();
+              }
+            }}
+          >
             <Dialog.Title className="page-title">Нова компанія</Dialog.Title>
             <Dialog.Description className="sr-only">
               Створення компанії: реквізити, контакти та підписанти за замовчуванням.

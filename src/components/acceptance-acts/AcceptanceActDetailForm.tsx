@@ -27,6 +27,7 @@ type LineRow = {
 
 type ActEditValues = {
   signingLocation: string;
+  /** YYYY-MM-DD or empty when not set */
   completionDate: string;
   signerFullNameNom: string;
   signerFullNameGen: string;
@@ -70,7 +71,7 @@ export function AcceptanceActDetailForm({
   actDateIso: string;
   signingLocation: string;
   signingLocationOptions: string[];
-  completionDateIso: string;
+  completionDateIso: string | null;
   customerCompanyId: string;
   contractorCompanyId: string;
   companies: Array<{
@@ -110,7 +111,7 @@ export function AcceptanceActDetailForm({
   const form = useForm<ActEditValues>({
     defaultValues: {
       signingLocation,
-      completionDate: completionDateIso.slice(0, 10),
+      completionDate: completionDateIso ? completionDateIso.slice(0, 10) : "",
       signerFullNameNom,
       signerFullNameGen,
       signerPositionNom,
@@ -152,10 +153,10 @@ export function AcceptanceActDetailForm({
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <ReadOnlyField label="Номер акту" value={actNumber} />
           <Field
-            label={completionDateLabel}
+            label={`${completionDateLabel} (необов’язково)`}
             type="date"
             disabled={!canEdit}
-            {...register("completionDate", { required: true })}
+            {...register("completionDate")}
           />
           {canEdit ? (
             <Controller

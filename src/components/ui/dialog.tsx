@@ -3,6 +3,7 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import * as React from "react";
 
+import { isSearchableDropdownPortalTarget } from "@/lib/searchable-dropdown-portal";
 import { cn } from "@/lib/utils";
 
 const Dialog = DialogPrimitive.Root;
@@ -20,7 +21,7 @@ const DialogOverlay = React.forwardRef<
 const DialogContent = React.forwardRef<
   React.ComponentRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(function DialogContent({ className, children, ...props }, ref) {
+>(function DialogContent({ className, children, onInteractOutside, onFocusOutside, ...props }, ref) {
   return (
     <DialogPortal>
       <DialogOverlay />
@@ -31,6 +32,18 @@ const DialogContent = React.forwardRef<
           className,
         )}
         {...props}
+        onInteractOutside={(event) => {
+          if (isSearchableDropdownPortalTarget(event.target)) {
+            event.preventDefault();
+          }
+          onInteractOutside?.(event);
+        }}
+        onFocusOutside={(event) => {
+          if (isSearchableDropdownPortalTarget(event.target)) {
+            event.preventDefault();
+          }
+          onFocusOutside?.(event);
+        }}
       >
         {children}
       </DialogPrimitive.Content>

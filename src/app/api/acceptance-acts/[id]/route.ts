@@ -11,7 +11,7 @@ export const runtime = "nodejs";
 const patchSchema = z
   .object({
     signingLocation: z.string().min(1).optional(),
-    completionDate: z.string().min(1).optional(),
+    completionDate: z.union([z.string(), z.null()]).optional(),
     signerFullNameNom: z.string().min(1).optional(),
     signerFullNameGen: z.string().min(1).optional(),
     signerPositionNom: z.string().min(1).optional(),
@@ -33,11 +33,16 @@ export async function PATCH(req: Request, ctx: RouteContext<"/api/acceptance-act
     return Response.json({ error: "VALIDATION_ERROR", details: parsed.error.flatten() }, { status: 400 });
   }
 
-  const updates: any = { ...parsed.data, updatedAt: new Date() };
-  if (parsed.data.completionDate) {
-    const d = new Date(parsed.data.completionDate);
-    if (Number.isNaN(d.getTime())) return Response.json({ error: "INVALID_DATE" }, { status: 400 });
-    updates.completionDate = d;
+  const { completionDate, ...rest } = parsed.data;
+  const updates: Record<string, unknown> = { ...rest, updatedAt: new Date() };
+  if (completionDate !== undefined) {
+    if (completionDate === null || completionDate === "") {
+      updates.completionDate = null;
+    } else {
+      const d = new Date(completionDate);
+      if (Number.isNaN(d.getTime())) return Response.json({ error: "INVALID_DATE" }, { status: 400 });
+      updates.completionDate = d;
+    }
   }
 
   const [after] = await db.update(acceptanceActs).set(updates).where(eq(acceptanceActs.id, id)).returning();

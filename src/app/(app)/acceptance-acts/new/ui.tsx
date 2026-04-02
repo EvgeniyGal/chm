@@ -92,7 +92,7 @@ export function AcceptanceActForm({
       invoiceId: initialInvoiceId,
       date: new Date().toISOString().slice(0, 10),
       signingLocation: defaultSigningLocation,
-      completionDate: new Date().toISOString().slice(0, 10),
+      completionDate: "",
       signerFullNameNom: initialSigner?.signerFullNameNom ?? "",
       signerFullNameGen: initialSigner?.signerFullNameGen ?? "",
       signerPositionNom: initialSigner?.signerPositionNom ?? "",
@@ -206,7 +206,11 @@ export function AcceptanceActForm({
               ))}
             </select>
           </label>
-          <Field label={completionDateLabel} type="date" {...form.register("completionDate", { required: true })} />
+          <Field
+            label={`${completionDateLabel} (необов’язково)`}
+            type="date"
+            {...form.register("completionDate")}
+          />
           <Controller
             name="signingLocation"
             control={form.control}

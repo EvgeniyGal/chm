@@ -1,0 +1,1 @@
+ALTER TABLE "acceptance_acts" ALTER COLUMN "completion_date" DROP NOT NULL;

@@ -13,7 +13,8 @@ const createSchema = z.object({
   invoiceId: z.string().uuid(),
   date: z.string().min(1),
   signingLocation: z.string().min(1),
-  completionDate: z.string().min(1),
+  /** Empty or omitted: stored as null; DOCX uses a handwritten-date placeholder. */
+  completionDate: z.union([z.string(), z.null()]).optional(),
   signerFullNameNom: z.string().min(1),
   signerFullNameGen: z.string().min(1),
   signerPositionNom: z.string().min(1),
@@ -55,8 +56,16 @@ export async function POST(req: Request) {
   const invItems = await db.query.lineItems.findMany({ where: eq(lineItems.invoiceId, invoice.id) });
 
   const date = new Date(parsed.data.date);
-  const completionDate = new Date(parsed.data.completionDate);
-  if (Number.isNaN(date.getTime()) || Number.isNaN(completionDate.getTime())) {
+  if (Number.isNaN(date.getTime())) {
+    return Response.json({ error: "INVALID_DATE" }, { status: 400 });
+  }
+
+  const completionRaw = parsed.data.completionDate;
+  const completionTrimmed =
+    completionRaw === null || completionRaw === undefined ? "" : String(completionRaw).trim();
+  const completionDate: Date | null =
+    completionTrimmed === "" ? null : new Date(completionTrimmed);
+  if (completionDate !== null && Number.isNaN(completionDate.getTime())) {
     return Response.json({ error: "INVALID_DATE" }, { status: 400 });
   }
 

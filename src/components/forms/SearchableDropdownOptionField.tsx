@@ -1,9 +1,11 @@
 "use client";
 
+import { DismissableLayerBranch } from "@radix-ui/react-dismissable-layer";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
+import { SEARCHABLE_DROPDOWN_PORTAL_DATA_ATTR } from "@/lib/searchable-dropdown-portal";
 import { DeleteOptionButton } from "./DeleteOptionButton";
 
 function sortUa(values: string[]) {
@@ -57,11 +59,14 @@ export function SearchableDropdownOptionField({
   const normalizedValue = value.trim();
 
   const [panelStyle, setPanelStyle] = useState<{
+    position: "fixed" | "absolute";
     top: number;
     left: number;
     width: number;
     maxHeight: number;
   } | null>(null);
+
+  const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
 
   const initialOptions = useMemo(() => {
     const seeded = normalizedValue ? [...optionsFromBackend, normalizedValue] : [...optionsFromBackend];
@@ -93,38 +98,73 @@ export function SearchableDropdownOptionField({
   useLayoutEffect(() => {
     if (!open) {
       setPanelStyle(null);
+      setPortalContainer(null);
       return;
     }
 
+    const anchorForMount = anchorRef.current;
+    setPortalContainer(
+      anchorForMount?.closest<HTMLElement>("[role=\"dialog\"]") ?? (typeof document !== "undefined" ? document.body : null),
+    );
+
     function updatePanelPosition() {
-      const el = anchorRef.current;
-      if (!el) return;
-      const r = el.getBoundingClientRect();
+      const anchor = anchorRef.current;
+      if (!anchor) return;
+      const ar = anchor.getBoundingClientRect();
       const gap = 4;
+      const preferredMax = 240;
+      const dialog = anchor.closest<HTMLElement>("[role=\"dialog\"]");
+
+      if (dialog) {
+        const dr = dialog.getBoundingClientRect();
+        const spaceBelow = dr.bottom - ar.bottom - gap;
+        const spaceAbove = ar.top - dr.top - gap;
+        const preferBelow = spaceBelow >= 100 || spaceBelow >= spaceAbove;
+
+        let top: number;
+        let maxHeight: number;
+
+        if (preferBelow) {
+          top = ar.bottom - dr.top + gap;
+          maxHeight = Math.min(preferredMax, Math.max(80, spaceBelow - 8));
+        } else {
+          maxHeight = Math.min(preferredMax, Math.max(80, spaceAbove - 8));
+          top = ar.top - dr.top - gap - maxHeight;
+        }
+
+        let left = ar.left - dr.left;
+        const width = Math.max(ar.width, 160);
+        const innerW = dr.width;
+        if (left + width > innerW - 8) left = Math.max(8, innerW - width - 8);
+        if (left < 8) left = 8;
+
+        setPanelStyle({ position: "absolute", top, left, width, maxHeight });
+        return;
+      }
+
       const viewportH = window.innerHeight;
       const viewportW = window.innerWidth;
-      const spaceBelow = viewportH - r.bottom - gap;
-      const spaceAbove = r.top - gap;
-      const preferredMax = 240;
+      const spaceBelow = viewportH - ar.bottom - gap;
+      const spaceAbove = ar.top - gap;
       const preferBelow = spaceBelow >= 100 || spaceBelow >= spaceAbove;
 
       let top: number;
       let maxHeight: number;
 
       if (preferBelow) {
-        top = r.bottom + gap;
+        top = ar.bottom + gap;
         maxHeight = Math.min(preferredMax, Math.max(80, spaceBelow - 8));
       } else {
         maxHeight = Math.min(preferredMax, Math.max(80, spaceAbove - 8));
-        top = r.top - gap - maxHeight;
+        top = ar.top - gap - maxHeight;
       }
 
-      let left = r.left;
-      const width = Math.max(r.width, 160);
+      let left = ar.left;
+      const width = Math.max(ar.width, 160);
       if (left + width > viewportW - 8) left = Math.max(8, viewportW - width - 8);
       if (left < 8) left = 8;
 
-      setPanelStyle({ top, left, width, maxHeight });
+      setPanelStyle({ position: "fixed", top, left, width, maxHeight });
     }
 
     updatePanelPosition();
@@ -212,13 +252,14 @@ export function SearchableDropdownOptionField({
             />
           )}
 
-          {open && panelStyle && typeof document !== "undefined"
+          {open && panelStyle && portalContainer && typeof document !== "undefined"
             ? createPortal(
-                <div
+                <DismissableLayerBranch
                   ref={portalRef}
-                  className="overflow-hidden rounded-md border bg-white shadow-lg"
+                  {...{ [SEARCHABLE_DROPDOWN_PORTAL_DATA_ATTR]: true }}
+                  className="pointer-events-auto overflow-hidden rounded-md border bg-white shadow-lg"
                   style={{
-                    position: "fixed",
+                    position: panelStyle.position,
                     top: panelStyle.top,
                     left: panelStyle.left,
                     width: panelStyle.width,
@@ -252,8 +293,8 @@ export function SearchableDropdownOptionField({
                       })
                     )}
                   </div>
-                </div>,
-                document.body,
+                </DismissableLayerBranch>,
+                portalContainer,
               )
             : null}
         </div>
