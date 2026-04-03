@@ -98,8 +98,8 @@ describe("admission-scope", () => {
   });
 
   it("welded-parts-type: лише факт зразка", () => {
-    expect(formatWeldedPartsSampleDisplay("plate")).toBe("P(пластина)");
-    expect(formatWeldedPartsSampleDisplay("pipe")).toBe("T(труба)");
+    expect(formatWeldedPartsSampleDisplay("plate")).toBe("P (пластина)");
+    expect(formatWeldedPartsSampleDisplay("pipe")).toBe("T (труба)");
   });
 
   it("admission-welded-parts-type: допуск пластина / труба+пластина", () => {

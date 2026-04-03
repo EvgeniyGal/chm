@@ -57,11 +57,12 @@ function normalizeAdmissionWeldingMethodSummary(s: string): string {
   return s.trim().replace(/\s*\/\s*/g, "\\");
 }
 
-/** `P(пластина)` / `T(труба)…` → `П` / `Т` як у компактному коді (§7.7.1). */
+/** Допуск «Вид деталей» у рядку `{admission}` протоколу: `P` або `T, P` (латиниця). */
 function compactAdmissionWeldedPartsType(s: string): string {
   const t = s.trim();
-  if (t === "P(пластина)") return "П";
-  if (t.includes("T(труба)")) return "Т";
+  if (t === "P(пластина)") return "P";
+  if (t === "T(труба), P(пластина)" || (t.includes("T(труба)") && t.includes("P(пластина)"))) return "T, P";
+  if (t.includes("T(труба)")) return "T";
   return t;
 }
 
@@ -135,7 +136,7 @@ export type WelderDocContext = {
 
 /**
  * Payload keys for docxtemplater (`forms/certificate.docx`, `forms/protocol.docx`, `forms/report.docx`).
- * `welded-parts-type` — факт зразка: `P(пластина)` або `T(труба)`.
+ * `welded-parts-type` — факт зразка: `P (пластина)` або `T (труба)`.
  * `admission-welded-parts-type` — допуск: пластина → лише `P(пластина)`; труба → `T(труба), P(пластина)`.
  * `admission-thickness-scope` / `admission-sample-thickness` — лише текст «Допуск (товщина)»; `admission-diameter-scope` / `admission-pipe-outer-diameter` — лише «Допуск (діаметр труби)» для труби (для пластини діаметр у допуску не виводиться).
  * `admission-thickness-table-ref` / `admission-diameter-table-ref` — довідкові підписи до табл. 2–3.

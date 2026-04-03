@@ -2,8 +2,8 @@ type Part = "plate" | "pipe";
 type Joint = "BW" | "FW";
 type Jc = "bs_gg" | "bs_ng" | "ss_mb" | "ss_nb";
 
-export function weldedPartsTypeLetter(t: Part): "Т" | "П" {
-  return t === "pipe" ? "Т" : "П";
+export function weldedPartsTypeLetter(t: Part): "P" | "T" {
+  return t === "pipe" ? "T" : "P";
 }
 
 export function formatJointCharacteristicsForCode(v: Jc): string {
@@ -11,7 +11,7 @@ export function formatJointCharacteristicsForCode(v: Jc): string {
 }
 
 /**
- * TRD §4.8 / §7.7.1 — single-line certification code (simplified; combined uses backslash).
+ * TRD §4.8 / §7.7.1 — single-line certification code (simplified; combined uses backslash). Вид деталей: `P` / `T`.
  */
 export function buildCertificationCodeString(input: {
   weldingMethod1: string;

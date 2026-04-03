@@ -122,7 +122,7 @@ export function WelderAttestationDocumentButtons({
         onClick={() => void saveThenDownload("protocol")}
       >
         <FileText className="size-4 shrink-0" aria-hidden />
-        {busy === "protocol" ? "Збереження…" : "Протокол (.docx)"}
+        {busy === "protocol" ? "Збереження…" : "Протокол"}
       </button>
       <button
         type="button"
@@ -131,7 +131,7 @@ export function WelderAttestationDocumentButtons({
         onClick={() => void saveThenDownload("certificate")}
       >
         <Award className="size-4 shrink-0" aria-hidden />
-        {busy === "certificate" ? "Збереження…" : "Посвідчення (.docx)"}
+        {busy === "certificate" ? "Збереження…" : "Посвідчення"}
       </button>
     </div>
   );

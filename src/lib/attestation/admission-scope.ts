@@ -220,7 +220,7 @@ export function formatThicknessAdmissionShortFromPairs(pairs: ThicknessWithMetho
 
 /** Що варив зварник на зразку — однозначно: лише пластина або лише труба (`{welded-parts-type}`). */
 export function formatWeldedPartsSampleDisplay(type: WeldedParts): string {
-  return type === "plate" ? "P(пластина)" : "T(труба)";
+  return type === "plate" ? "P (пластина)" : "T (труба)";
 }
 
 /**
