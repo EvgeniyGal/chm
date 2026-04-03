@@ -59,6 +59,17 @@ describe("admission-scope", () => {
     expect(formatCoatingAdmissionShort(["A", "B"])).toBe("A, RA");
   });
 
+  it("coating Wm: admission only Wm", () => {
+    expect(formatCoatingAdmissionShort(["Wm"])).toBe("Wm");
+    expect(formatCoatingAdmissionUa(["Wm"])).toContain("Wm");
+  });
+
+  it("RB + Wm combined: table 8 from electrode + Wm (no empty intersection)", () => {
+    expect(formatCoatingAdmissionShort(["RB", "Wm"])).toBe("A, R, RA, RB, RC, Wm");
+    expect(formatCoatingAdmissionUa(["RB", "Wm"])).toContain("табл. 8");
+    expect(formatCoatingAdmissionUa(["RB", "Wm"])).toContain("присадний");
+  });
+
   it("electrode-or-wire docx: coating (grade) / combined", () => {
     expect(
       formatElectrodeOrWireDocx({ coatingType: "B", materialGrade: "GHGhH67" }, null, false),

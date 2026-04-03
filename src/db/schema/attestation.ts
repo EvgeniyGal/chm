@@ -24,7 +24,7 @@ export const commissionMemberRoleEnum = pgEnum("commission_member_role", commiss
 export const sampleMaterialGroupCodes = ["W01", "W02", "W03", "W04", "W11"] as const;
 export const sampleMaterialGroupCodeEnum = pgEnum("sample_material_group_code", sampleMaterialGroupCodes);
 
-export const weldingConsumableCoatingTypes = ["A", "RA", "R", "RB", "RC", "B", "C", "S"] as const;
+export const weldingConsumableCoatingTypes = ["A", "RA", "R", "RB", "RC", "B", "C", "S", "Wm"] as const;
 export const weldingConsumableCoatingTypeEnum = pgEnum("welding_consumable_coating_type", weldingConsumableCoatingTypes);
 
 export const certificationGroupStatuses = ["draft", "active", "completed", "archived"] as const;

@@ -144,7 +144,7 @@ export type WelderDocContext = {
  * `welding-position` — коди ISO: `PA` або `PA, PF`; `admission-welding-position` — лише `manualWeldingPositionAdmission`.
  * `performing-weld` — характеристика шва: `ss nb`, `bs gg` (код з підкреслення → пробіл); `admission-performing-weld` — лише `manualJointCharacteristicsAdmission`.
  * `sample-material-grade` — `W01 (Ст3пс)`; `admission-sample-material-grade` — коротко `W01` / `W01, W02` / … за табл. 6–7 (п. 6.3).
- * `electrode-or-wire` — `B (марка)` або `B (марка) / C (марка)` при комбінованому зварюванні; `admission-electrode-or-wire` — коротко типи покриття за табл. 8 (перетин для обох матеріалів).
+ * `electrode-or-wire` — `B (марка)` або `B (марка) / C (марка)` при комбінованому зварюванні; `admission-electrode-or-wire` — типи за табл. 8: перетин лише між електродами; якщо є `Wm`, до списку додається `Wm` (без перетину з покриттями).
  * `certificate issued` — дата видачі посвідчень + місце видачі з групи: `ДД.ММ.РРРР р., {місце}`.
  */
 export function buildCertificateDocxPayload(ctx: WelderDocContext): Record<string, unknown> {

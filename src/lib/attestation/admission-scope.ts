@@ -321,19 +321,33 @@ const COATING_ALLOWED: Record<string, string[]> = {
   B: ["A", "RA", "R", "RB", "RC", "B"],
   C: ["C"],
   S: ["S"],
+  /** Присадний матеріал (wm) — допуск лише на той самий тип, без перетину з табл. 8 для електродів. */
+  Wm: ["Wm"],
 };
 
-/** Перетин допустимих типів покриття (табл. 8) для кожного фактичного покриття зразка; комбіноване зварювання — обидва матеріали. */
+const COATING_WM = "Wm";
+
+/**
+ * Перетин допустимих типів за табл. 8 для електродів; `Wm` (присадний дріт) не перетинається з покриттями —
+ * додається до результату, якщо серед матеріалів є присадний (комбіноване 141/111 тощо).
+ */
 function coatingAdmissionAllowedCodes(coatings: string[]): string[] {
   const uniq = [...new Set(coatings.map((c) => c.trim()).filter(Boolean))];
   if (uniq.length === 0) return [];
-  const allowedSets = uniq.map((c) => COATING_ALLOWED[c] ?? [c]);
+
+  const hasWm = uniq.includes(COATING_WM);
+  const electrodes = uniq.filter((c) => c !== COATING_WM);
+  if (electrodes.length === 0) return hasWm ? [COATING_WM] : [];
+
+  const allowedSets = electrodes.map((c) => COATING_ALLOWED[c] ?? [c]);
   let inter = new Set(allowedSets[0]);
   for (let i = 1; i < allowedSets.length; i++) {
     const next = new Set(allowedSets[i]);
     inter = new Set([...inter].filter((x) => next.has(x)));
   }
-  return [...inter].sort();
+  const electrodeCodes = [...inter].sort();
+  if (!hasWm) return electrodeCodes;
+  return [...new Set([...electrodeCodes, COATING_WM])].sort();
 }
 
 /** Документи: коротко `A` або `A, B, RC` за табл. 8. */
@@ -346,6 +360,14 @@ export function formatCoatingAdmissionShort(coatings: string[]): string {
 export function formatCoatingAdmissionUa(coatings: string[]): string {
   const codes = coatingAdmissionAllowedCodes(coatings);
   if (codes.length === 0) return "—";
+  const hasWm = codes.includes(COATING_WM);
+  const electrodeOnly = codes.filter((c) => c !== COATING_WM);
+  if (hasWm && electrodeOnly.length > 0) {
+    return `типи покриття електродів (п.3.2.4, табл. 8): ${electrodeOnly.join(", ")}; присадний матеріал (wm): ${COATING_WM}`;
+  }
+  if (hasWm) {
+    return `присадний матеріал (wm): ${COATING_WM}`;
+  }
   return `типи покриття електродів (п.3.2.4, табл. 8): ${codes.join(", ")}`;
 }
 

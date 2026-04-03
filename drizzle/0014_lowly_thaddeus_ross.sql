@@ -1,0 +1,1 @@
+ALTER TYPE "public"."welding_consumable_coating_type" ADD VALUE 'Wm';
