@@ -8,8 +8,11 @@ import {
   welderCertifications,
 } from "@/db/schema/attestation";
 
-import { buildAdmissionScopeFields } from "@/lib/attestation/admission-scope";
-import { buildCertificationCodeString } from "@/lib/attestation/certification-code";
+import {
+  buildAdmissionScopeFields,
+  formatWeldedPartsSampleDisplay,
+} from "@/lib/attestation/admission-scope";
+import { buildCertificationCodeString, formatJointCharacteristicsForCode } from "@/lib/attestation/certification-code";
 import {
   computeCertificateBlankNumber,
   computeCertificateNumber,
@@ -45,7 +48,13 @@ export type WelderDocContext = {
 
 /**
  * Payload keys for docxtemplater (`forms/certificate.docx`, `forms/protocol.docx`, `forms/report.docx`).
- * Додатково: `admission-welded-parts-type` (`p` / `T`), короткі `admission-thickness-scope` (напр. `3≤t≤20`),
+ * `welded-parts-type` — факт зразка: `P(пластина)` або `T(труба)`.
+ * `admission-welded-parts-type` — допуск: пластина → лише `P(пластина)`; труба → `T(труба), P(пластина)`.
+ * `admission-thickness-scope` + `admission-thickness-table-ref` (табл. 2: лист / стінка труби).
+ * Непорожні `manualThicknessAdmission` / `manualDiameterAdmission` (труба) підставляються замість авто у відповідні `admission-*-scope`.
+ * `admission-seam-type` / `welding-position`: непорожні `manualJointCharacteristicsAdmission` / `manualWeldingPositionAdmission` замінюють фрагмент з правил.
+ * `admission-diameter-scope` + `admission-diameter-table-ref` (табл. 3 для труби; п.6.2.2–6.2.3 для пластини).
+ * Короткі межі, напр. `3≤t≤20`,
  * `admission-diameter-scope` (табл. 3 або `D>500` / `D>150` для пластини п.6.2.2–6.2.3), інші `admission-*`.
  */
 export function buildCertificateDocxPayload(ctx: WelderDocContext): Record<string, unknown> {
@@ -89,11 +98,13 @@ export function buildCertificateDocxPayload(ctx: WelderDocContext): Record<strin
     .filter(Boolean) as string[];
   const sampleThickness = thicknessParts.join(", ");
 
-  const weldingPosition = [welder.weldingPosition1, welder.weldingPosition2].filter(Boolean).join(", ");
+  const weldingPositionCodes = [welder.weldingPosition1, welder.weldingPosition2].filter(Boolean).join(", ");
+  const manualPos = welder.manualWeldingPositionAdmission?.trim();
+  const weldingPosition = manualPos || weldingPositionCodes;
 
   const birthdayStr = welder.birthday ? fmtDate(new Date(welder.birthday)) : "—";
 
-  const admissionScope = buildAdmissionScopeFields({
+  const admissionScopeComputed = buildAdmissionScopeFields({
     weldedPartsType: welder.weldedPartsType,
     jointType: welder.jointType,
     sampleMaterialGroupCode: sampleMaterial.groupCode,
@@ -111,6 +122,17 @@ export function buildCertificateDocxPayload(ctx: WelderDocContext): Record<strin
     consumableCoating1: consumable1.coatingType,
     consumableCoating2: consumable2?.coatingType ?? null,
   });
+
+  const manualThickness = welder.manualThicknessAdmission?.trim();
+  const manualDiameter = welder.manualDiameterAdmission?.trim();
+  const admissionScope: Record<string, string> = {
+    ...admissionScopeComputed,
+    "admission-thickness-scope": manualThickness || admissionScopeComputed["admission-thickness-scope"],
+    "admission-diameter-scope":
+      welder.weldedPartsType === "pipe"
+        ? manualDiameter || admissionScopeComputed["admission-diameter-scope"]
+        : admissionScopeComputed["admission-diameter-scope"],
+  };
 
   const base: Record<string, unknown> = {
     "last-name": welder.lastName,
@@ -131,7 +153,7 @@ export function buildCertificateDocxPayload(ctx: WelderDocContext): Record<strin
     "welding-method": welder.isCombined
       ? `${welder.weldingMethod1} / ${welder.weldingMethod2 ?? ""}`
       : welder.weldingMethod1,
-    "welded-parts-type": weldedPartsTypeLabelUa(welder.weldedPartsType),
+    "welded-parts-type": formatWeldedPartsSampleDisplay(welder.weldedPartsType),
     "sample-material-grade": sampleMaterial.steelGrade,
     "sample-thickness": sampleThickness,
     "pipe-outer-diameter": [welder.pipeDiameter1, welder.pipeDiameter2, welder.pipeDiameter3]
@@ -143,6 +165,8 @@ export function buildCertificateDocxPayload(ctx: WelderDocContext): Record<strin
     "electrode-or-wire": electrodeOrWire,
     "joint-type": jointTypeLabelUa(welder.jointType),
     "certification-type": certificationTypeLabelUa(welder.certificationType),
+    "work-experience-years": String(welder.workExperienceYears),
+    "sample-mark": welder.sampleMark,
     "work-company": company.shortName,
     "certificate-valid-until": fmtDate(certificateValidUntil),
     "blank-number": blankNum,
@@ -150,6 +174,8 @@ export function buildCertificateDocxPayload(ctx: WelderDocContext): Record<strin
   };
 
   const coatingAdmission = admissionScope["admission-coating-scope"];
+  const manualJoint = welder.manualJointCharacteristicsAdmission?.trim();
+  const seamAdmissionBody = manualJoint || admissionScopeComputed["admission-joint-scope"];
   Object.assign(base, {
     "admission-electrode-or-wire": `${electrodeOrWire}. ${coatingAdmission}`,
     "admission-pipe-outer-diameter": admissionScope["admission-diameter-scope"],
@@ -158,12 +184,76 @@ export function buildCertificateDocxPayload(ctx: WelderDocContext): Record<strin
     "admission-welding-position": weldingPosition,
     "admission-sample-material-grade": `${sampleMaterial.steelGrade} (${admissionScope["admission-material-groups-scope"]})`,
     "admission-welding-method": base["welding-method"],
-    "admission-seam-type": `${jointTypeLabelUa(welder.jointType)}; ${admissionScope["admission-joint-scope"]}`,
+    "admission-seam-type": `${jointTypeLabelUa(welder.jointType)}; ${seamAdmissionBody}`,
     "seam-type": jointTypeLabelUa(welder.jointType),
     "performing-weld": certificationTypeLabelUa(welder.certificationType),
   });
 
   return base;
+}
+
+/** Поля з `forms/protocol.docx` (і сумісних завантажених шаблонів протоколу). */
+export function buildProtocolDocxPayload(
+  ctx: WelderDocContext,
+  commissionMemberNames: string[],
+): Record<string, unknown> {
+  const cert = buildCertificateDocxPayload(ctx);
+  const { welder, regulatoryDocs } = ctx;
+
+  const fullName = [welder.lastName, welder.firstName, welder.middleName].filter(Boolean).join(" ").trim();
+
+  let birthYearLocation = "—";
+  if (welder.birthday) {
+    const y = new Date(welder.birthday).getFullYear();
+    const loc = welder.birthLocation?.trim() || "—";
+    birthYearLocation = `${y} / ${loc}`;
+  } else if (welder.birthLocation?.trim()) {
+    birthYearLocation = `— / ${welder.birthLocation.trim()}`;
+  }
+
+  const jc = formatJointCharacteristicsForCode(
+    welder.jointCharacteristics as Parameters<typeof formatJointCharacteristicsForCode>[0],
+  );
+  const manualJoint = welder.manualJointCharacteristicsAdmission?.trim();
+  const jointDesc = `${jointTypeLabelUa(welder.jointType)}; ${jc}${manualJoint ? `; ${manualJoint}` : ""}`;
+
+  const standardsAdmission = regulatoryDocs.map((r) => r.admissionText.trim()).join(", ");
+
+  const memberLines = commissionMemberNames.map((n) => n.trim()).filter(Boolean);
+
+  const admissionTypePart = `виконання зварювальних робіт (${weldedPartsTypeLabelUa(welder.weldedPartsType)})`;
+
+  return {
+    ...cert,
+    "full-name": fullName,
+    "birth-year-location": birthYearLocation,
+    "qualification-doc-number": welder.prevQualificationDoc?.trim() || "—",
+    "type-of-certification": certificationTypeLabelUa(welder.certificationType),
+    "joint-type-description": jointDesc,
+    "preheat-and-interpass": welder.preheat ? "Так" : "Ні",
+    "heat-treatment": welder.heatTreatment ? "Так" : "Ні",
+    members: memberLines.join(", "),
+    "standards-list-admission": standardsAdmission,
+    "inspection-order-number": "9.1",
+    inspection: buildProtocolInspectionSummaryUa(welder),
+    commissionMembers: memberLines.map((n) => ({ "member-1": n })),
+    "admission-type": admissionTypePart,
+    admission: standardsAdmission ? `. ${standardsAdmission}` : "",
+  };
+}
+
+function buildProtocolInspectionSummaryUa(
+  welder: Parameters<typeof buildCertificateDocxPayload>[0]["welder"],
+): string {
+  const rows: string[] = [];
+  if (welder.inspVisual) rows.push("ВТ");
+  if (welder.inspRadiographic) rows.push("РТ");
+  if (welder.inspUltrasonic) rows.push("УЗК");
+  if (welder.inspBend) rows.push("вигин");
+  if (welder.inspMetallographic) rows.push("металографія");
+  if (welder.inspAdditional) rows.push("додатковий контроль");
+  if (rows.length === 0) return "Не обрано";
+  return `Обрано: ${rows.join(", ")}`;
 }
 
 export function buildReportDocxPayload(

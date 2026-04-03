@@ -7,7 +7,11 @@ import {
 import { weldingPositionSelectOptions } from "@/lib/attestation/welding-iso-options";
 import { DecimalMmInput } from "@/components/attestation/DecimalMmInput";
 import { SampleMaterialWelderSelect } from "@/components/attestation/SampleMaterialWelderSelect";
+import { ManualAdmissionSearchableField } from "@/components/attestation/ManualAdmissionSearchableField";
+import { ManualAdmissionTextInput } from "@/components/attestation/ManualAdmissionTextInput";
 import { PipeDiametersRow, WeldedPartsTypeProvider, WeldedPartsTypeSelect } from "@/components/attestation/WeldedPartsTypeContext";
+import { RequiredFieldMark } from "@/components/attestation/RequiredFieldMark";
+import { DROPDOWN_SCOPE } from "@/lib/dropdown-scopes";
 import { WelderCompanySelect } from "@/components/attestation/WelderCompanySelect";
 import { WorkExperienceYearsInput } from "@/components/attestation/WorkExperienceYearsInput";
 import type { certificationGroups, regulatoryDocuments, sampleMaterials, weldingConsumables } from "@/db/schema/attestation";
@@ -46,6 +50,8 @@ export function WelderCertificationFormFields({
   initial,
   lockGroupId = false,
   selectedRegulatoryIds = [],
+  welderManualJointAdmissionOptions,
+  welderManualPositionAdmissionOptions,
 }: {
   groups: GroupRow[];
   companies: CompanyRow[];
@@ -62,6 +68,10 @@ export function WelderCertificationFormFields({
   initial?: WelderRow;
   lockGroupId?: boolean;
   selectedRegulatoryIds?: string[];
+  /** Варіанти з `dropdown_options` для поля ручного допуску (характеристика шва). */
+  welderManualJointAdmissionOptions: string[];
+  /** Варіанти з `dropdown_options` для поля ручного допуску (положення). */
+  welderManualPositionAdmissionOptions: string[];
 }) {
   const w = initial;
   const gid = w?.groupId ?? defaultGroupId;
@@ -75,7 +85,9 @@ export function WelderCertificationFormFields({
         </>
       ) : (
         <label className="flex min-w-0 flex-col gap-1 text-sm">
-          <span>Група атестації *</span>
+          <span>
+            Група атестації <RequiredFieldMark />
+          </span>
           <select
             name="groupId"
             required
@@ -96,7 +108,9 @@ export function WelderCertificationFormFields({
         <legend className="text-sm font-medium">ПІБ та місце роботи</legend>
         <div className="grid min-w-0 grid-cols-1 gap-2 md:grid-cols-4">
           <label className="flex min-w-0 flex-col gap-1 text-sm">
-            <span>Прізвище *</span>
+            <span>
+              Прізвище <RequiredFieldMark />
+            </span>
             <input
               name="lastName"
               required
@@ -106,7 +120,9 @@ export function WelderCertificationFormFields({
             />
           </label>
           <label className="flex min-w-0 flex-col gap-1 text-sm">
-            <span>Ім&apos;я *</span>
+            <span>
+              Ім&apos;я <RequiredFieldMark />
+            </span>
             <input
               name="firstName"
               required
@@ -116,25 +132,59 @@ export function WelderCertificationFormFields({
             />
           </label>
           <label className="flex min-w-0 flex-col gap-1 text-sm">
-            <span>По батькові</span>
-            <input name="middleName" maxLength={100} defaultValue={w?.middleName ?? ""} className={welderFormInputClass} />
+            <span>
+              По батькові <RequiredFieldMark />
+            </span>
+            <input
+              name="middleName"
+              required
+              maxLength={100}
+              defaultValue={w?.middleName ?? ""}
+              className={welderFormInputClass}
+            />
           </label>
           <label className="flex min-w-0 flex-col gap-1 text-sm">
-            <span>Місце народження</span>
-            <input name="birthLocation" defaultValue={w?.birthLocation ?? ""} className={welderFormInputClass} />
+            <span>
+              Місце народження <RequiredFieldMark />
+            </span>
+            <input
+              name="birthLocation"
+              required
+              maxLength={255}
+              defaultValue={w?.birthLocation ?? ""}
+              className={welderFormInputClass}
+            />
           </label>
         </div>
         <div className="grid min-w-0 grid-cols-1 gap-2 md:grid-cols-4">
           <label className="flex min-w-0 flex-col gap-1 text-sm">
-            <span>Дата народження</span>
-            <input name="birthday" type="date" defaultValue={isoDate(w?.birthday)} className={welderFormInputClass} />
+            <span>
+              Дата народження <RequiredFieldMark />
+            </span>
+            <input
+              name="birthday"
+              type="date"
+              required
+              defaultValue={isoDate(w?.birthday)}
+              className={welderFormInputClass}
+            />
           </label>
           <label className="flex min-w-0 flex-col gap-1 text-sm">
-            <span>Попереднє посвідчення</span>
-            <input name="prevQualificationDoc" defaultValue={w?.prevQualificationDoc ?? ""} className={welderFormInputClass} />
+            <span>
+              Попереднє посвідчення <RequiredFieldMark />
+            </span>
+            <input
+              name="prevQualificationDoc"
+              required
+              maxLength={255}
+              defaultValue={w?.prevQualificationDoc ?? ""}
+              className={welderFormInputClass}
+            />
           </label>
           <label className="flex min-w-0 flex-col gap-1 text-sm">
-            <span>Стаж зварника (років) *</span>
+            <span>
+              Стаж зварника (років) <RequiredFieldMark />
+            </span>
             <WorkExperienceYearsInput
               name="workExperienceYears"
               required
@@ -143,7 +193,9 @@ export function WelderCertificationFormFields({
             />
           </label>
           <div className="flex min-w-0 flex-col gap-1 text-sm">
-            <span>Місце роботи (компанія) *</span>
+            <span>
+              Місце роботи (компанія) <RequiredFieldMark />
+            </span>
             <WelderCompanySelect
               initialCompanies={companies.map((c) => ({ id: c.id, label: c.shortName }))}
               defaultCompanyId={w?.companyId ?? ""}
@@ -159,7 +211,9 @@ export function WelderCertificationFormFields({
           <legend className="text-sm font-medium">Атестація</legend>
           <div className="flex min-w-0 flex-col gap-2 md:flex-row md:items-end md:gap-4">
             <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
-              <span>Вид атестації *</span>
+              <span>
+                Вид атестації <RequiredFieldMark />
+              </span>
               <select
                 name="certificationType"
                 required
@@ -182,14 +236,18 @@ export function WelderCertificationFormFields({
         <div className="flex min-w-0 flex-col gap-2 md:flex-row md:items-start md:gap-4">
           <WeldedPartsTypeSelect className={welderFormInputClass} />
           <label className="flex min-w-0 flex-col gap-1 text-sm md:min-w-0 md:flex-1">
-            <span>Тип шва *</span>
+            <span>
+              Тип шва <RequiredFieldMark />
+            </span>
             <select name="jointType" required className={welderFormInputClass} defaultValue={w?.jointType ?? "BW"}>
               <option value="BW">BW (стиковий)</option>
               <option value="FW">FW (кутовий)</option>
             </select>
           </label>
           <label className="flex min-w-0 flex-col gap-1 text-sm md:min-w-0 md:flex-1">
-            <span>Характеристика шва *</span>
+            <span>
+              Характеристика шва <RequiredFieldMark />
+            </span>
             <select
               name="jointCharacteristics"
               required
@@ -202,10 +260,20 @@ export function WelderCertificationFormFields({
               <option value="bs_ng">bs ng</option>
             </select>
           </label>
+          <ManualAdmissionSearchableField
+            name="manualJointCharacteristicsAdmission"
+            scope={DROPDOWN_SCOPE.WELDER_MANUAL_JOINT_ADMISSION}
+            label="Допуск (характеристика шва)"
+            defaultValue={w?.manualJointCharacteristicsAdmission ?? ""}
+            optionsFromBackend={welderManualJointAdmissionOptions}
+            inputClassName={welderFormInputClass}
+          />
         </div>
         <div className="flex min-w-0 flex-col gap-2 md:flex-row md:items-start md:gap-4">
           <label className="flex min-w-0 flex-col gap-1 text-sm md:min-w-0 md:flex-1">
-            <span>Положення 1 (ISO 6947) *</span>
+            <span>
+              Положення 1 <RequiredFieldMark />
+            </span>
             <select
               name="weldingPosition1"
               required
@@ -221,7 +289,7 @@ export function WelderCertificationFormFields({
             </select>
           </label>
           <label className="flex min-w-0 flex-col gap-1 text-sm md:min-w-0 md:flex-1">
-            <span>Положення 2 (ISO 6947)</span>
+            <span>Положення 2</span>
             <select name="weldingPosition2" defaultValue={(w?.weldingPosition2 ?? "").trim() || undefined} className={welderFormInputClass}>
               <option value="">—</option>
               {weldingPositionSelectOptions(w?.weldingPosition2 ?? "").map((o) => (
@@ -231,6 +299,14 @@ export function WelderCertificationFormFields({
               ))}
             </select>
           </label>
+          <ManualAdmissionSearchableField
+            name="manualWeldingPositionAdmission"
+            scope={DROPDOWN_SCOPE.WELDER_MANUAL_POSITION_ADMISSION}
+            label="Допуск (положення)"
+            defaultValue={w?.manualWeldingPositionAdmission ?? ""}
+            optionsFromBackend={welderManualPositionAdmissionOptions}
+            inputClassName={welderFormInputClass}
+          />
         </div>
         <label className="flex min-w-0 items-center gap-2 text-sm">
           <input name="preheat" type="checkbox" className="size-4" defaultChecked={w?.preheat ?? false} />
@@ -245,7 +321,9 @@ export function WelderCertificationFormFields({
         <fieldset className="flex min-w-0 flex-col gap-2 rounded-md border border-border p-3">
           <legend className="text-sm font-medium">Матеріали та розміри</legend>
         <div className="flex min-w-0 flex-col gap-1 text-sm">
-          <span>Матеріал зразка *</span>
+          <span>
+            Матеріал зразка <RequiredFieldMark />
+          </span>
           <SampleMaterialWelderSelect
             initialOptions={samples.map((s) => ({
               id: s.id,
@@ -257,7 +335,9 @@ export function WelderCertificationFormFields({
         </div>
         <div className="flex min-w-0 flex-col gap-2 md:flex-row md:items-start md:gap-4">
           <label className="flex min-w-0 flex-col gap-1 text-sm md:min-w-0 md:flex-1">
-            <span>Товщина 1 (мм) *</span>
+            <span>
+              Товщина 1 (мм) <RequiredFieldMark />
+            </span>
             <DecimalMmInput
               name="thickness1"
               required
@@ -274,14 +354,23 @@ export function WelderCertificationFormFields({
             <span>Товщина 3</span>
             <DecimalMmInput name="thickness3" defaultValue={dec(w?.thickness3)} className={welderFormInputClass} maxIntegerDigits={6} />
           </label>
+          <ManualAdmissionTextInput
+            name="manualThicknessAdmission"
+            label="Допуск (товщина)"
+            defaultValue={w?.manualThicknessAdmission ?? ""}
+            className={welderFormInputClass}
+            wrapClassName="md:min-w-[12rem]"
+          />
         </div>
         <PipeDiametersRow
           className={welderFormInputClass}
+          inputClassName={welderFormInputClass}
           defaults={{
             d1: dec(w?.pipeDiameter1),
             d2: dec(w?.pipeDiameter2),
             d3: dec(w?.pipeDiameter3),
           }}
+          defaultManualDiameterAdmission={w?.manualDiameterAdmission ?? ""}
         />
         <WeldingConsumablesPairRow
           consumables={consumables.map((c) => ({
@@ -297,7 +386,9 @@ export function WelderCertificationFormFields({
           <input name="shieldingGasFlux" defaultValue={w?.shieldingGasFlux ?? ""} className={welderFormInputClass} />
         </label>
         <label className="flex min-w-0 flex-col gap-1 text-sm">
-          <span>Маркування зразка *</span>
+          <span>
+            Маркування зразка <RequiredFieldMark />
+          </span>
           <input name="sampleMark" required maxLength={50} defaultValue={w?.sampleMark ?? ""} className={welderFormInputClass} />
         </label>
         </fieldset>
@@ -335,14 +426,18 @@ export function WelderCertificationFormFields({
       <fieldset className="flex min-w-0 flex-col gap-2 rounded-md border border-border p-3">
         <legend className="text-sm font-medium">Теорія та НД</legend>
         <label className="flex min-w-0 flex-col gap-1 text-sm">
-          <span>Результат теорії *</span>
+          <span>
+            Результат теорії <RequiredFieldMark />
+          </span>
           <select name="theoryScore" required className={welderFormInputClass} defaultValue={w?.theoryScore ?? "passed"}>
             <option value="passed">Здано</option>
             <option value="failed">Нездано</option>
           </select>
         </label>
         <div className="min-w-0">
-          <div className="mb-1 text-sm font-medium">Нормативні документи (до 10)</div>
+          <div className="mb-1 text-sm font-medium">
+            Нормативні документи (до 10) <RequiredFieldMark />
+          </div>
           <div className="max-h-40 min-w-0 space-y-1 overflow-y-auto overflow-x-hidden rounded-md border border-border p-2">
             {regulatoryDocs.length === 0 ? (
               <p className="text-xs text-muted-foreground">Додайте НД у Налаштуваннях.</p>

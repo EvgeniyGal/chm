@@ -15,6 +15,8 @@ const scopeSchema = z.enum([
   "CONTRACT_DURATION",
   "LINE_ITEM_UNIT",
   "CERTIFICATE_ISSUE_LOCATION",
+  "WELDER_MANUAL_JOINT_ADMISSION",
+  "WELDER_MANUAL_POSITION_ADMISSION",
 ]);
 const bodySchema = z.object({
   scope: scopeSchema,
@@ -22,7 +24,11 @@ const bodySchema = z.object({
 });
 
 async function requireRoleForDropdownScope(scope: string) {
-  if (scope === "CERTIFICATE_ISSUE_LOCATION") {
+  if (
+    scope === "CERTIFICATE_ISSUE_LOCATION" ||
+    scope === "WELDER_MANUAL_JOINT_ADMISSION" ||
+    scope === "WELDER_MANUAL_POSITION_ADMISSION"
+  ) {
     await requireRole("MANAGER");
   } else {
     await requireRole("ADMIN");

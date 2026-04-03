@@ -12,7 +12,7 @@ function sortUa(values: string[]) {
   return [...values].sort((a, b) => a.localeCompare(b, "uk"));
 }
 
-type Scope =
+export type SearchableDropdownScope =
   | "TAX_STATUS"
   | "SIGNER_POSITION_NOM"
   | "SIGNER_POSITION_GEN"
@@ -21,7 +21,9 @@ type Scope =
   | "PROJECT_TIMELINE"
   | "CONTRACT_DURATION"
   | "LINE_ITEM_UNIT"
-  | "CERTIFICATE_ISSUE_LOCATION";
+  | "CERTIFICATE_ISSUE_LOCATION"
+  | "WELDER_MANUAL_JOINT_ADMISSION"
+  | "WELDER_MANUAL_POSITION_ADMISSION";
 
 export function SearchableDropdownOptionField({
   label,
@@ -39,7 +41,7 @@ export function SearchableDropdownOptionField({
   showManageButtons = true,
 }: {
   label: string;
-  scope: Scope;
+  scope: SearchableDropdownScope;
   value: string;
   onChange: (next: string) => void;
   optionsFromBackend?: string[];

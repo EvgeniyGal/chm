@@ -32,12 +32,20 @@ export const certificationGroupUpdateSchema = certificationGroupCreateSchema;
 export const welderCertificationCreateSchema = z
   .object({
     groupId: z.string().uuid("Оберіть групу"),
-    lastName: z.string().min(1).max(100),
-    firstName: z.string().min(1).max(100),
-    middleName: z.string().max(100).optional(),
-    birthLocation: z.string().max(255).optional(),
-    birthday: z.string().optional(),
-    prevQualificationDoc: z.string().max(255).optional(),
+    lastName: z.string().trim().min(1, "Вкажіть прізвище").max(100),
+    firstName: z.string().trim().min(1, "Вкажіть ім'я").max(100),
+    middleName: z.string().trim().min(1, "Вкажіть по батькові").max(100),
+    birthLocation: z.string().trim().min(1, "Вкажіть місце народження").max(255),
+    birthday: z
+      .string()
+      .trim()
+      .min(1, "Вкажіть дату народження")
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "Некоректна дата народження"),
+    prevQualificationDoc: z
+      .string()
+      .trim()
+      .min(1, "Вкажіть дані про попереднє посвідчення")
+      .max(255),
     workExperienceYears: z
       .string()
       .transform((s) => s.trim())
@@ -68,6 +76,10 @@ export const welderCertificationCreateSchema = z
     thickness1: z.string().optional(),
     thickness2: z.string().optional(),
     thickness3: z.string().optional(),
+    manualJointCharacteristicsAdmission: z.string().max(4000),
+    manualWeldingPositionAdmission: z.string().max(4000),
+    manualThicknessAdmission: z.string().max(4000),
+    manualDiameterAdmission: z.string().max(4000),
     pipeDiameter1: z.string().optional(),
     pipeDiameter2: z.string().optional(),
     pipeDiameter3: z.string().optional(),
@@ -95,6 +107,34 @@ export const welderCertificationCreateSchema = z
     }
     if (!data.thickness1?.trim()) {
       ctx.addIssue({ code: "custom", message: "Вкажіть товщину зразка", path: ["thickness1"] });
+    }
+    if (!data.manualJointCharacteristicsAdmission?.trim()) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Вкажіть текст допуску за характеристикою шва",
+        path: ["manualJointCharacteristicsAdmission"],
+      });
+    }
+    if (!data.manualWeldingPositionAdmission?.trim()) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Вкажіть текст допуску за положенням зварювання",
+        path: ["manualWeldingPositionAdmission"],
+      });
+    }
+    if (!data.manualThicknessAdmission?.trim()) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Вкажіть текст допуску за товщиною",
+        path: ["manualThicknessAdmission"],
+      });
+    }
+    if (data.weldedPartsType === "pipe" && !data.manualDiameterAdmission?.trim()) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Вкажіть текст допуску за діаметром труби",
+        path: ["manualDiameterAdmission"],
+      });
     }
 
     const tFields: [string, string | undefined][] = [

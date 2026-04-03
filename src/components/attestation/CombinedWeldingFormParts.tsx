@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 
+import { RequiredFieldMark } from "@/components/attestation/RequiredFieldMark";
 import { WeldingConsumableWelderSelect } from "@/components/attestation/WeldingConsumableWelderSelect";
 import { weldingMethodSelectOptions } from "@/lib/attestation/welding-iso-options";
 import { cn } from "@/lib/utils";
@@ -75,7 +76,9 @@ export function WeldingMethodsGrid({
       )}
     >
       <label className={cn("flex min-w-0 flex-col gap-1 text-sm", isCombined && "md:min-w-0 md:flex-1")}>
-        <span>Спосіб зварювання 1 (ISO 4063) *</span>
+        <span>
+          Спосіб зварювання 1 <RequiredFieldMark />
+        </span>
         <select name="weldingMethod1" required defaultValue={d1 || undefined} className={inputClassName}>
           <option value="">— Оберіть код —</option>
           {options1.map((o) => (
@@ -87,7 +90,9 @@ export function WeldingMethodsGrid({
       </label>
       {isCombined ? (
         <label className="flex min-w-0 flex-col gap-1 text-sm md:min-w-0 md:flex-1">
-          <span>Спосіб зварювання 2 *</span>
+          <span>
+            Спосіб зварювання 2 <RequiredFieldMark />
+          </span>
           <select name="weldingMethod2" required defaultValue={d2 || undefined} className={inputClassName}>
             <option value="">— Оберіть код —</option>
             {options2.map((o) => (
@@ -124,7 +129,9 @@ export function WeldingConsumablesPairRow({
       )}
     >
       <div className={cn("flex min-w-0 flex-col gap-1 text-sm", isCombined && "md:min-w-0 md:flex-1")}>
-        <span>Електрод / дріт 1 *</span>
+        <span>
+          Електрод / дріт 1 <RequiredFieldMark />
+        </span>
         <WeldingConsumableWelderSelect
           name="consumable1Id"
           initialOptions={consumables}

@@ -10,6 +10,10 @@ describe("attestation critical path (validation + domain)", () => {
     fd.set("groupId", "00000000-0000-4000-8000-000000000001");
     fd.set("lastName", "Іванов");
     fd.set("firstName", "Іван");
+    fd.set("middleName", "Іванович");
+    fd.set("birthLocation", "Київ");
+    fd.set("birthday", "1990-05-15");
+    fd.set("prevQualificationDoc", "№123 від 2015");
     fd.set("workExperienceYears", "5");
     fd.set("companyId", "00000000-0000-4000-8000-000000000002");
     fd.set("certificationType", "primary");
@@ -20,6 +24,9 @@ describe("attestation critical path (validation + domain)", () => {
     fd.set("weldingPosition1", "PA");
     fd.set("sampleMaterialId", "00000000-0000-4000-8000-000000000003");
     fd.set("thickness1", "12");
+    fd.set("manualJointCharacteristicsAdmission", "Допуск за характеристикою шва");
+    fd.set("manualWeldingPositionAdmission", "Допуск за положенням");
+    fd.set("manualThicknessAdmission", "3≤t≤20 мм");
     fd.set("consumable1Id", "00000000-0000-4000-8000-000000000004");
     fd.set("sampleMark", "A-1");
     fd.set("theoryScore", "passed");
@@ -39,6 +46,10 @@ describe("attestation critical path (validation + domain)", () => {
     fd.set("groupId", "00000000-0000-4000-8000-000000000001");
     fd.set("lastName", "Іванов");
     fd.set("firstName", "Іван");
+    fd.set("middleName", "Іванович");
+    fd.set("birthLocation", "Київ");
+    fd.set("birthday", "1990-05-15");
+    fd.set("prevQualificationDoc", "№123");
     fd.set("workExperienceYears", "3.5");
     fd.set("companyId", "00000000-0000-4000-8000-000000000002");
     fd.set("certificationType", "primary");
@@ -49,6 +60,9 @@ describe("attestation critical path (validation + domain)", () => {
     fd.set("weldingPosition1", "PA");
     fd.set("sampleMaterialId", "00000000-0000-4000-8000-000000000003");
     fd.set("thickness1", "12");
+    fd.set("manualJointCharacteristicsAdmission", "x");
+    fd.set("manualWeldingPositionAdmission", "y");
+    fd.set("manualThicknessAdmission", "z");
     fd.set("consumable1Id", "00000000-0000-4000-8000-000000000004");
     fd.set("sampleMark", "A-1");
     fd.set("theoryScore", "passed");

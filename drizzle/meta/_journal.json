@@ -92,6 +92,13 @@
       "when": 1775125780110,
       "tag": "0012_slippery_scarlet_witch",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1775189749701,
+      "tag": "0013_welder_manual_admission",
+      "breakpoints": true
     }
   ]
 }

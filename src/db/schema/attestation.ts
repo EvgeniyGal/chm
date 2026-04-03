@@ -145,6 +145,14 @@ export const welderCertifications = pgTable(
     weldingPosition2: varchar("welding_position_2", { length: 10 }),
     preheat: boolean("preheat").notNull().default(false),
     heatTreatment: boolean("heat_treatment").notNull().default(false),
+    /** Ручний текст допуску для характеристики шва (документи). */
+    manualJointCharacteristicsAdmission: text("manual_joint_characteristics_admission").notNull().default(""),
+    /** Ручний текст допуску за положенням зварювання (документи). */
+    manualWeldingPositionAdmission: text("manual_welding_position_admission").notNull().default(""),
+    /** Ручний текст допуску за товщиною (документи). */
+    manualThicknessAdmission: text("manual_thickness_admission").notNull().default(""),
+    /** Ручний текст допуску за діаметром труби; для пластини — порожній рядок. */
+    manualDiameterAdmission: text("manual_diameter_admission").notNull().default(""),
     sampleMaterialId: uuid("sample_material_id")
       .notNull()
       .references(() => sampleMaterials.id),

@@ -1,3 +1,4 @@
+import { normalizeAdmissionComparisonSymbols } from "@/lib/attestation/admission-text-normalize";
 import { welderCertificationCreateSchema } from "@/lib/attestation/validation";
 
 function opt(s: string | undefined): string | undefined {
@@ -18,10 +19,10 @@ export function parseWelderCertificationForm(formData: FormData) {
     groupId: String(formData.get("groupId") ?? ""),
     lastName: String(formData.get("lastName") ?? ""),
     firstName: String(formData.get("firstName") ?? ""),
-    middleName: opt(String(formData.get("middleName") ?? "")),
-    birthLocation: opt(String(formData.get("birthLocation") ?? "")),
-    birthday: opt(String(formData.get("birthday") ?? "")),
-    prevQualificationDoc: opt(String(formData.get("prevQualificationDoc") ?? "")),
+    middleName: String(formData.get("middleName") ?? ""),
+    birthLocation: String(formData.get("birthLocation") ?? ""),
+    birthday: String(formData.get("birthday") ?? ""),
+    prevQualificationDoc: String(formData.get("prevQualificationDoc") ?? ""),
     workExperienceYears: String(formData.get("workExperienceYears") ?? ""),
     companyId: String(formData.get("companyId") ?? ""),
     certificationType: String(formData.get("certificationType") ?? "primary"),
@@ -39,6 +40,14 @@ export function parseWelderCertificationForm(formData: FormData) {
     thickness1: optDec(String(formData.get("thickness1") ?? "")),
     thickness2: optDec(String(formData.get("thickness2") ?? "")),
     thickness3: optDec(String(formData.get("thickness3") ?? "")),
+    manualJointCharacteristicsAdmission: normalizeAdmissionComparisonSymbols(
+      String(formData.get("manualJointCharacteristicsAdmission") ?? ""),
+    ),
+    manualWeldingPositionAdmission: normalizeAdmissionComparisonSymbols(
+      String(formData.get("manualWeldingPositionAdmission") ?? ""),
+    ),
+    manualThicknessAdmission: normalizeAdmissionComparisonSymbols(String(formData.get("manualThicknessAdmission") ?? "")),
+    manualDiameterAdmission: normalizeAdmissionComparisonSymbols(String(formData.get("manualDiameterAdmission") ?? "")),
     pipeDiameter1: optDec(String(formData.get("pipeDiameter1") ?? "")),
     pipeDiameter2: optDec(String(formData.get("pipeDiameter2") ?? "")),
     pipeDiameter3: optDec(String(formData.get("pipeDiameter3") ?? "")),

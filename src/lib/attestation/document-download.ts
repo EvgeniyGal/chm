@@ -1,5 +1,10 @@
 const DOCX_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
+function asciiSafeFilename(name: string): string {
+  const s = name.replace(/[^\x20-\x7E]/g, "_").replace(/["\\]/g, "_");
+  return s.trim() || "document.docx";
+}
+
 export async function attestationDocxOrPdfResponse(
   docx: Buffer,
   filenameDocx: string,
@@ -9,7 +14,7 @@ export async function attestationDocxOrPdfResponse(
     return new Response(new Uint8Array(docx), {
       headers: {
         "Content-Type": DOCX_TYPE,
-        "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(filenameDocx)}`,
+        "Content-Disposition": `attachment; filename="${asciiSafeFilename(filenameDocx)}"; filename*=UTF-8''${encodeURIComponent(filenameDocx)}`,
       },
     });
   }
@@ -31,7 +36,7 @@ export async function attestationDocxOrPdfResponse(
   return new Response(new Uint8Array(pdf), {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(pdfName)}`,
+      "Content-Disposition": `attachment; filename="${asciiSafeFilename(pdfName)}"; filename*=UTF-8''${encodeURIComponent(pdfName)}`,
     },
   });
 }

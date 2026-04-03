@@ -8,6 +8,10 @@ export const DROPDOWN_SCOPE = {
   CONTRACT_DURATION: "CONTRACT_DURATION",
   LINE_ITEM_UNIT: "LINE_ITEM_UNIT",
   CERTIFICATE_ISSUE_LOCATION: "CERTIFICATE_ISSUE_LOCATION",
+  /** Тексти допуску для документів зварника (характеристика шва). */
+  WELDER_MANUAL_JOINT_ADMISSION: "WELDER_MANUAL_JOINT_ADMISSION",
+  /** Тексти допуску для документів зварника (положення). */
+  WELDER_MANUAL_POSITION_ADMISSION: "WELDER_MANUAL_POSITION_ADMISSION",
 } as const;
 
 export type DropdownScope = (typeof DROPDOWN_SCOPE)[keyof typeof DROPDOWN_SCOPE];

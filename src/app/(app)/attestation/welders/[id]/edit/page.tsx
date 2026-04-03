@@ -54,9 +54,18 @@ export default async function EditWelderCertificationPage({ params }: { params: 
       getDropdownOptions(DROPDOWN_SCOPE.SIGNER_POSITION_NOM),
       getDropdownOptions(DROPDOWN_SCOPE.SIGNER_POSITION_GEN),
       getDropdownOptions(DROPDOWN_SCOPE.ACTING_UNDER),
+      getDropdownOptions(DROPDOWN_SCOPE.WELDER_MANUAL_JOINT_ADMISSION),
+      getDropdownOptions(DROPDOWN_SCOPE.WELDER_MANUAL_POSITION_ADMISSION),
     ]),
   ]);
-  const [taxStatusOptions, signerPositionNomOptions, signerPositionGenOptions, actingUnderOptions] = dropdownStuff;
+  const [
+    taxStatusOptions,
+    signerPositionNomOptions,
+    signerPositionGenOptions,
+    actingUnderOptions,
+    welderManualJointAdmissionOptions,
+    welderManualPositionAdmissionOptions,
+  ] = dropdownStuff;
 
   async function updateWelder(formData: FormData) {
     "use server";
@@ -87,10 +96,10 @@ export default async function EditWelderCertificationPage({ params }: { params: 
       .set({
         lastName: d.lastName.trim(),
         firstName: d.firstName.trim(),
-        middleName: d.middleName?.trim() || null,
-        birthLocation: d.birthLocation?.trim() || null,
-        birthday: d.birthday?.trim() || null,
-        prevQualificationDoc: d.prevQualificationDoc?.trim() || null,
+        middleName: d.middleName.trim(),
+        birthLocation: d.birthLocation.trim(),
+        birthday: d.birthday.trim(),
+        prevQualificationDoc: d.prevQualificationDoc.trim(),
         workExperienceYears: d.workExperienceYears.trim(),
         companyId: d.companyId,
         certificationType: d.certificationType,
@@ -104,6 +113,10 @@ export default async function EditWelderCertificationPage({ params }: { params: 
         weldingPosition2: d.weldingPosition2?.trim() || null,
         preheat: d.preheat,
         heatTreatment: d.heatTreatment,
+        manualJointCharacteristicsAdmission: d.manualJointCharacteristicsAdmission.trim(),
+        manualWeldingPositionAdmission: d.manualWeldingPositionAdmission.trim(),
+        manualThicknessAdmission: d.manualThicknessAdmission.trim(),
+        manualDiameterAdmission: pipeNull ? "" : d.manualDiameterAdmission.trim(),
         sampleMaterialId: d.sampleMaterialId,
         thickness1: d.thickness1?.trim() ?? null,
         thickness2: d.thickness2?.trim() || null,
@@ -172,6 +185,8 @@ export default async function EditWelderCertificationPage({ params }: { params: 
           initial={w}
           lockGroupId
           selectedRegulatoryIds={selectedRegulatoryIds}
+          welderManualJointAdmissionOptions={welderManualJointAdmissionOptions}
+          welderManualPositionAdmissionOptions={welderManualPositionAdmissionOptions}
         />
         <div className="mt-2 flex gap-3">
           <button type="submit" className="crm-btn-primary">

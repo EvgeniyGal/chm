@@ -10,7 +10,8 @@ import {
   formatThicknessAdmissionShortFromPairs,
   formatThicknessAdmissionUa,
   formatThicknessAdmissionUaFromPairs,
-  formatWeldedPartsAdmissionLetter,
+  formatWeldedPartsAdmissionDisplay,
+  formatWeldedPartsSampleDisplay,
 } from "@/lib/attestation/admission-scope";
 
 describe("admission-scope", () => {
@@ -61,20 +62,25 @@ describe("admission-scope", () => {
     expect(formatPipeDiameterAdmissionShort(273)).toBe("D≥136.5");
   });
 
-  it("plate spread: PA → D>150", () => {
-    expect(formatPlateTubeSpreadShort("PA", null)).toBe("D>150");
+  it("plate spread: PA → п.6.2.3", () => {
+    expect(formatPlateTubeSpreadShort("PA", null)).toBe("D>150 мм (п.6.2.3)");
   });
 
-  it("plate spread: PF → D>500", () => {
-    expect(formatPlateTubeSpreadShort("PF", null)).toBe("D>500");
+  it("plate spread: PF → п.6.2.2", () => {
+    expect(formatPlateTubeSpreadShort("PF", null)).toBe("D>500 мм (п.6.2.2)");
   });
 
-  it("welded parts letter", () => {
-    expect(formatWeldedPartsAdmissionLetter("plate")).toBe("p");
-    expect(formatWeldedPartsAdmissionLetter("pipe")).toBe("T");
+  it("welded-parts-type: лише факт зразка", () => {
+    expect(formatWeldedPartsSampleDisplay("plate")).toBe("P(пластина)");
+    expect(formatWeldedPartsSampleDisplay("pipe")).toBe("T(труба)");
   });
 
-  it("min/max thickness: t=5 and t=10 → lower from min, upper from max → 3≤t≤20", () => {
+  it("admission-welded-parts-type: допуск пластина / труба+пластина", () => {
+    expect(formatWeldedPartsAdmissionDisplay("plate")).toBe("P(пластина)");
+    expect(formatWeldedPartsAdmissionDisplay("pipe")).toBe("T(труба), P(пластина)");
+  });
+
+  it("табл. 2: кілька зразків (лист або стінка труби) t=5 і t=10 → 3≤t≤20", () => {
     expect(
       formatThicknessAdmissionShortFromPairs([
         { tMm: 5, methodCode: "111" },

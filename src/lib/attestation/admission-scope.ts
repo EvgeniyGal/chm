@@ -1,6 +1,14 @@
 /**
  * Область поширення атестації за п.3.2.5, 6.3–6.5 «Welder_Certification_Rules.md»
- * (табл. 2 — товщина, табл. 3 — діаметр, табл. 6 — групи металу, табл. 8 — покриття електродів).
+ *
+ * Товщина (табл. 2): з усіх зазначених зразків беруться min(t) і max(t); нижня межа допуску — з рядка
+ * таблиці для мінімальної t, верхня — для максимальної t (різні методи при однаковій t — об’єднання
+ * інтервалів). Для пластини t — товщина листа; для труби t — товщина стінки труби.
+ *
+ * Діаметр (табл. 3): лише якщо обрано «труба» — з усіх зазначених D беруться min і max; межі допуску
+ * з мінімального та максимального D за табл. 3.
+ *
+ * Пластина → труби: не табл. 3 з полів форми, а п.6.2.2 (D>500 мм) та п.6.2.3 (PA/PC → D>150 мм).
  */
 
 import { sampleMaterialGroupCodes, weldedPartsTypes } from "@/db/schema/attestation";
@@ -136,7 +144,10 @@ function diameterIntervalMm(D: number): { lo: number; hi: number | null } {
 
 export type DiameterWithMethod = { dMm: number; methodCode: string };
 
-/** Нижня межа з мінімального D зразка, верхня — з максимального D (порядок зразків 1→2→3). */
+/**
+ * Табл. 3: нижня межа допуску з мінімального D серед зразків, верхня — з максимального D.
+ * (methodCode у зрізі для симетрії з товщиною; табл. 3 від методу не залежить.)
+ */
 export function diameterBoundsMinMax(dPairs: DiameterWithMethod[]): { lo: number; hi: number | null } | null {
   if (dPairs.length === 0) return null;
 
@@ -210,9 +221,17 @@ export function formatThicknessAdmissionShortFromPairs(pairs: ThicknessWithMetho
   return formatThicknessShortFromBounds(b);
 }
 
-/** п — пластина, T — труба (п.7.7.5, позначення зразка). */
-export function formatWeldedPartsAdmissionLetter(type: WeldedParts): "p" | "T" {
-  return type === "plate" ? "p" : "T";
+/** Що варив зварник на зразку — однозначно: лише пластина або лише труба (`{welded-parts-type}`). */
+export function formatWeldedPartsSampleDisplay(type: WeldedParts): string {
+  return type === "plate" ? "P(пластина)" : "T(труба)";
+}
+
+/**
+ * Область поширення атестації (`{admission-welded-parts-type}`): пластина — лише пластина;
+ * труба — і труба, і пластина (п.6.2.1).
+ */
+export function formatWeldedPartsAdmissionDisplay(type: WeldedParts): string {
+  return type === "plate" ? "P(пластина)" : "T(труба), P(пластина)";
 }
 
 /**
@@ -236,15 +255,16 @@ export function formatPipeDiameterAdmissionShort(dMm: number): string {
 }
 
 /**
- * Для пластини: поширення на труби (п.6.2.2, п.6.2.3) — коротко `D>500` або `D>150` (PA/PC).
+ * Пластина → допуск на труби за п.6.2.2 (усі положення) та п.6.2.3 (PA або PC).
+ * Для PA/PC застосовується більш «дрібний» поріг D>150; інакше — D>500.
  */
 export function formatPlateTubeSpreadShort(
   weldingPosition1: string,
   weldingPosition2: string | null | undefined,
 ): string {
   const pos = `${weldingPosition1} ${weldingPosition2 ?? ""}`;
-  if (/\bPA\b/.test(pos) || /\bPC\b/.test(pos)) return "D>150";
-  return "D>500";
+  if (/\bPA\b/.test(pos) || /\bPC\b/.test(pos)) return "D>150 мм (п.6.2.3)";
+  return "D>500 мм (п.6.2.2)";
 }
 
 /** Спрощений варіант: один і той самий ISO-код (або 311 для усіх, якщо серед методів є газове зварювання) для кожного t. */
@@ -353,6 +373,10 @@ export function buildAdmissionScopeFields(input: AdmissionScopeInput): Record<st
   if (t3 != null) pairs.push({ tMm: t3, methodCode: m1 });
 
   const thicknessShort = formatThicknessAdmissionShortFromPairs(pairs);
+  const thicknessTableRef =
+    input.weldedPartsType === "plate"
+      ? "табл. 2 (t — товщина листа зразка)"
+      : "табл. 2 (t — товщина стінки труби зразка)";
 
   const dPairs: DiameterWithMethod[] = [];
   const d1 = parseMm(input.pipeDiameter1);
@@ -365,10 +389,13 @@ export function buildAdmissionScopeFields(input: AdmissionScopeInput): Record<st
   if (d3 != null) dPairs.push({ dMm: d3, methodCode: m1 });
 
   let diameterShort = "—";
+  let diameterTableRef = "—";
   if (input.weldedPartsType === "pipe" && dPairs.length > 0) {
     diameterShort = formatPipeDiameterAdmissionShortFromBounds(diameterBoundsMinMax(dPairs));
+    diameterTableRef = "табл. 3 (D — зовнішній діаметр труби зразка)";
   } else if (input.weldedPartsType === "plate") {
     diameterShort = formatPlateTubeSpreadShort(input.weldingPosition1, input.weldingPosition2);
+    diameterTableRef = "поширення атестації на листі на труби (п.6.2.2, п.6.2.3)";
   }
 
   const materialUa = formatMaterialGroupAdmissionUa(input.sampleMaterialGroupCode);
@@ -379,10 +406,10 @@ export function buildAdmissionScopeFields(input: AdmissionScopeInput): Record<st
 
   const jointUa = formatJointTypeAdmissionUa(input.jointType);
 
-  const partLetter = formatWeldedPartsAdmissionLetter(input.weldedPartsType);
+  const partDisplay = formatWeldedPartsAdmissionDisplay(input.weldedPartsType);
 
   const narrative = [
-    partLetter,
+    partDisplay,
     thicknessShort !== "—" ? thicknessShort : null,
     diameterShort !== "—" ? diameterShort : null,
     materialUa,
@@ -394,8 +421,10 @@ export function buildAdmissionScopeFields(input: AdmissionScopeInput): Record<st
 
   return {
     "admission-thickness-scope": thicknessShort,
+    "admission-thickness-table-ref": thicknessTableRef,
     "admission-diameter-scope": diameterShort,
-    "admission-welded-parts-type": partLetter,
+    "admission-diameter-table-ref": diameterTableRef,
+    "admission-welded-parts-type": partDisplay,
     "admission-material-groups-scope": materialUa,
     "admission-coating-scope": coatingUa,
     "admission-joint-scope": jointUa,
