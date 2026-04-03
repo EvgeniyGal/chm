@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 
 import { db } from "@/db";
 import { commissionMembers } from "@/db/schema/attestation";
-import { requireRole } from "@/lib/authz";
+import { requireApprovedUser } from "@/lib/authz";
 
 function revalidateCommissionRoster() {
   revalidatePath("/attestation/settings");
@@ -13,7 +13,7 @@ function revalidateCommissionRoster() {
 }
 
 export async function addCommissionMemberAction(formData: FormData) {
-  await requireRole("MANAGER");
+  await requireApprovedUser();
   const fullName = String(formData.get("fullName") ?? "").trim();
   const position = String(formData.get("position") ?? "").trim();
   const role = String(formData.get("role") ?? "member");
@@ -30,7 +30,7 @@ export async function addCommissionMemberAction(formData: FormData) {
 }
 
 export async function updateCommissionMemberAction(formData: FormData) {
-  await requireRole("MANAGER");
+  await requireApprovedUser();
   const id = String(formData.get("id") ?? "").trim();
   const fullName = String(formData.get("fullName") ?? "").trim();
   const position = String(formData.get("position") ?? "").trim();
@@ -51,7 +51,7 @@ export async function updateCommissionMemberAction(formData: FormData) {
 }
 
 export async function archiveCommissionMemberAction(formData: FormData) {
-  await requireRole("MANAGER");
+  await requireApprovedUser();
   const id = String(formData.get("id") ?? "").trim();
   if (!id) return;
   await db.update(commissionMembers).set({ isActive: false }).where(eq(commissionMembers.id, id));
@@ -59,7 +59,7 @@ export async function archiveCommissionMemberAction(formData: FormData) {
 }
 
 export async function restoreCommissionMemberAction(formData: FormData) {
-  await requireRole("MANAGER");
+  await requireApprovedUser();
   const id = String(formData.get("id") ?? "").trim();
   if (!id) throw new Error("Не вказано запис");
   await db.update(commissionMembers).set({ isActive: true }).where(eq(commissionMembers.id, id));

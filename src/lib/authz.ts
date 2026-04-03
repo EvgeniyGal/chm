@@ -28,3 +28,10 @@ export async function requireRole(minRole: UserRole) {
   return { userId, role: actual };
 }
 
+/** Any approved account (OWNER / ADMIN / MANAGER). No extra role rank — use for org-wide features like attestation. */
+export async function requireApprovedUser() {
+  const { userId, role } = await requireAuth();
+  const actual = role ?? "MANAGER";
+  return { userId, role: actual };
+}
+

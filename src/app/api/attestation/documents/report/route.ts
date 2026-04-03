@@ -2,7 +2,7 @@ import { asc, eq } from "drizzle-orm";
 
 import { db } from "@/db";
 import { certificationGroups, commissionMembers, welderCertifications } from "@/db/schema/attestation";
-import { requireRole } from "@/lib/authz";
+import { requireApprovedUser } from "@/lib/authz";
 import { buildReportDocxPayload, buildReportItemRow } from "@/lib/attestation/docx-payload";
 import { attestationDocxOrPdfResponse } from "@/lib/attestation/document-download";
 import { wantsPdfFormat } from "@/lib/attestation/output-format";
@@ -13,7 +13,7 @@ import { renderDocxTemplate } from "@/lib/attestation/render-docx";
 export const runtime = "nodejs";
 
 export async function GET(req: Request) {
-  await requireRole("MANAGER");
+  await requireApprovedUser();
   const url = new URL(req.url);
   const groupId = url.searchParams.get("groupId")?.trim();
   if (!groupId) {

@@ -12,12 +12,12 @@ import {
 import { CommissionGroupPickers } from "@/components/attestation/CommissionGroupPickers";
 import { CertificateIssueLocationField } from "@/components/attestation/CertificateIssueLocationField";
 import { GuardedForm } from "@/components/forms/GuardedForm";
-import { requireRole } from "@/lib/authz";
+import { requireApprovedUser } from "@/lib/authz";
 import { certificationGroupCreateSchema } from "@/lib/attestation/validation";
 import { DROPDOWN_SCOPE, getDropdownOptions, saveDropdownOption } from "@/lib/dropdown-options";
 
 export default async function NewAttestationGroupPage() {
-  await requireRole("MANAGER");
+  await requireApprovedUser();
 
   const commissionAllRows = await db.select().from(commissionMembers).orderBy(desc(commissionMembers.createdAt));
 
@@ -43,7 +43,7 @@ export default async function NewAttestationGroupPage() {
 
   async function create(formData: FormData) {
     "use server";
-    await requireRole("MANAGER");
+    await requireApprovedUser();
 
     const skipRedirect = String(formData.get("_skipRedirect") ?? "") === "1";
 

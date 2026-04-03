@@ -5,7 +5,7 @@ import { db } from "@/db";
 import { documentTemplates } from "@/db/schema/attestation";
 import { readTemplateBuffer } from "@/lib/attestation/template-buffer";
 import { blobReadWriteToken, vercelPrivateBlobUrlFromStorageKey } from "@/lib/blob-token";
-import { requireRole } from "@/lib/authz";
+import { requireApprovedUser } from "@/lib/authz";
 
 export const runtime = "nodejs";
 
@@ -18,7 +18,7 @@ function attachmentFilename(baseName: string): string {
 }
 
 export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
-  await requireRole("MANAGER");
+  await requireApprovedUser();
   const { id } = await ctx.params;
 
   const row = await db.query.documentTemplates.findFirst({
@@ -42,7 +42,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
 }
 
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
-  await requireRole("MANAGER");
+  await requireApprovedUser();
   const { id } = await ctx.params;
   const body = (await req.json()) as { name?: string };
   const name = String(body.name ?? "").trim();
@@ -62,7 +62,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 }
 
 export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
-  await requireRole("MANAGER");
+  await requireApprovedUser();
   const { id } = await ctx.params;
 
   const row = await db.query.documentTemplates.findFirst({

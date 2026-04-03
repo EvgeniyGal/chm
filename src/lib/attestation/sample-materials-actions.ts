@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 
 import { db } from "@/db";
 import { sampleMaterials } from "@/db/schema/attestation";
-import { requireRole } from "@/lib/authz";
+import { requireApprovedUser } from "@/lib/authz";
 
 const GROUPS = ["W01", "W02", "W03", "W04", "W11"] as const;
 
@@ -15,7 +15,7 @@ function revalidateSampleMaterialRelated() {
 }
 
 export async function addSampleMaterialAndReturnId(formData: FormData): Promise<string> {
-  await requireRole("MANAGER");
+  await requireApprovedUser();
   const groupCode = String(formData.get("groupCode") ?? "").trim() as (typeof GROUPS)[number];
   const steelGrade = String(formData.get("steelGrade") ?? "").trim();
   if (!steelGrade) throw new Error("Вкажіть марку сталі");
@@ -34,7 +34,7 @@ export async function addSampleMaterialAction(formData: FormData): Promise<void>
 }
 
 export async function updateSampleMaterialAction(formData: FormData) {
-  await requireRole("MANAGER");
+  await requireApprovedUser();
   const id = String(formData.get("id") ?? "").trim();
   const groupCode = String(formData.get("groupCode") ?? "").trim() as (typeof GROUPS)[number];
   const steelGrade = String(formData.get("steelGrade") ?? "").trim();
@@ -54,7 +54,7 @@ export async function updateSampleMaterialAction(formData: FormData) {
 }
 
 export async function archiveSampleMaterialAction(formData: FormData) {
-  await requireRole("MANAGER");
+  await requireApprovedUser();
   const id = String(formData.get("id") ?? "").trim();
   if (!id) return;
   await db.update(sampleMaterials).set({ isActive: false }).where(eq(sampleMaterials.id, id));
@@ -62,7 +62,7 @@ export async function archiveSampleMaterialAction(formData: FormData) {
 }
 
 export async function restoreSampleMaterialAction(formData: FormData) {
-  await requireRole("MANAGER");
+  await requireApprovedUser();
   const id = String(formData.get("id") ?? "").trim();
   if (!id) throw new Error("Не вказано запис");
   await db.update(sampleMaterials).set({ isActive: true }).where(eq(sampleMaterials.id, id));

@@ -14,12 +14,12 @@ import {
   welderCertificationRegulatoryDocuments,
   welderCertifications,
 } from "@/db/schema/attestation";
-import { requireRole } from "@/lib/authz";
+import { requireApprovedUser } from "@/lib/authz";
 import { parseWelderCertificationForm } from "@/lib/attestation/parse-welder-form";
 import { DROPDOWN_SCOPE, getDropdownOptions } from "@/lib/dropdown-options";
 
 export default async function EditWelderCertificationPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireRole("MANAGER");
+  await requireApprovedUser();
   const { id } = await params;
 
   const w = await db.query.welderCertifications.findFirst({
@@ -69,7 +69,7 @@ export default async function EditWelderCertificationPage({ params }: { params: 
 
   async function updateWelder(formData: FormData) {
     "use server";
-    await requireRole("MANAGER");
+    await requireApprovedUser();
 
     const skipRedirect = String(formData.get("_skipRedirect") ?? "") === "1";
 

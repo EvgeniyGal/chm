@@ -5,14 +5,14 @@ import { revalidatePath } from "next/cache";
 
 import { db } from "@/db";
 import { regulatoryDocuments } from "@/db/schema/attestation";
-import { requireRole } from "@/lib/authz";
+import { requireApprovedUser } from "@/lib/authz";
 
 function revalidateSettings() {
   revalidatePath("/attestation/settings");
 }
 
 export async function addRegulatoryDocumentAction(formData: FormData) {
-  await requireRole("MANAGER");
+  await requireApprovedUser();
   const code = String(formData.get("code") ?? "").trim();
   const name = String(formData.get("name") ?? "").trim();
   const admissionText = String(formData.get("admissionText") ?? "").trim();
@@ -22,7 +22,7 @@ export async function addRegulatoryDocumentAction(formData: FormData) {
 }
 
 export async function updateRegulatoryDocumentAction(formData: FormData) {
-  await requireRole("MANAGER");
+  await requireApprovedUser();
   const id = String(formData.get("id") ?? "").trim();
   const code = String(formData.get("code") ?? "").trim();
   const name = String(formData.get("name") ?? "").trim();
@@ -42,7 +42,7 @@ export async function updateRegulatoryDocumentAction(formData: FormData) {
 }
 
 export async function archiveRegulatoryDocumentAction(formData: FormData) {
-  await requireRole("MANAGER");
+  await requireApprovedUser();
   const id = String(formData.get("id") ?? "").trim();
   if (!id) return;
   await db.update(regulatoryDocuments).set({ isActive: false }).where(eq(regulatoryDocuments.id, id));
@@ -50,7 +50,7 @@ export async function archiveRegulatoryDocumentAction(formData: FormData) {
 }
 
 export async function restoreRegulatoryDocumentAction(formData: FormData) {
-  await requireRole("MANAGER");
+  await requireApprovedUser();
   const id = String(formData.get("id") ?? "").trim();
   if (!id) throw new Error("Не вказано запис");
   await db.update(regulatoryDocuments).set({ isActive: true }).where(eq(regulatoryDocuments.id, id));

@@ -2,12 +2,12 @@ import { eq } from "drizzle-orm";
 
 import { db } from "@/db";
 import { documentTemplates } from "@/db/schema/attestation";
-import { requireRole } from "@/lib/authz";
+import { requireApprovedUser } from "@/lib/authz";
 
 export const runtime = "nodejs";
 
 export async function POST(_req: Request, ctx: { params: Promise<{ id: string }> }) {
-  await requireRole("MANAGER");
+  await requireApprovedUser();
   const { id } = await ctx.params;
 
   const row = await db.query.documentTemplates.findFirst({

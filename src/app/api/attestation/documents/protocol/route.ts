@@ -1,4 +1,4 @@
-import { requireRole } from "@/lib/authz";
+import { requireApprovedUser } from "@/lib/authz";
 import { buildProtocolDocxPayload } from "@/lib/attestation/docx-payload";
 import { attestationDocxOrPdfResponse } from "@/lib/attestation/document-download";
 import { wantsPdfFormat } from "@/lib/attestation/output-format";
@@ -10,7 +10,7 @@ import { renderDocxTemplate } from "@/lib/attestation/render-docx";
 export const runtime = "nodejs";
 
 export async function GET(req: Request) {
-  await requireRole("MANAGER");
+  await requireApprovedUser();
   const url = new URL(req.url);
   const welderId = url.searchParams.get("welderId")?.trim();
   if (!welderId) {

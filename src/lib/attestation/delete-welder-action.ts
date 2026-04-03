@@ -6,10 +6,10 @@ import { redirect } from "next/navigation";
 
 import { db } from "@/db";
 import { certificationGroups, welderCertifications } from "@/db/schema/attestation";
-import { requireRole } from "@/lib/authz";
+import { requireApprovedUser } from "@/lib/authz";
 
 export async function deleteWelderAction(formData: FormData) {
-  await requireRole("MANAGER");
+  await requireApprovedUser();
   const wid = String(formData.get("welderId") ?? "").trim();
   if (!wid) throw new Error("MISSING_ID");
   const current = await db.query.welderCertifications.findFirst({

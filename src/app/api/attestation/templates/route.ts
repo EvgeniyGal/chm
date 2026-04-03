@@ -4,14 +4,14 @@ import { db } from "@/db";
 import { documentTemplates } from "@/db/schema/attestation";
 import type { AttestationTemplateType } from "@/db/schema/attestation";
 import { blobReadWriteToken } from "@/lib/blob-token";
-import { requireRole } from "@/lib/authz";
+import { requireApprovedUser } from "@/lib/authz";
 
 export const runtime = "nodejs";
 
 const TYPES: AttestationTemplateType[] = ["protocol", "certificate", "report_protocol"];
 
 export async function POST(req: Request) {
-  const { userId } = await requireRole("MANAGER");
+  const { userId } = await requireApprovedUser();
   const token = blobReadWriteToken();
   if (!token) {
     return Response.json({ error: "BLOB_NOT_CONFIGURED" }, { status: 503 });

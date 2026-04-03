@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { deleteDropdownOptions, saveDropdownOption } from "@/lib/dropdown-options";
-import { requireRole } from "@/lib/authz";
+import { requireApprovedUser, requireRole } from "@/lib/authz";
 
 export const runtime = "nodejs";
 
@@ -29,7 +29,7 @@ async function requireRoleForDropdownScope(scope: string) {
     scope === "WELDER_MANUAL_JOINT_ADMISSION" ||
     scope === "WELDER_MANUAL_POSITION_ADMISSION"
   ) {
-    await requireRole("MANAGER");
+    await requireApprovedUser();
   } else {
     await requireRole("ADMIN");
   }

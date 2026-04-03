@@ -15,13 +15,13 @@ import {
   commissionMembers,
   welderCertifications,
 } from "@/db/schema/attestation";
-import { requireRole } from "@/lib/authz";
+import { requireApprovedUser } from "@/lib/authz";
 import { certificationGroupStatusLabelUa } from "@/lib/attestation/labels-uk";
 import { certificationGroupUpdateSchema } from "@/lib/attestation/validation";
 import { DROPDOWN_SCOPE, getDropdownOptions, saveDropdownOption } from "@/lib/dropdown-options";
 
 export default async function EditAttestationGroupPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireRole("MANAGER");
+  await requireApprovedUser();
   const { id } = await params;
 
   const group = await db.query.certificationGroups.findFirst({
@@ -68,7 +68,7 @@ export default async function EditAttestationGroupPage({ params }: { params: Pro
 
   async function update(formData: FormData) {
     "use server";
-    await requireRole("MANAGER");
+    await requireApprovedUser();
 
     const skipRedirect = String(formData.get("_skipRedirect") ?? "") === "1";
 
@@ -176,7 +176,7 @@ export default async function EditAttestationGroupPage({ params }: { params: Pro
 
   async function markActive() {
     "use server";
-    await requireRole("MANAGER");
+    await requireApprovedUser();
     const g = await db.query.certificationGroups.findFirst({
       where: eq(certificationGroups.id, id),
     });
@@ -191,7 +191,7 @@ export default async function EditAttestationGroupPage({ params }: { params: Pro
 
   async function revertToDraft() {
     "use server";
-    await requireRole("MANAGER");
+    await requireApprovedUser();
     const g = await db.query.certificationGroups.findFirst({
       where: eq(certificationGroups.id, id),
     });
@@ -206,7 +206,7 @@ export default async function EditAttestationGroupPage({ params }: { params: Pro
 
   async function markCompleted() {
     "use server";
-    await requireRole("MANAGER");
+    await requireApprovedUser();
     const g = await db.query.certificationGroups.findFirst({
       where: eq(certificationGroups.id, id),
     });
@@ -221,7 +221,7 @@ export default async function EditAttestationGroupPage({ params }: { params: Pro
 
   async function archiveGroup() {
     "use server";
-    await requireRole("MANAGER");
+    await requireApprovedUser();
     const g = await db.query.certificationGroups.findFirst({
       where: eq(certificationGroups.id, id),
     });

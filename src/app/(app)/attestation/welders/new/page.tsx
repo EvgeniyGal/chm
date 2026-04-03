@@ -16,7 +16,7 @@ import {
 } from "@/db/schema/attestation";
 import { allocateNextFreeOrderInGroup } from "@/lib/attestation/allocate-next-free-order-in-group";
 import { buildDuplicateWelderTemplate } from "@/lib/attestation/build-duplicate-welder-template";
-import { requireRole } from "@/lib/authz";
+import { requireApprovedUser } from "@/lib/authz";
 import { parseWelderCertificationForm } from "@/lib/attestation/parse-welder-form";
 import { DROPDOWN_SCOPE, getDropdownOptions } from "@/lib/dropdown-options";
 
@@ -25,7 +25,7 @@ export default async function NewWelderCertificationPage({
 }: {
   searchParams: Promise<{ groupId?: string; from?: string }>;
 }) {
-  await requireRole("MANAGER");
+  await requireApprovedUser();
   const sp = await searchParams;
   const explicitGroupId = String(sp.groupId ?? "").trim();
   const fromId = String(sp.from ?? "").trim();
@@ -90,7 +90,7 @@ export default async function NewWelderCertificationPage({
 
   async function createWelder(formData: FormData) {
     "use server";
-    await requireRole("MANAGER");
+    await requireApprovedUser();
 
     const skipRedirect = String(formData.get("_skipRedirect") ?? "") === "1";
 

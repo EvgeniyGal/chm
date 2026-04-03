@@ -6,7 +6,7 @@ import type { ShowFilter, SortBy } from "@/components/attestation/AttestationGro
 import { AttestationGroupsTable } from "@/components/attestation/AttestationGroupsTable";
 import { db } from "@/db";
 import { certificationGroups, welderCertifications } from "@/db/schema/attestation";
-import { requireRole } from "@/lib/authz";
+import { requireApprovedUser } from "@/lib/authz";
 import { getPgErrorCode } from "@/lib/pg-error-code";
 
 const NON_ARCHIVED_GROUP_STATUSES = ["draft", "active", "completed"] as const;
@@ -76,7 +76,7 @@ export default async function AttestationGroupsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await requireRole("MANAGER");
+  await requireApprovedUser();
   const sp = await searchParams;
 
   const q = String(sp.q ?? "").trim();

@@ -21,10 +21,10 @@ import { addRegulatoryDocumentAction } from "@/lib/attestation/regulatory-docume
 import { addSampleMaterialAction } from "@/lib/attestation/sample-materials-actions";
 import { WELDING_COATING_TYPES } from "@/lib/attestation/welding-consumable-coating-options";
 import { addWeldingConsumableAction } from "@/lib/attestation/welding-consumables-actions";
-import { requireRole } from "@/lib/authz";
+import { requireApprovedUser } from "@/lib/authz";
 
 export default async function AttestationSettingsPage() {
-  await requireRole("MANAGER");
+  await requireApprovedUser();
 
   const members = await db.select().from(commissionMembers).orderBy(desc(commissionMembers.createdAt));
   const templates = await db.select().from(documentTemplates).orderBy(desc(documentTemplates.createdAt));

@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 
 import { db } from "@/db";
 import { weldingConsumables } from "@/db/schema/attestation";
-import { requireRole } from "@/lib/authz";
+import { requireApprovedUser } from "@/lib/authz";
 import { WELDING_COATING_TYPES, type WeldingCoatingType } from "@/lib/attestation/welding-consumable-coating-options";
 
 const COATING = WELDING_COATING_TYPES;
@@ -16,7 +16,7 @@ function revalidateWeldingConsumableRelated() {
 }
 
 export async function addWeldingConsumableAndReturnId(formData: FormData): Promise<string> {
-  await requireRole("MANAGER");
+  await requireApprovedUser();
   const materialGrade = String(formData.get("materialGrade") ?? "").trim();
   const coatingType = String(formData.get("coatingType") ?? "").trim() as WeldingCoatingType;
   if (!materialGrade) throw new Error("Вкажіть марку матеріалу");
@@ -35,7 +35,7 @@ export async function addWeldingConsumableAction(formData: FormData): Promise<vo
 }
 
 export async function updateWeldingConsumableAction(formData: FormData) {
-  await requireRole("MANAGER");
+  await requireApprovedUser();
   const id = String(formData.get("id") ?? "").trim();
   const materialGrade = String(formData.get("materialGrade") ?? "").trim();
   const coatingType = String(formData.get("coatingType") ?? "").trim() as WeldingCoatingType;
@@ -61,7 +61,7 @@ export async function updateWeldingConsumableAction(formData: FormData) {
 }
 
 export async function archiveWeldingConsumableAction(formData: FormData) {
-  await requireRole("MANAGER");
+  await requireApprovedUser();
   const id = String(formData.get("id") ?? "").trim();
   if (!id) return;
   await db.update(weldingConsumables).set({ isActive: false }).where(eq(weldingConsumables.id, id));
@@ -69,7 +69,7 @@ export async function archiveWeldingConsumableAction(formData: FormData) {
 }
 
 export async function restoreWeldingConsumableAction(formData: FormData) {
-  await requireRole("MANAGER");
+  await requireApprovedUser();
   const id = String(formData.get("id") ?? "").trim();
   if (!id) throw new Error("Не вказано запис");
   await db.update(weldingConsumables).set({ isActive: true }).where(eq(weldingConsumables.id, id));
