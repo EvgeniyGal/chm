@@ -2,7 +2,7 @@
  * Способи зварювання ISO 4063 (п.3.2.1 «Welder_Certification_Rules.md»).
  * Значення зберігаються як код (напр. «111»).
  */
-export const ISO4063_WELDING_METHOD_OPTIONS = [
+const ISO4063_WELDING_METHOD_OPTIONS = [
   { value: "111", label: "111 — Ручне дугове зварювання покритим електродом (РЗЕ)" },
   { value: "114", label: "114 — Дугове зварювання порошковим дротом (ЗП)" },
   { value: "121", label: "121 — Дугове зварювання під флюсом дротяним електродом (ЗФ)" },
@@ -18,7 +18,7 @@ export const ISO4063_WELDING_METHOD_OPTIONS = [
 /**
  * Положення зварювання (ISO 6947 / п.3.2.6, приклади п.7.7.5 у «Welder_Certification_Rules.md»).
  */
-export const ISO6947_WELDING_POSITION_OPTIONS = [
+const ISO6947_WELDING_POSITION_OPTIONS = [
   { value: "PA", label: "PA — плоский шов (flat)" },
   { value: "PB", label: "PB — горизонтальний у вертикальній площині" },
   { value: "PC", label: "PC — горизонтальний шов" },
@@ -29,10 +29,10 @@ export const ISO6947_WELDING_POSITION_OPTIONS = [
   { value: "PH", label: "PH — знизу (overhead)" },
 ] as const;
 
-const METHOD_VALUES = new Set(ISO4063_WELDING_METHOD_OPTIONS.map((o) => o.value));
-const POSITION_VALUES = new Set(ISO6947_WELDING_POSITION_OPTIONS.map((o) => o.value));
+const METHOD_VALUES = new Set<string>(ISO4063_WELDING_METHOD_OPTIONS.map((o) => o.value));
+const POSITION_VALUES = new Set<string>(ISO6947_WELDING_POSITION_OPTIONS.map((o) => o.value));
 
-export type IsoSelectOption = { value: string; label: string };
+type IsoSelectOption = { value: string; label: string };
 
 /** Якщо в БД збережено код поза списком — додаємо один варіант, щоб select не втрачав значення. */
 export function weldingMethodSelectOptions(saved: string | undefined): IsoSelectOption[] {
@@ -51,12 +51,4 @@ export function weldingPositionSelectOptions(saved: string | undefined): IsoSele
     return [{ value: s, label: `${s} (збережене значення)` }, ...list];
   }
   return list;
-}
-
-export function isKnownWeldingMethodCode(v: string): boolean {
-  return METHOD_VALUES.has(v.trim());
-}
-
-export function isKnownWeldingPositionCode(v: string): boolean {
-  return POSITION_VALUES.has(v.trim());
 }

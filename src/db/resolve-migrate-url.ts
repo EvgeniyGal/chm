@@ -1,6 +1,6 @@
 import { normalizeDatabaseUrlForPg } from "./normalize-database-url";
 
-export function deriveNeonDirectFromPooler(connectionString: string): string | null {
+function deriveNeonDirectFromPooler(connectionString: string): string | null {
   try {
     const u = new URL(connectionString);
     if (!u.hostname.includes("-pooler")) return null;

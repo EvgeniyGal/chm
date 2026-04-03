@@ -22,7 +22,7 @@ import { useListUrlParams } from "@/hooks/use-list-url-params";
 import { AttestationGroupRowActions } from "@/components/attestation/AttestationGroupRowActions";
 import { certificationGroupStatusLabelUa } from "@/lib/attestation/labels-uk";
 
-export type AttestationGroupListRow = {
+type AttestationGroupListRow = {
   id: string;
   groupNumber: string;
   protocolDate: string;

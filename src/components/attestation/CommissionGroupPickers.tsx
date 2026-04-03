@@ -8,7 +8,7 @@ import { CommissionManageDialog, type CommissionRosterRow } from "@/components/a
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 
-export type CommissionMemberOption = {
+type CommissionMemberOption = {
   id: string;
   fullName: string;
   position: string | null;

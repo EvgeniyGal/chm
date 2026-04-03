@@ -12,7 +12,7 @@ type ActRow = typeof acceptanceActs.$inferSelect;
 type InvoiceRow = typeof invoices.$inferSelect;
 type CompanyRow = typeof companies.$inferSelect;
 
-export type AcceptanceActDocxInput = {
+type AcceptanceActDocxInput = {
   act: ActRow;
   invoice: InvoiceRow;
   customer: CompanyRow;

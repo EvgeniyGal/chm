@@ -3,7 +3,7 @@ import { and, desc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { auditEvents, users } from "@/db/schema";
 
-export type ContractAuditHistoryItem = {
+type ContractAuditHistoryItem = {
   id: string;
   action: "CREATE" | "UPDATE" | "DELETE";
   atIso: string;
@@ -62,7 +62,7 @@ function diffContractRows(before: Record<string, unknown>, after: Record<string,
 }
 
 /** Human-readable lines for CONTRACT audit `diff` JSON (stored by writeAuditEvent). */
-export function summarizeContractAuditDiff(action: string, diff: unknown): string[] {
+function summarizeContractAuditDiff(action: string, diff: unknown): string[] {
   const lines: string[] = [];
   if (diff == null) return ["Немає збережених деталей."];
 

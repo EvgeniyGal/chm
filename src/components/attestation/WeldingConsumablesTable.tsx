@@ -21,7 +21,7 @@ import {
 } from "@/lib/attestation/welding-consumables-actions";
 import { getServerActionErrorMessage } from "@/lib/server-action-error-message";
 
-export type WeldingConsumableRow = {
+type WeldingConsumableRow = {
   id: string;
   materialGrade: string;
   coatingType: string;

@@ -9,7 +9,7 @@ import {
   type SampleMaterialEditTarget,
 } from "@/components/attestation/QuickCreateSampleMaterialModal";
 
-export type SampleMaterialOption = { id: string; groupCode: string; steelGrade: string };
+type SampleMaterialOption = { id: string; groupCode: string; steelGrade: string };
 
 export function SampleMaterialWelderSelect({
   initialOptions,

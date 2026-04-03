@@ -29,7 +29,7 @@ import { useListUrlParams } from "@/hooks/use-list-url-params";
 import { formatMoney } from "@/lib/totals";
 import { exportRowsToXlsx } from "@/lib/xlsx-export";
 
-export type InvoiceRow = {
+type InvoiceRow = {
   id: string;
   number: string;
   date: string;

@@ -76,9 +76,3 @@ export async function loadGroupCommissionMembersForDocx(groupId: string): Promis
     namesOnly: rows.map((r) => r.fullName.trim()).filter(Boolean),
   };
 }
-
-/** Лише ПІБ членів групи (без посади) — для звіту та полів, де потрібно ім’я без «ПІБ — посада». */
-export async function loadGroupCommissionMemberNames(groupId: string): Promise<string[]> {
-  const { namesOnly } = await loadGroupCommissionMembersForDocx(groupId);
-  return namesOnly;
-}

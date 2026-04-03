@@ -1,4 +1,4 @@
-export type LineItemInput = {
+type LineItemInput = {
   quantity: number;
   price: number; // without VAT
 };
@@ -14,7 +14,7 @@ export function calcTotals(items: LineItemInput[]) {
   return { totalWithoutVat, vat20, totalWithVat };
 }
 
-export function round2(n: number) {
+function round2(n: number) {
   return Math.round((n + Number.EPSILON) * 100) / 100;
 }
 

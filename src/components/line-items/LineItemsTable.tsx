@@ -40,7 +40,7 @@ type LineItemForm = {
   }>;
 };
 
-export type ContractLineCatalogEntry = {
+type ContractLineCatalogEntry = {
   id: string;
   title: string;
   unit: string;

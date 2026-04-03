@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /** Client forms send quantity/price as strings; JSON may use comma decimals. */
-export function parseNonNegativeDecimal(v: unknown): number {
+function parseNonNegativeDecimal(v: unknown): number {
   if (typeof v === "number" && Number.isFinite(v)) return Math.max(0, v);
   if (typeof v === "string") {
     const n = Number.parseFloat(v.replace(",", ".").replace(/\s/g, "").trim());

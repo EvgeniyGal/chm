@@ -1,11 +1,11 @@
 "use client";
 
-import { CheckCircle2, FileUp, Loader2, Upload, X } from "lucide-react";
+import { CheckCircle2, Loader2, Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { cn } from "@/lib/utils";
+import { FileDropZone } from "@/components/uploads/FileDropZone";
 
 const TYPES = [
   { value: "protocol", label: "Протокол засідання" },
@@ -41,7 +41,6 @@ export function TemplateUploadForm() {
   const [pending, setPending] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null);
-  const [dragOver, setDragOver] = useState(false);
 
   const clearFile = useCallback(() => {
     const input = fileInputRef.current;
@@ -49,15 +48,19 @@ export function TemplateUploadForm() {
     setSelectedLabel(null);
   }, []);
 
-  const pickFile = useCallback((file: File) => {
-    if (!isDocxFile(file)) {
-      toast.error("Потрібен файл Microsoft Word (.docx)");
+  const handleTemplateFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) {
+      setSelectedLabel(null);
       return;
     }
-    const input = fileInputRef.current;
-    if (!input) return;
-    assignInputFile(input, file);
-    setSelectedLabel(file.name);
+    if (!isDocxFile(f)) {
+      toast.error("Потрібен файл Microsoft Word (.docx)");
+      assignInputFile(e.target, null);
+      setSelectedLabel(null);
+      return;
+    }
+    setSelectedLabel(f.name);
   }, []);
 
   return (
@@ -113,96 +116,26 @@ export function TemplateUploadForm() {
         <span>Назва</span>
         <input name="name" required className="h-10 rounded-md border border-border px-3" placeholder="напр. Посвідчення 2026" />
       </label>
-      <div className="flex flex-col gap-1">
-        <span className="text-foreground" id="template-docx-label">
-          Файл шаблону
-        </span>
-        <input
-          ref={fileInputRef}
-          id="template-docx-file"
-          name="file"
-          type="file"
-          accept={ACCEPT}
-          required
-          className="sr-only"
-          aria-labelledby="template-docx-label"
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (f) pickFile(f);
-            else setSelectedLabel(null);
-          }}
-        />
-        <div className="relative">
-          <label
-            htmlFor="template-docx-file"
-            onDragEnter={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setDragOver(true);
-            }}
-            onDragLeave={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOver(false);
-            }}
-            onDragOver={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-            }}
-            onDrop={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setDragOver(false);
-              const f = e.dataTransfer.files?.[0];
-              if (f) pickFile(f);
-            }}
-            className={cn(
-              "group flex min-h-[9.5rem] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed px-4 py-8 text-center transition-[border-color,background-color,box-shadow]",
-              dragOver
-                ? "border-primary bg-primary/10 ring-2 ring-primary/25 dark:bg-primary/15"
-                : "border-border bg-muted/30 hover:border-primary/50 hover:bg-muted/50 dark:hover:bg-muted/40",
-            )}
-          >
-            <span
-              className={cn(
-                "mb-2 flex size-12 items-center justify-center rounded-full transition-colors",
-                dragOver
-                  ? "bg-primary/15 text-primary"
-                  : "bg-background text-muted-foreground shadow-sm ring-1 ring-border group-hover:text-primary",
-              )}
-            >
-              <FileUp className="size-6" aria-hidden />
-            </span>
-            {selectedLabel ? (
-              <span className="max-w-full break-all text-sm font-medium text-foreground">{selectedLabel}</span>
-            ) : (
-              <>
-                <span className="text-sm font-medium text-foreground">
-                  {dragOver ? "Відпустіть файл тут" : "Перетягніть .docx сюди або натисніть, щоб обрати"}
-                </span>
-                <span className="mt-1 text-xs text-muted-foreground">Лише формат Word (.docx)</span>
-              </>
-            )}
-          </label>
-          {selectedLabel ? (
-            <button
-              type="button"
-              className="absolute top-2 right-2 z-10 inline-flex size-8 items-center justify-center rounded-md border border-border bg-background text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground"
-              title="Прибрати файл"
-              aria-label="Прибрати файл"
-              onClick={(e) => {
-                e.preventDefault();
-                clearFile();
-              }}
-            >
-              <X className="size-4" aria-hidden />
-            </button>
-          ) : null}
-        </div>
-        <p className="text-xs text-muted-foreground">
-          Перетягніть файл у рамку або натисніть на неї — відкриється вибір файлу.
-        </p>
-      </div>
+      <FileDropZone
+        inputId="template-docx-file"
+        labelId="template-docx-label"
+        label="Файл шаблону"
+        accept={ACCEPT}
+        name="file"
+        required
+        inputRef={fileInputRef}
+        emptyTitle="Перетягніть .docx сюди або натисніть, щоб обрати"
+        emptySubtitle="Лише формат Word (.docx)"
+        footerHint="Перетягніть файл у рамку або натисніть на неї — відкриється вибір файлу."
+        dragActiveTitle="Відпустіть файл тут"
+        selectedContent={
+          selectedLabel ? (
+            <span className="max-w-full break-all text-sm font-medium text-foreground">{selectedLabel}</span>
+          ) : null
+        }
+        onInputChange={handleTemplateFileChange}
+        onClear={clearFile}
+      />
       <button
         type="submit"
         disabled={pending}

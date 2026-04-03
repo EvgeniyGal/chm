@@ -24,7 +24,7 @@ import { certificationGroupStatusLabelUa } from "@/lib/attestation/labels-uk";
 import type { ShowFilter } from "@/components/attestation/AttestationGroupsTable";
 import { WelderListRowActions } from "@/components/attestation/WelderListRowActions";
 
-export type WelderListRow = {
+type WelderListRow = {
   id: string;
   groupNumber: string;
   protocolDate: string;

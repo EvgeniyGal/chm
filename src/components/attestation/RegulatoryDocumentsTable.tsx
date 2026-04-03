@@ -20,7 +20,7 @@ import {
 } from "@/lib/attestation/regulatory-documents-actions";
 import { getServerActionErrorMessage } from "@/lib/server-action-error-message";
 
-export type RegulatoryDocumentRow = {
+type RegulatoryDocumentRow = {
   id: string;
   code: string;
   name: string;

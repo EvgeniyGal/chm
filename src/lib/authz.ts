@@ -5,7 +5,7 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import type { UserRole } from "@/db/schema";
 
-export async function requireAuth() {
+async function requireAuth() {
   const session = await auth();
   const user = session?.user as any;
   if (!user?.id) throw new Error("UNAUTHORIZED");

@@ -2,10 +2,9 @@ import { and, asc, eq, inArray } from "drizzle-orm";
 
 import { db } from "@/db";
 import { dropdownOptions } from "@/db/schema";
-import { DROPDOWN_SCOPE, type DropdownScope } from "./dropdown-scopes";
+import type { DropdownScope } from "./dropdown-scopes";
 
 export { DROPDOWN_SCOPE } from "./dropdown-scopes";
-export type { DropdownScope } from "./dropdown-scopes";
 
 function normalizeValues(values: string[]) {
   return [...new Set(values.map((v) => v.trim()).filter(Boolean))];

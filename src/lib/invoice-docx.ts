@@ -21,7 +21,7 @@ function formatContactsLine(contactsJson: string): string {
   }
 }
 
-export type InvoiceDocxInput = {
+type InvoiceDocxInput = {
   invoice: InvoiceRow;
   contractor: CompanyRow;
   customer: CompanyRow;

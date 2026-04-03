@@ -9,7 +9,7 @@ import {
   type WeldingConsumableEditTarget,
 } from "@/components/attestation/QuickCreateWeldingConsumableModal";
 
-export type WeldingConsumableOption = { id: string; materialGrade: string; coatingType: string };
+type WeldingConsumableOption = { id: string; materialGrade: string; coatingType: string };
 
 export function WeldingConsumableWelderSelect({
   name,

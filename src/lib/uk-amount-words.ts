@@ -140,7 +140,7 @@ function joinParts(parts: string[]): string {
 /**
  * @param unitsGender Gender for the 1..999 "units" group (before гривня use "f").
  */
-export function integerToUkrainianWords(n: number, unitsGender: Gender = "m"): string {
+function integerToUkrainianWords(n: number, unitsGender: Gender = "m"): string {
   if (!Number.isFinite(n) || n < 0 || n > 999999999999) {
     return String(n);
   }
@@ -194,7 +194,7 @@ function kopiykaWordForm(n: number): string {
  * Amount in words only (no leading figure), sentence case.
  * Example: `Чотири тисячі сто шість гривень 57 копійок`
  */
-export function uahAmountWordsOnly(amount: number): string {
+function uahAmountWordsOnly(amount: number): string {
   const rounded = Math.round((amount + Number.EPSILON) * 100) / 100;
   const hrn = Math.floor(rounded + 1e-9);
   let kop = Math.round((rounded - hrn) * 100);
@@ -212,7 +212,7 @@ export function uahAmountWordsOnly(amount: number): string {
  * Amount for contract text: figure + parenthetical words for hryvnias, kopiyky as digits.
  * Example: `4106.57 (Чотири тисячі сто шість гривень 57 копійок)`
  */
-export function uahAmountToWords(amount: number): string {
+function uahAmountToWords(amount: number): string {
   const rounded = Math.round((amount + Number.EPSILON) * 100) / 100;
   return `${rounded.toFixed(2)} (${uahAmountWordsOnly(amount)})`;
 }

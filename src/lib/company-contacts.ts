@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export function normalizePhone(input: string) {
+function normalizePhone(input: string) {
   const digits = input.replace(/\D/g, "");
   if (digits.startsWith("380")) return `+${digits}`;
   if (digits.startsWith("0") && digits.length === 10) return `+38${digits}`;

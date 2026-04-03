@@ -8,7 +8,7 @@ import type { companies } from "@/db/schema";
 import { calcRowTotal, calcTotals, formatMoney } from "@/lib/totals";
 import { uahContractPriceLiteral } from "@/lib/uk-amount-words";
 
-export type CompanyRow = typeof companies.$inferSelect;
+type CompanyRow = typeof companies.$inferSelect;
 
 type CompanyContact = { type: "tel" | "email"; value: string };
 
@@ -57,7 +57,7 @@ function formatCompanyDetails(c: CompanyRow): string {
   return lines.join("\n");
 }
 
-export type TreatyGeneratePayload = {
+type TreatyGeneratePayload = {
   variant: "full" | "short";
   workType: "WORKS" | "SERVICES";
   /** Shown in header; use "—" for unsaved draft. */

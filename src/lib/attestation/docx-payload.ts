@@ -69,7 +69,7 @@ function compactAdmissionWeldedPartsType(s: string): string {
 /**
  * Один рядок з полів допуску посвідчення (ті самі ключі, що в шаблоні сертифіката).
  */
-export function buildAdmissionSummaryLine(cert: Record<string, unknown>): string {
+function buildAdmissionSummaryLine(cert: Record<string, unknown>): string {
   const parts: string[] = [];
   for (const key of ADMISSION_SUMMARY_KEYS) {
     const raw = cert[key];

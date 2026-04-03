@@ -88,4 +88,4 @@ const DialogTitle = React.forwardRef<
   return <DialogPrimitive.Title ref={ref} className={cn("text-sm font-semibold text-foreground", className)} {...props} />;
 });
 
-export { Dialog, DialogPortal, DialogTrigger, DialogClose, DialogContent, DialogOverlay, DialogTitle };
+export { Dialog, DialogTrigger, DialogClose, DialogContent, DialogTitle };

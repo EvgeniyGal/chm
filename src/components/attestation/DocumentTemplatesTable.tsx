@@ -13,7 +13,7 @@ import { TemplateDownloadButton } from "@/components/attestation/TemplateDownloa
 import { TemplateActivateButton } from "@/components/attestation/TemplateUploadForm";
 import { listTableHeaderClass } from "@/components/data-table/list-styles";
 
-export type DocumentTemplateRow = {
+type DocumentTemplateRow = {
   id: string;
   templateType: string;
   name: string;

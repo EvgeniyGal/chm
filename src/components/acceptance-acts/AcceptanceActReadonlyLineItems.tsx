@@ -2,7 +2,7 @@
 
 import { formatMoney } from "@/lib/totals";
 
-export type AcceptanceActReadonlyLineItem = {
+type AcceptanceActReadonlyLineItem = {
   id: string;
   title: string;
   unit: string;

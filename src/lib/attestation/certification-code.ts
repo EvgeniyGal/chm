@@ -2,7 +2,7 @@ type Part = "plate" | "pipe";
 type Joint = "BW" | "FW";
 type Jc = "bs_gg" | "bs_ng" | "ss_mb" | "ss_nb";
 
-export function weldedPartsTypeLetter(t: Part): "P" | "T" {
+function weldedPartsTypeLetter(t: Part): "P" | "T" {
   return t === "pipe" ? "T" : "P";
 }
 

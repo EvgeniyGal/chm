@@ -15,19 +15,13 @@ type WeldedParts = (typeof weldedPartsTypes)[number];
 
 const GAS_WELD_CODE = "311";
 
-function parseMm(v: string | null | undefined): number | null {
-  if (v == null || v === "") return null;
-  const n = Number(v);
-  return Number.isFinite(n) && n > 0 ? n : null;
-}
-
 function formatMm(n: number): string {
   if (Number.isInteger(n)) return String(n);
   return n.toLocaleString("uk-UA", { maximumFractionDigits: 2 });
 }
 
 /** Компактні числа для умов t, D (мм), без пробілів. */
-export function formatNumShort(n: number): string {
+function formatNumShort(n: number): string {
   if (Number.isInteger(n)) return String(n);
   const s = n.toFixed(2).replace(/\.?0+$/, "");
   return s;
@@ -139,7 +133,7 @@ function diameterIntervalMm(D: number): { lo: number; hi: number | null } {
   return { lo: 0.5 * D, hi: null };
 }
 
-export type DiameterWithMethod = { dMm: number; methodCode: string };
+type DiameterWithMethod = { dMm: number; methodCode: string };
 
 /**
  * Табл. 3: нижня межа допуску з мінімального D серед зразків, верхня — з максимального D.
@@ -167,7 +161,7 @@ export function diameterBoundsMinMax(dPairs: DiameterWithMethod[]): { lo: number
   return { lo: iLo.lo, hi: iHi.hi };
 }
 
-export type ThicknessWithMethod = { tMm: number; methodCode: string };
+type ThicknessWithMethod = { tMm: number; methodCode: string };
 
 function formatThicknessUaFromBounds(
   bounds: NonNullable<ReturnType<typeof thicknessBoundsMinMax>>,
@@ -308,7 +302,7 @@ export function formatMaterialGroupAdmissionShort(group: GroupCode): string {
   return MAP[group];
 }
 
-export function formatMaterialGroupAdmissionUa(group: GroupCode): string {
+function formatMaterialGroupAdmissionUa(group: GroupCode): string {
   return `групи зварюваних матеріалів (основний метал): ${MATERIAL_SCOPE[group]}`;
 }
 
@@ -370,14 +364,14 @@ export function formatElectrodeOrWireDocx(
 }
 
 /** п.6.2.6 — стиковий шов поширюється на кутовий за подібних умов. */
-export function formatJointTypeAdmissionUa(joint: "BW" | "FW"): string {
+function formatJointTypeAdmissionUa(joint: "BW" | "FW"): string {
   if (joint === "BW") {
     return "тип шва: BW; атестація на стикові шви поширюється на кутові (FW) за подібних умов (п.6.2.6)";
   }
   return "тип шва: FW";
 }
 
-export type AdmissionScopeInput = {
+type AdmissionScopeInput = {
   weldedPartsType: WeldedParts;
   jointType: "BW" | "FW";
   sampleMaterialGroupCode: GroupCode;

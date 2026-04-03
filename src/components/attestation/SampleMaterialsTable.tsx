@@ -20,7 +20,7 @@ import {
 } from "@/lib/attestation/sample-materials-actions";
 import { getServerActionErrorMessage } from "@/lib/server-action-error-message";
 
-export type SampleMaterialRow = {
+type SampleMaterialRow = {
   id: string;
   groupCode: string;
   steelGrade: string;

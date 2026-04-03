@@ -18,7 +18,7 @@ export function WeldedPartsTypeProvider({ defaultValue, children }: { defaultVal
   );
 }
 
-export function useWeldedPartsType() {
+function useWeldedPartsType() {
   const ctx = useContext(WeldedPartsTypeContext);
   if (!ctx) {
     throw new Error("useWeldedPartsType must be used within WeldedPartsTypeProvider");

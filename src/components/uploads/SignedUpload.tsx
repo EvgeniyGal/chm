@@ -1,14 +1,13 @@
 "use client";
 
 import * as Dialog from "@radix-ui/react-dialog";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
 import { FiTrash2 } from "react-icons/fi";
 import { toast } from "sonner";
 
+import { FileDropZone } from "@/components/uploads/FileDropZone";
 import { getServerActionErrorMessage } from "@/lib/server-action-error-message";
 import type { SignedScanListItem } from "@/lib/signed-scans";
-
-export type { SignedScanListItem } from "@/lib/signed-scans";
 
 const ACCEPT_ATTR =
   "application/pdf,.pdf,image/jpeg,image/png,image/gif,image/webp,image/bmp,image/tiff,image/x-ms-bmp,.tif,.tiff,.heic,.heif";
@@ -36,7 +35,25 @@ export function SignedUpload({
   const [scans, setScans] = useState<SignedScanListItem[]>(() => initialScans ?? []);
   const [listLoading, setListLoading] = useState(() => initialScans === undefined);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [pickedFiles, setPickedFiles] = useState<File[]>([]);
   const docPhrase = entityLabels[entityType];
+
+  const syncPickedFromInput = useCallback(() => {
+    setPickedFiles(Array.from(fileRef.current?.files ?? []));
+  }, []);
+
+  const clearPicked = useCallback(() => {
+    const input = fileRef.current;
+    if (input) input.value = "";
+    setPickedFiles([]);
+  }, []);
+
+  const handleFileInputChange = useCallback(
+    (_e: ChangeEvent<HTMLInputElement>) => {
+      syncPickedFromInput();
+    },
+    [syncPickedFromInput],
+  );
 
   const loadScans = useCallback(async () => {
     setListLoading(true);
@@ -97,6 +114,7 @@ export function SignedUpload({
       }
 
       if (input) input.value = "";
+      setPickedFiles([]);
       await loadScans();
 
       if (failures.length === 0) {
@@ -142,10 +160,6 @@ export function SignedUpload({
   return (
     <div className="rounded-xl border bg-white p-4">
       <div className="text-sm font-semibold text-foreground">Скан підписаного {docPhrase} — хмарне сховище</div>
-      <p className="mt-1 text-xs text-muted-foreground">
-        PDF у хмару зберігається як є. Будь-яке растрове зображення (JPEG, PNG тощо) перед збереженням конвертується у WebP (якість 80) для меншого розміру. Можна обрати кілька файлів одразу (окремі сторінки скану) і завантажити їх однією кнопкою. Максимальний розмір кожного файлу залежить від сервера (типово ~12 МБ;{" "}
-        <code className="rounded bg-muted px-1">MAX_SIGNED_UPLOAD_MB</code>).
-      </p>
 
       <div className="mt-3 border-t border-border pt-3">
         <div className="text-xs font-medium text-foreground/90">Завантажені файли</div>
@@ -190,13 +204,27 @@ export function SignedUpload({
       </div>
 
       <div className="mt-3 flex flex-col gap-3 border-t border-border pt-3">
-        <input
-          ref={fileRef}
-          type="file"
+        <FileDropZone
+          inputId="signed-scan-files"
+          labelId="signed-scan-label"
+          label="Файли для завантаження"
           accept={ACCEPT_ATTR}
           multiple
-          className="text-sm"
-          aria-label="Файли для завантаження (можна обрати кілька)"
+          inputRef={fileRef}
+          emptyTitle="Перетягніть файли сюди або натисніть, щоб обрати"
+          footerHint="Перетягніть файли у рамку або натисніть на неї — можна обрати кілька."
+          dragActiveTitle="Відпустіть файли тут"
+          selectedContent={
+            pickedFiles.length === 0 ? null : pickedFiles.length === 1 ? (
+              <span className="max-w-full break-all text-sm font-medium text-foreground">{pickedFiles[0].name}</span>
+            ) : (
+              <span className="text-sm font-medium text-foreground">
+                {pickedFiles.length} файл(ів): {pickedFiles.map((f) => f.name).join(", ")}
+              </span>
+            )
+          }
+          onInputChange={handleFileInputChange}
+          onClear={clearPicked}
         />
         <button type="button" disabled={busy} className="crm-btn-primary w-fit disabled:opacity-50" onClick={upload}>
           {busy ? "Завантаження…" : "Додати файли у хмару"}

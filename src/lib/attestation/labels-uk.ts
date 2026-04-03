@@ -29,10 +29,6 @@ export function theoryScoreLabelUa(v: "passed" | "failed"): string {
   return v === "passed" ? "здано" : "нездано";
 }
 
-export function weldedPartsTypeLabelUa(v: "plate" | "pipe"): string {
-  return v === "pipe" ? "Труба" : "Пластина";
-}
-
 export function jointTypeLabelUa(v: "BW" | "FW"): string {
   return v === "BW" ? "Стиковий (BW)" : "Кутовий (FW)";
 }

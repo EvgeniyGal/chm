@@ -8,7 +8,7 @@ import { RequiredFieldMark } from "@/components/attestation/RequiredFieldMark";
 import { normalizeAdmissionComparisonSymbols } from "@/lib/attestation/admission-text-normalize";
 import { cn } from "@/lib/utils";
 
-export type ManualAdmissionSearchableScope = Extract<
+type ManualAdmissionSearchableScope = Extract<
   SearchableDropdownScope,
   "WELDER_MANUAL_JOINT_ADMISSION" | "WELDER_MANUAL_POSITION_ADMISSION"
 >;
