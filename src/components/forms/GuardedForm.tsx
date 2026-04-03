@@ -105,13 +105,14 @@ export const GuardedForm = forwardRef<GuardedFormHandle, GuardedFormProps>(funct
         {...formProps}
         onSubmit={async (e) => {
           e.preventDefault();
-          const formData = new FormData(e.currentTarget);
+          const formEl = e.currentTarget;
+          const formData = new FormData(formEl);
           try {
             await action(formData);
-            const form = e.currentTarget;
-            if (resetOnSuccess) {
-              form.reset();
-              initialSnapshotRef.current = snapshotForm(form);
+            // After `await`, React may clear `e.currentTarget` — use captured `formEl`.
+            if (resetOnSuccess && formEl) {
+              formEl.reset();
+              initialSnapshotRef.current = snapshotForm(formEl);
             }
             setIsDirty(false);
             if (successMessage) toast.success(successMessage);
