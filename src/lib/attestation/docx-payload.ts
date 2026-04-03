@@ -249,6 +249,7 @@ export function buildCertificateDocxPayload(ctx: WelderDocContext): Record<strin
     "work-company": company.shortName,
     "certificate-valid-until": fmtDate(certificateValidUntil),
     "blank-number": blankNum,
+    "sertificate-number": blankNum,
     ...admissionScope,
   };
 
@@ -386,10 +387,18 @@ function buildProtocolInspectionItems(
   return out;
 }
 
+/**
+ * Звіт до УАКЗ (`report_protocol` / `forms/report.docx`).
+ * - `{#items}…{/items}` — рядки таблиці по зварниках (`group-oder-number`, `sertificate-number` = `ОД-1/{номер}`, `certification`, …).
+ * - `{#commissionItems}…{/commissionItems}` — підписи членів комісії; у кожному рядку `{member}` або `{member-1}` — лише ПІБ з довідника, без посади, без голови (голова окремо в `{chairperson}`).
+ * - `{members-with-position}` — члени комісії (без голови) у тексті листа: `ПІБ - посада` для кожного, через кому.
+ * - `{chairperson-with-position}` — ПІБ голови та посада в одному рядку (`ПІБ - посада`).
+ */
 export function buildReportDocxPayload(
   group: typeof certificationGroups.$inferSelect,
   head: typeof commissionMembers.$inferSelect,
-  memberLines: string[],
+  memberNamesOnly: string[],
+  membersWithPositionLines: string[],
   items: Record<string, unknown>[],
 ): Record<string, unknown> {
   const protocolDate = new Date(group.protocolDate);
@@ -397,8 +406,10 @@ export function buildReportDocxPayload(
     "group-date": fmtDate(protocolDate),
     "group-number": group.groupNumber,
     chairperson: head.fullName.trim(),
-    members: memberLines.join("; "),
+    "chairperson-with-position": formatCommissionMemberDocxLine(head.fullName, head.position),
+    "members-with-position": membersWithPositionLines.join(", "),
     items,
+    commissionItems: memberNamesOnly.map((line) => ({ member: line, "member-1": line })),
   };
 }
 
@@ -406,12 +417,12 @@ export function buildReportItemRow(ctx: WelderDocContext): Record<string, unknow
   const certPayload = buildCertificateDocxPayload(ctx);
   const { welder, company } = ctx;
   const fullNameBirthday = [welder.lastName, welder.firstName, welder.middleName].filter(Boolean).join(" ");
+  const orderStr = String(welder.orderInGroup);
   return {
     ...certPayload,
-    "sertificate-number": certPayload["sert-number"],
-    "full-name-birthday": `${fullNameBirthday}; ${certPayload.birthday}`,
+    "full-name-birthday": `${fullNameBirthday}, ${certPayload.birthday}`,
     "work-experience-years-work-company": `${welder.workExperienceYears} р.; ${company.shortName}`,
-    "group-oder-number": String(welder.orderInGroup),
-    "member-1": String(welder.orderInGroup),
+    "group-oder-number": orderStr,
+    "group-order-number": orderStr,
   };
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, Pencil, UserPlus } from "lucide-react";
+import { ChartColumn, Pencil, UserPlus } from "lucide-react";
 import Link from "next/link";
 
 import { tableActionIconClassName } from "@/components/data-table/list-styles";
@@ -27,7 +27,7 @@ export function AttestationGroupRowActions({
         title="Згенерувати звіт"
         aria-label="Згенерувати звіт по групі"
       >
-        <BarChart3 className="size-4 shrink-0" aria-hidden />
+        <ChartColumn className="size-4 shrink-0" aria-hidden />
       </a>
       {canMutate ? (
         <Link

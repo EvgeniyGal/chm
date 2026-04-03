@@ -77,7 +77,8 @@ export async function loadGroupCommissionMembersForDocx(groupId: string): Promis
   };
 }
 
+/** Лише ПІБ членів групи (без посади) — для звіту та полів, де потрібно ім’я без «ПІБ — посада». */
 export async function loadGroupCommissionMemberNames(groupId: string): Promise<string[]> {
-  const { displayLines } = await loadGroupCommissionMembersForDocx(groupId);
-  return displayLines;
+  const { namesOnly } = await loadGroupCommissionMembersForDocx(groupId);
+  return namesOnly;
 }

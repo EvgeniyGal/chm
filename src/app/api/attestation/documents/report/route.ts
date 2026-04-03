@@ -6,7 +6,7 @@ import { requireRole } from "@/lib/authz";
 import { buildReportDocxPayload, buildReportItemRow } from "@/lib/attestation/docx-payload";
 import { attestationDocxOrPdfResponse } from "@/lib/attestation/document-download";
 import { wantsPdfFormat } from "@/lib/attestation/output-format";
-import { loadGroupCommissionMemberNames, loadWelderDocContext } from "@/lib/attestation/load-context";
+import { loadGroupCommissionMembersForDocx, loadWelderDocContext } from "@/lib/attestation/load-context";
 import { loadActiveTemplateBuffer } from "@/lib/attestation/resolve-template";
 import { renderDocxTemplate } from "@/lib/attestation/render-docx";
 
@@ -40,7 +40,8 @@ export async function GET(req: Request) {
     .where(eq(welderCertifications.groupId, groupId))
     .orderBy(asc(welderCertifications.orderInGroup));
 
-  const memberLines = await loadGroupCommissionMemberNames(groupId);
+  const { namesOnly: memberNamesOnly, displayLines: membersWithPositionLines } =
+    await loadGroupCommissionMembersForDocx(groupId);
 
   const items: Record<string, unknown>[] = [];
   for (const w of welders) {
@@ -50,7 +51,7 @@ export async function GET(req: Request) {
 
   try {
     const { buffer } = await loadActiveTemplateBuffer("report_protocol");
-    const data = buildReportDocxPayload(group, head, memberLines, items);
+    const data = buildReportDocxPayload(group, head, memberNamesOnly, membersWithPositionLines, items);
     const out = renderDocxTemplate(buffer, data);
     const filename = `report-${group.groupNumber}.docx`;
     return attestationDocxOrPdfResponse(Buffer.from(out), filename, wantsPdfFormat(url.searchParams));

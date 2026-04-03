@@ -1,4 +1,4 @@
-import { BarChart3, List, Pencil, Save } from "lucide-react";
+import { ChartColumn, List, Pencil, Save } from "lucide-react";
 import Link from "next/link";
 import { and, asc, desc, eq, inArray, ne } from "drizzle-orm";
 import { notFound, redirect } from "next/navigation";
@@ -295,7 +295,7 @@ export default async function EditAttestationGroupPage({ params }: { params: Pro
             href={`/api/attestation/documents/report?groupId=${id}`}
             title="Згенерувати звіт по групі"
           >
-            <BarChart3 className="size-4 shrink-0" aria-hidden />
+            <ChartColumn className="size-4 shrink-0" aria-hidden />
             Згенерувати звіт
           </a>
           <Link
