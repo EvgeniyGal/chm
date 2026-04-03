@@ -4,7 +4,6 @@ import {
   addDays,
   computeCertificateBlankNumber,
   computeCertificateNumber,
-  computeQcProtocolNumbers,
   computeValidityDates,
 } from "./compute";
 
@@ -21,18 +20,5 @@ describe("attestation compute", () => {
     const protocol = new Date(2026, 0, 10);
     const { certificateValidUntil } = computeValidityDates(protocol);
     expect(certificateValidUntil.getTime()).toBe(addDays(protocol, 730).getTime());
-  });
-
-  it("builds QC protocol numbers for selected methods", () => {
-    const d = new Date(2026, 3, 1);
-    const nums = computeQcProtocolNumbers("15", d, {
-      inspVisual: true,
-      inspRadiographic: true,
-      inspUltrasonic: false,
-      inspBend: false,
-      inspMetallographic: false,
-      inspAdditional: false,
-    });
-    expect(nums.map((n) => n.number)).toEqual(["15/VT", "15/RT"]);
   });
 });

@@ -2,11 +2,15 @@ import { describe, expect, it } from "vitest";
 
 import {
   diameterBoundsMinMax,
+  formatCoatingAdmissionShort,
   formatCoatingAdmissionUa,
+  formatElectrodeOrWireDocx,
+  formatMaterialGroupAdmissionShort,
   formatPipeDiameterAdmissionShort,
   formatPipeDiameterAdmissionShortFromBounds,
   formatPipeDiameterAdmissionUa,
   formatPlateTubeSpreadShort,
+  formatSampleMaterialGradeDocx,
   formatThicknessAdmissionShortFromPairs,
   formatThicknessAdmissionUa,
   formatThicknessAdmissionUaFromPairs,
@@ -43,6 +47,29 @@ describe("admission-scope", () => {
     const s = formatCoatingAdmissionUa(["B"]);
     expect(s).toContain("A");
     expect(s).toContain("B");
+  });
+
+  it("table 8: short form", () => {
+    expect(formatCoatingAdmissionShort(["A"])).toBe("A, RA");
+    expect(formatCoatingAdmissionShort(["B"])).toContain("A");
+    expect(formatCoatingAdmissionShort(["B"])).toContain("B");
+  });
+
+  it("table 8: combined coatings — intersection of both", () => {
+    expect(formatCoatingAdmissionShort(["A", "B"])).toBe("A, RA");
+  });
+
+  it("electrode-or-wire docx: coating (grade) / combined", () => {
+    expect(
+      formatElectrodeOrWireDocx({ coatingType: "B", materialGrade: "GHGhH67" }, null, false),
+    ).toBe("B (GHGhH67)");
+    expect(
+      formatElectrodeOrWireDocx(
+        { coatingType: "B", materialGrade: "GHGhH67" },
+        { coatingType: "C", materialGrade: "BCG67" },
+        true,
+      ),
+    ).toBe("B (GHGhH67) / C (BCG67)");
   });
 
   it("combined: t=10 arc + t=10 gas → union 3–20 mm", () => {
@@ -96,5 +123,17 @@ describe("admission-scope", () => {
     ]);
     expect(b).toEqual({ lo: 20, hi: 200 });
     expect(formatPipeDiameterAdmissionShortFromBounds(b)).toBe("20<D≤200");
+  });
+
+  it("табл. 6–7: короткі коди груп допуску", () => {
+    expect(formatMaterialGroupAdmissionShort("W01")).toBe("W01");
+    expect(formatMaterialGroupAdmissionShort("W02")).toBe("W01, W02");
+    expect(formatMaterialGroupAdmissionShort("W03")).toBe("W01, W02, W03");
+    expect(formatMaterialGroupAdmissionShort("W04")).toBe("W01, W02, W04");
+    expect(formatMaterialGroupAdmissionShort("W11")).toBe("W01, W02, W03, W04, W11");
+  });
+
+  it("зразок у документі: група (марка)", () => {
+    expect(formatSampleMaterialGradeDocx("W01", "Ст3пс")).toBe("W01 (Ст3пс)");
   });
 });

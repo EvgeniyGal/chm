@@ -36,3 +36,13 @@ export function weldedPartsTypeLabelUa(v: "plate" | "pipe"): string {
 export function jointTypeLabelUa(v: "BW" | "FW"): string {
   return v === "BW" ? "Стиковий (BW)" : "Кутовий (FW)";
 }
+
+/** Certificate / protocol: `BW (стиковий)` / `FW (кутовий)` */
+export function seamTypeDocxUa(v: "BW" | "FW"): string {
+  return v === "BW" ? "BW (стиковий)" : "FW (кутовий)";
+}
+
+/** Admission scope: sample BW → `BW, FW`; sample FW → `FW` (п.6.2.6). */
+export function admissionJointTypesShort(v: "BW" | "FW"): string {
+  return v === "BW" ? "BW, FW" : "FW";
+}

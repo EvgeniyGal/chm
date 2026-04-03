@@ -296,8 +296,28 @@ const MATERIAL_SCOPE: Record<GroupCode, string> = {
   W11: "W 01, W 02, W 03, W 04, W 11 (за умови присадних матеріалів групи W 11, табл. 6)",
 };
 
+/**
+ * Таблиці 6 і 7 — набір груп у допуску (короткі коди без пробілу).
+ * Множина кодів для з'єднань з різних груп збігається з табл. 7 (п. 6.3).
+ */
+export function formatMaterialGroupAdmissionShort(group: GroupCode): string {
+  const MAP: Record<GroupCode, string> = {
+    W01: "W01",
+    W02: "W01, W02",
+    W03: "W01, W02, W03",
+    W04: "W01, W02, W04",
+    W11: "W01, W02, W03, W04, W11",
+  };
+  return MAP[group];
+}
+
 export function formatMaterialGroupAdmissionUa(group: GroupCode): string {
   return `групи зварюваних матеріалів (основний метал): ${MATERIAL_SCOPE[group]}`;
+}
+
+/** Документи: зразок як `W01 (Ст3пс)`. */
+export function formatSampleMaterialGradeDocx(group: GroupCode, steelGrade: string): string {
+  return `${group} (${steelGrade})`;
 }
 
 /** Таблиця 8 — область поширення за типом покриття електрода. */
@@ -312,17 +332,44 @@ const COATING_ALLOWED: Record<string, string[]> = {
   S: ["S"],
 };
 
-export function formatCoatingAdmissionUa(coatings: string[]): string {
+/** Перетин допустимих типів покриття (табл. 8) для кожного фактичного покриття зразка; комбіноване зварювання — обидва матеріали. */
+function coatingAdmissionAllowedCodes(coatings: string[]): string[] {
   const uniq = [...new Set(coatings.map((c) => c.trim()).filter(Boolean))];
-  if (uniq.length === 0) return "—";
+  if (uniq.length === 0) return [];
   const allowedSets = uniq.map((c) => COATING_ALLOWED[c] ?? [c]);
   let inter = new Set(allowedSets[0]);
   for (let i = 1; i < allowedSets.length; i++) {
     const next = new Set(allowedSets[i]);
     inter = new Set([...inter].filter((x) => next.has(x)));
   }
-  const list = [...inter].sort().join(", ");
-  return `типи покриття електродів (п.3.2.4, табл. 8): ${list}`;
+  return [...inter].sort();
+}
+
+/** Документи: коротко `A` або `A, B, RC` за табл. 8. */
+export function formatCoatingAdmissionShort(coatings: string[]): string {
+  const codes = coatingAdmissionAllowedCodes(coatings);
+  if (codes.length === 0) return "—";
+  return codes.join(", ");
+}
+
+export function formatCoatingAdmissionUa(coatings: string[]): string {
+  const codes = coatingAdmissionAllowedCodes(coatings);
+  if (codes.length === 0) return "—";
+  return `типи покриття електродів (п.3.2.4, табл. 8): ${codes.join(", ")}`;
+}
+
+/**
+ * Документи: `B (GHGhH67)` або комбіноване `B (GHGhH67) / C (BCG67)`.
+ */
+export function formatElectrodeOrWireDocx(
+  consumable1: { coatingType: string; materialGrade: string },
+  consumable2: { coatingType: string; materialGrade: string } | null,
+  isCombined: boolean,
+): string {
+  const part = (c: { coatingType: string; materialGrade: string }) =>
+    `${c.coatingType.trim()} (${c.materialGrade.trim()})`;
+  if (!isCombined || consumable2 == null) return part(consumable1);
+  return `${part(consumable1)} / ${part(consumable2)}`;
 }
 
 /** п.6.2.6 — стиковий шов поширюється на кутовий за подібних умов. */

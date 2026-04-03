@@ -13,7 +13,7 @@ import {
   welderCertifications,
 } from "@/db/schema/attestation";
 
-import type { WelderDocContext } from "@/lib/attestation/docx-payload";
+import { formatCommissionMemberDocxLine, type WelderDocContext } from "@/lib/attestation/docx-payload";
 
 export async function loadWelderDocContext(welderId: string): Promise<WelderDocContext | null> {
   const welder = await db.query.welderCertifications.findFirst({
@@ -61,12 +61,23 @@ export async function loadWelderDocContext(welderId: string): Promise<WelderDocC
   };
 }
 
-export async function loadGroupCommissionMemberNames(groupId: string): Promise<string[]> {
+export async function loadGroupCommissionMembersForDocx(groupId: string): Promise<{
+  displayLines: string[];
+  namesOnly: string[];
+}> {
   const rows = await db
-    .select({ fullName: commissionMembers.fullName })
+    .select({ fullName: commissionMembers.fullName, position: commissionMembers.position })
     .from(certificationGroupMembers)
     .innerJoin(commissionMembers, eq(certificationGroupMembers.memberId, commissionMembers.id))
     .where(eq(certificationGroupMembers.groupId, groupId));
 
-  return rows.map((r) => r.fullName);
+  return {
+    displayLines: rows.map((r) => formatCommissionMemberDocxLine(r.fullName, r.position)),
+    namesOnly: rows.map((r) => r.fullName.trim()).filter(Boolean),
+  };
+}
+
+export async function loadGroupCommissionMemberNames(groupId: string): Promise<string[]> {
+  const { displayLines } = await loadGroupCommissionMembersForDocx(groupId);
+  return displayLines;
 }

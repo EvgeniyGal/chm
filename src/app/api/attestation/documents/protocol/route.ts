@@ -2,7 +2,7 @@ import { requireRole } from "@/lib/authz";
 import { buildProtocolDocxPayload } from "@/lib/attestation/docx-payload";
 import { attestationDocxOrPdfResponse } from "@/lib/attestation/document-download";
 import { wantsPdfFormat } from "@/lib/attestation/output-format";
-import { loadGroupCommissionMemberNames, loadWelderDocContext } from "@/lib/attestation/load-context";
+import { loadGroupCommissionMembersForDocx, loadWelderDocContext } from "@/lib/attestation/load-context";
 import { computeCertificateNumber } from "@/lib/attestation/compute";
 import { loadActiveTemplateBuffer } from "@/lib/attestation/resolve-template";
 import { renderDocxTemplate } from "@/lib/attestation/render-docx";
@@ -24,8 +24,8 @@ export async function GET(req: Request) {
 
   try {
     const { buffer } = await loadActiveTemplateBuffer("protocol");
-    const memberNames = await loadGroupCommissionMemberNames(ctx.group.id);
-    const data = buildProtocolDocxPayload(ctx, memberNames);
+    const { displayLines, namesOnly } = await loadGroupCommissionMembersForDocx(ctx.group.id);
+    const data = buildProtocolDocxPayload(ctx, displayLines, namesOnly);
     const out = renderDocxTemplate(buffer, data);
     const protocolDate = new Date(ctx.group.protocolDate);
     const certNum = computeCertificateNumber(ctx.group.groupNumber, ctx.welder.orderInGroup, protocolDate);
