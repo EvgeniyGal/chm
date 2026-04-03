@@ -5,7 +5,7 @@ import { AttestationMigrationMissingNotice } from "@/components/attestation/Atte
 import type { ShowFilter, SortBy } from "@/components/attestation/AttestationGroupsTable";
 import { AttestationGroupsTable } from "@/components/attestation/AttestationGroupsTable";
 import { db } from "@/db";
-import { certificationGroups } from "@/db/schema/attestation";
+import { certificationGroups, welderCertifications } from "@/db/schema/attestation";
 import { requireRole } from "@/lib/authz";
 import { getPgErrorCode } from "@/lib/pg-error-code";
 
@@ -106,7 +106,9 @@ export default async function AttestationGroupsPage({
       ? "all"
       : showRaw === "archived"
         ? "archived"
-        : "active";
+        : showRaw === "active"
+          ? "active"
+          : "all";
 
   const protocolFromRaw = parseIsoDateOnly(String(sp.protocolFrom ?? ""));
   const protocolToRaw = parseIsoDateOnly(String(sp.protocolTo ?? ""));
@@ -124,6 +126,7 @@ export default async function AttestationGroupsPage({
   let dbTotal = 0;
   let total = 0;
   let rows: (typeof certificationGroups.$inferSelect)[] = [];
+  let welderCountByGroupId = new Map<string, number>();
 
   try {
     const [{ n }] = await db.select({ n: count() }).from(certificationGroups);
@@ -143,6 +146,16 @@ export default async function AttestationGroupsPage({
       .orderBy(...orderByClause(sortBy, sortDir))
       .limit(pageSize)
       .offset(offset);
+
+    if (rows.length > 0) {
+      const groupIds = rows.map((r) => r.id);
+      const countRows = await db
+        .select({ groupId: welderCertifications.groupId, n: count() })
+        .from(welderCertifications)
+        .where(inArray(welderCertifications.groupId, groupIds))
+        .groupBy(welderCertifications.groupId);
+      welderCountByGroupId = new Map(countRows.map((c) => [c.groupId, Number(c.n)]));
+    }
   } catch (e) {
     if (getPgErrorCode(e) === "42P01") {
       return <AttestationMigrationMissingNotice />;
@@ -168,6 +181,7 @@ export default async function AttestationGroupsPage({
           groupNumber: g.groupNumber,
           protocolDate: String(g.protocolDate).slice(0, 10),
           certificateIssueLocation: g.certificateIssueLocation,
+          welderCount: welderCountByGroupId.get(g.id) ?? 0,
           status: g.status,
         }))}
         total={total}

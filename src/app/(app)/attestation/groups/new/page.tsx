@@ -45,6 +45,8 @@ export default async function NewAttestationGroupPage() {
     "use server";
     await requireRole("MANAGER");
 
+    const skipRedirect = String(formData.get("_skipRedirect") ?? "") === "1";
+
     const memberIds = formData
       .getAll("memberId")
       .map((v) => String(v).trim())
@@ -126,6 +128,9 @@ export default async function NewAttestationGroupPage() {
 
     await saveDropdownOption(DROPDOWN_SCOPE.CERTIFICATE_ISSUE_LOCATION, parsed.data.certificateIssueLocation.trim());
 
+    if (skipRedirect) {
+      return;
+    }
     redirect("/attestation/groups");
   }
 
@@ -138,7 +143,12 @@ export default async function NewAttestationGroupPage() {
         <h1 className="page-title">Нова група атестації</h1>
       </div>
 
-      <GuardedForm action={create} className="flex min-w-0 flex-col gap-4 rounded-xl border bg-white p-4">
+      <GuardedForm
+        action={create}
+        className="flex min-w-0 flex-col gap-4 rounded-xl border bg-white p-4"
+        enableSaveAndProceed
+        successMessage="Групу створено."
+      >
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <label className="flex min-w-0 flex-col gap-1 text-sm">
             <span className="text-zinc-700">Номер групи (номер протоколу)</span>
@@ -162,7 +172,11 @@ export default async function NewAttestationGroupPage() {
           </label>
         </div>
 
-        <CommissionGroupPickers members={commissionMemberOptions} rosterRows={commissionRosterRows} />
+        <CommissionGroupPickers
+          members={commissionMemberOptions}
+          rosterRows={commissionRosterRows}
+          variant="create"
+        />
 
         <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
           <button

@@ -3,7 +3,7 @@ import { desc, eq, inArray } from "drizzle-orm";
 import { redirect } from "next/navigation";
 
 import { WelderCertificationFormFields } from "@/components/attestation/WelderCertificationFormFields";
-import { GuardedForm } from "@/components/forms/GuardedForm";
+import { WelderCertificationNewForm } from "@/components/attestation/WelderCertificationNewForm";
 import { db } from "@/db";
 import { companies } from "@/db/schema/companies";
 import {
@@ -92,6 +92,8 @@ export default async function NewWelderCertificationPage({
     "use server";
     await requireRole("MANAGER");
 
+    const skipRedirect = String(formData.get("_skipRedirect") ?? "") === "1";
+
     const parsed = parseWelderCertificationForm(formData);
     if (!parsed.success) {
       throw new Error(parsed.error.issues[0]?.message ?? "VALIDATION_ERROR");
@@ -176,6 +178,9 @@ export default async function NewWelderCertificationPage({
       );
     }
 
+    if (skipRedirect) {
+      return { welderId: row.id };
+    }
     redirect("/attestation/welders");
   }
 
@@ -193,10 +198,7 @@ export default async function NewWelderCertificationPage({
         ) : null}
       </div>
 
-      <GuardedForm
-        action={createWelder}
-        className="flex min-w-0 flex-col gap-4 rounded-xl border bg-white p-4"
-      >
+      <WelderCertificationNewForm createWelder={createWelder} successMessage="Атестацію створено.">
         <WelderCertificationFormFields
           key={fromId ? `dup-${fromId}` : "new-welder"}
           groups={groups}
@@ -216,12 +218,7 @@ export default async function NewWelderCertificationPage({
           welderManualJointAdmissionOptions={welderManualJointAdmissionOptions}
           welderManualPositionAdmissionOptions={welderManualPositionAdmissionOptions}
         />
-        <div className="mt-2 flex gap-3">
-          <button type="submit" className="crm-btn-primary">
-            Зберегти
-          </button>
-        </div>
-      </GuardedForm>
+      </WelderCertificationNewForm>
     </div>
   );
 }

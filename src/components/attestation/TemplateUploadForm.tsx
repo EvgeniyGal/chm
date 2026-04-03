@@ -1,9 +1,11 @@
 "use client";
 
-import { CheckCircle2, Loader2, Upload } from "lucide-react";
+import { CheckCircle2, FileUp, Loader2, Upload, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
+
+import { cn } from "@/lib/utils";
 
 const TYPES = [
   { value: "protocol", label: "Протокол засідання" },
@@ -11,9 +13,52 @@ const TYPES = [
   { value: "report_protocol", label: "Протокол звітний" },
 ] as const;
 
+const ACCEPT =
+  ".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" as const;
+
+function isDocxFile(file: File): boolean {
+  if (!/\.docx$/i.test(file.name)) return false;
+  const t = file.type;
+  if (!t) return true;
+  return (
+    t === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+    t === "application/octet-stream"
+  );
+}
+
+function assignInputFile(input: HTMLInputElement, file: File | null) {
+  if (!file) {
+    input.value = "";
+    return;
+  }
+  const dt = new DataTransfer();
+  dt.items.add(file);
+  input.files = dt.files;
+}
+
 export function TemplateUploadForm() {
   const router = useRouter();
   const [pending, setPending] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedLabel, setSelectedLabel] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState(false);
+
+  const clearFile = useCallback(() => {
+    const input = fileInputRef.current;
+    if (input) assignInputFile(input, null);
+    setSelectedLabel(null);
+  }, []);
+
+  const pickFile = useCallback((file: File) => {
+    if (!isDocxFile(file)) {
+      toast.error("Потрібен файл Microsoft Word (.docx)");
+      return;
+    }
+    const input = fileInputRef.current;
+    if (!input) return;
+    assignInputFile(input, file);
+    setSelectedLabel(file.name);
+  }, []);
 
   return (
     <form
@@ -44,6 +89,7 @@ export function TemplateUploadForm() {
           }
           toast.success("Шаблон завантажено (неактивний). Оберіть «Активувати» у списку.");
           form.reset();
+          clearFile();
           router.refresh();
         } catch {
           toast.error("Мережева помилка");
@@ -67,10 +113,96 @@ export function TemplateUploadForm() {
         <span>Назва</span>
         <input name="name" required className="h-10 rounded-md border border-border px-3" placeholder="напр. Посвідчення 2026" />
       </label>
-      <label className="flex flex-col gap-1">
-        <span>Файл .docx</span>
-        <input name="file" type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" required />
-      </label>
+      <div className="flex flex-col gap-1">
+        <span className="text-foreground" id="template-docx-label">
+          Файл шаблону
+        </span>
+        <input
+          ref={fileInputRef}
+          id="template-docx-file"
+          name="file"
+          type="file"
+          accept={ACCEPT}
+          required
+          className="sr-only"
+          aria-labelledby="template-docx-label"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) pickFile(f);
+            else setSelectedLabel(null);
+          }}
+        />
+        <div className="relative">
+          <label
+            htmlFor="template-docx-file"
+            onDragEnter={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setDragOver(true);
+            }}
+            onDragLeave={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOver(false);
+            }}
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setDragOver(false);
+              const f = e.dataTransfer.files?.[0];
+              if (f) pickFile(f);
+            }}
+            className={cn(
+              "group flex min-h-[9.5rem] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed px-4 py-8 text-center transition-[border-color,background-color,box-shadow]",
+              dragOver
+                ? "border-primary bg-primary/10 ring-2 ring-primary/25 dark:bg-primary/15"
+                : "border-border bg-muted/30 hover:border-primary/50 hover:bg-muted/50 dark:hover:bg-muted/40",
+            )}
+          >
+            <span
+              className={cn(
+                "mb-2 flex size-12 items-center justify-center rounded-full transition-colors",
+                dragOver
+                  ? "bg-primary/15 text-primary"
+                  : "bg-background text-muted-foreground shadow-sm ring-1 ring-border group-hover:text-primary",
+              )}
+            >
+              <FileUp className="size-6" aria-hidden />
+            </span>
+            {selectedLabel ? (
+              <span className="max-w-full break-all text-sm font-medium text-foreground">{selectedLabel}</span>
+            ) : (
+              <>
+                <span className="text-sm font-medium text-foreground">
+                  {dragOver ? "Відпустіть файл тут" : "Перетягніть .docx сюди або натисніть, щоб обрати"}
+                </span>
+                <span className="mt-1 text-xs text-muted-foreground">Лише формат Word (.docx)</span>
+              </>
+            )}
+          </label>
+          {selectedLabel ? (
+            <button
+              type="button"
+              className="absolute top-2 right-2 z-10 inline-flex size-8 items-center justify-center rounded-md border border-border bg-background text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground"
+              title="Прибрати файл"
+              aria-label="Прибрати файл"
+              onClick={(e) => {
+                e.preventDefault();
+                clearFile();
+              }}
+            >
+              <X className="size-4" aria-hidden />
+            </button>
+          ) : null}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Перетягніть файл у рамку або натисніть на неї — відкриється вибір файлу.
+        </p>
+      </div>
       <button
         type="submit"
         disabled={pending}

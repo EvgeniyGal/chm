@@ -13,7 +13,10 @@ function optDec(s: string | undefined): string | undefined {
 }
 
 export function parseWelderCertificationForm(formData: FormData) {
-  const regulatoryDocumentIds = formData.getAll("regulatoryDocumentId").map((v) => String(v).trim());
+  const regulatoryDocumentIds = formData
+    .getAll("regulatoryDocumentId")
+    .map((v) => String(v).trim())
+    .filter(Boolean);
 
   return welderCertificationCreateSchema.safeParse({
     groupId: String(formData.get("groupId") ?? ""),

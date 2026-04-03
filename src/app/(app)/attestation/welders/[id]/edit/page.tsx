@@ -2,8 +2,8 @@ import Link from "next/link";
 import { eq } from "drizzle-orm";
 import { notFound, redirect } from "next/navigation";
 
+import { WelderCertificationEditForm } from "@/components/attestation/WelderCertificationEditForm";
 import { WelderCertificationFormFields } from "@/components/attestation/WelderCertificationFormFields";
-import { GuardedForm } from "@/components/forms/GuardedForm";
 import { db } from "@/db";
 import { companies } from "@/db/schema/companies";
 import {
@@ -70,6 +70,8 @@ export default async function EditWelderCertificationPage({ params }: { params: 
   async function updateWelder(formData: FormData) {
     "use server";
     await requireRole("MANAGER");
+
+    const skipRedirect = String(formData.get("_skipRedirect") ?? "") === "1";
 
     const parsed = parseWelderCertificationForm(formData);
     if (!parsed.success) {
@@ -152,6 +154,9 @@ export default async function EditWelderCertificationPage({ params }: { params: 
       );
     }
 
+    if (skipRedirect) {
+      return { welderId: id };
+    }
     redirect("/attestation/welders");
   }
 
@@ -164,10 +169,7 @@ export default async function EditWelderCertificationPage({ params }: { params: 
         <h1 className="page-title mt-2">Редагування атестації</h1>
       </div>
 
-      <GuardedForm
-        action={updateWelder}
-        className="flex min-w-0 flex-col gap-4 rounded-xl border bg-white p-4"
-      >
+      <WelderCertificationEditForm welderId={id} saveWelder={updateWelder} successMessage="Зміни збережено.">
         <WelderCertificationFormFields
           key={id}
           groups={groups}
@@ -188,12 +190,7 @@ export default async function EditWelderCertificationPage({ params }: { params: 
           welderManualJointAdmissionOptions={welderManualJointAdmissionOptions}
           welderManualPositionAdmissionOptions={welderManualPositionAdmissionOptions}
         />
-        <div className="mt-2 flex gap-3">
-          <button type="submit" className="crm-btn-primary">
-            Зберегти
-          </button>
-        </div>
-      </GuardedForm>
+      </WelderCertificationEditForm>
     </div>
   );
 }

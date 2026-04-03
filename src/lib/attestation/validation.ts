@@ -19,19 +19,30 @@ function isValidMmDecimal(s: string | undefined): boolean {
 
 export const certificationGroupCreateSchema = z.object({
   groupNumber: z.string().min(1, "Вкажіть номер групи"),
-  protocolDate: z.string().min(1),
-  inspectionDate: z.string().min(1),
-  certificateIssueDate: z.string().min(1),
+  protocolDate: z.string().min(1, "Вкажіть дату протоколу"),
+  inspectionDate: z.string().min(1, "Вкажіть дату контролю якості зразків"),
+  certificateIssueDate: z.string().min(1, "Вкажіть дату видачі посвідчень"),
   certificateIssueLocation: z.string().min(1, "Вкажіть місце видачі"),
-  headId: z.string().uuid("Оберіть голову комісії"),
-  memberIds: z.array(z.string().uuid()).max(5, "Не більше 5 членів комісії"),
+  headId: z.string().guid("Оберіть голову комісії"),
+  memberIds: z
+    .array(z.string().guid())
+    .min(1, "Оберіть хоча б одного члена комісії")
+    .max(5, "Не більше 5 членів комісії"),
 });
 
-export const certificationGroupUpdateSchema = certificationGroupCreateSchema;
+export const certificationGroupUpdateSchema = z.object({
+  groupNumber: z.string().min(1, "Вкажіть номер групи"),
+  protocolDate: z.string().min(1, "Вкажіть дату протоколу"),
+  inspectionDate: z.string().min(1, "Вкажіть дату контролю якості зразків"),
+  certificateIssueDate: z.string().min(1, "Вкажіть дату видачі посвідчень"),
+  certificateIssueLocation: z.string().min(1, "Вкажіть місце видачі"),
+  headId: z.string().guid("Оберіть голову комісії"),
+  memberIds: z.array(z.string().guid()).max(5, "Не більше 5 членів комісії"),
+});
 
 export const welderCertificationCreateSchema = z
   .object({
-    groupId: z.string().uuid("Оберіть групу"),
+    groupId: z.string().guid("Оберіть групу"),
     lastName: z.string().trim().min(1, "Вкажіть прізвище").max(100),
     firstName: z.string().trim().min(1, "Вкажіть ім'я").max(100),
     middleName: z.string().trim().min(1, "Вкажіть по батькові").max(100),
@@ -60,7 +71,7 @@ export const welderCertificationCreateSchema = z
           }, "Стаж має бути від 0 до 999 років")
           .transform((s) => String(Number.parseInt(s, 10))),
       ),
-    companyId: z.string().uuid("Оберіть компанію"),
+    companyId: z.string().guid("Оберіть компанію"),
     certificationType: z.enum(["primary", "additional", "periodic", "extraordinary"]),
     isCombined: z.boolean(),
     weldingMethod1: z.string().min(1).max(20),
@@ -72,7 +83,7 @@ export const welderCertificationCreateSchema = z
     weldingPosition2: z.string().max(10).optional(),
     preheat: z.boolean(),
     heatTreatment: z.boolean(),
-    sampleMaterialId: z.string().uuid(),
+    sampleMaterialId: z.string().guid("Оберіть матеріал зразка"),
     thickness1: z.string().optional(),
     thickness2: z.string().optional(),
     thickness3: z.string().optional(),
@@ -83,8 +94,8 @@ export const welderCertificationCreateSchema = z
     pipeDiameter1: z.string().optional(),
     pipeDiameter2: z.string().optional(),
     pipeDiameter3: z.string().optional(),
-    consumable1Id: z.string().uuid(),
-    consumable2Id: z.string().uuid().optional(),
+    consumable1Id: z.string().guid("Оберіть зварювальний матеріал"),
+    consumable2Id: z.string().guid().optional(),
     shieldingGasFlux: z.string().max(255).optional(),
     sampleMark: z.string().min(1).max(50),
     inspVisual: z.boolean(),
@@ -94,7 +105,10 @@ export const welderCertificationCreateSchema = z
     inspMetallographic: z.boolean(),
     inspAdditional: z.boolean(),
     theoryScore: z.enum(["passed", "failed"]),
-    regulatoryDocumentIds: z.array(z.string().uuid()).min(1, "Оберіть хоча б один нормативний документ").max(10, "Не більше 10 НД"),
+    regulatoryDocumentIds: z
+      .array(z.string().guid("Некоректний ідентифікатор НД"))
+      .min(1, "Оберіть хоча б один нормативний документ")
+      .max(10, "Не більше 10 НД"),
   })
   .superRefine((data, ctx) => {
     if (data.isCombined) {

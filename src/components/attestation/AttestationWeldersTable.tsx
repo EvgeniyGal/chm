@@ -253,7 +253,7 @@ export function AttestationWeldersTable({
                   });
                 }}
               >
-                <option value="">Усі (з урахуванням «Показати»)</option>
+                <option value="">Усі</option>
                 <option value="draft">Чернетка</option>
                 <option value="active">Активна</option>
                 <option value="completed">Завершена</option>
@@ -269,14 +269,14 @@ export function AttestationWeldersTable({
                 onChange={(e) => {
                   const v = e.target.value;
                   updateParams({
-                    show: v === "active" || v === "all" || v === "archived" ? v : "active",
+                    show: v === "active" || v === "all" || v === "archived" ? v : "all",
                     page: 1,
                   });
                 }}
               >
-                <option value="active">Без архівних груп</option>
-                <option value="all">Усі статуси груп</option>
-                <option value="archived">Лише архівні групи</option>
+                <option value="all">Усі</option>
+                <option value="archived">Архівні</option>
+                <option value="active">Активні</option>
               </NativeSelect>
             </div>
           </div>

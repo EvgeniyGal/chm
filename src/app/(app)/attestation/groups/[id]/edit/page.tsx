@@ -70,6 +70,8 @@ export default async function EditAttestationGroupPage({ params }: { params: Pro
     "use server";
     await requireRole("MANAGER");
 
+    const skipRedirect = String(formData.get("_skipRedirect") ?? "") === "1";
+
     const memberIds = formData
       .getAll("memberId")
       .map((v) => String(v).trim())
@@ -166,6 +168,9 @@ export default async function EditAttestationGroupPage({ params }: { params: Pro
 
     await saveDropdownOption(DROPDOWN_SCOPE.CERTIFICATE_ISSUE_LOCATION, parsed.data.certificateIssueLocation.trim());
 
+    if (skipRedirect) {
+      return;
+    }
     redirect("/attestation/groups");
   }
 
@@ -240,7 +245,12 @@ export default async function EditAttestationGroupPage({ params }: { params: Pro
         <h1 className="page-title">Редагування групи №{group.groupNumber}</h1>
       </div>
 
-      <GuardedForm action={update} className="flex min-w-0 flex-col gap-4 rounded-xl border bg-white p-4">
+      <GuardedForm
+        action={update}
+        className="flex min-w-0 flex-col gap-4 rounded-xl border bg-white p-4"
+        enableSaveAndProceed
+        successMessage="Зміни збережено."
+      >
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <label className="flex min-w-0 flex-col gap-1 text-sm">
             <span className="text-zinc-700">Номер групи (номер протоколу)</span>

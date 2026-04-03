@@ -15,7 +15,8 @@ export function CertificateIssueLocationField({
 
   return (
     <div className="min-w-0">
-      <input type="hidden" name="certificateIssueLocation" value={value} required />
+      {/* Значення для submit; перевірка — на видимому полі (type=hidden не валідується браузером). */}
+      <input type="hidden" name="certificateIssueLocation" value={value} />
       <SearchableDropdownOptionField
         label="Місце видачі посвідчень"
         scope="CERTIFICATE_ISSUE_LOCATION"
@@ -24,7 +25,7 @@ export function CertificateIssueLocationField({
         optionsFromBackend={optionsFromBackend}
         placeholder="Оберіть або введіть місце видачі"
         inputClassName="bg-zinc-50"
-        required={false}
+        required
       />
     </div>
   );

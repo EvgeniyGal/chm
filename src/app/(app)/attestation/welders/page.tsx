@@ -115,7 +115,13 @@ export default async function AttestationWeldersPage({
   const allParam = Array.isArray(sp.all) ? sp.all[0] : sp.all;
   const legacyAll = allParam === "1" || allParam === "true";
   const show: ShowFilter =
-    legacyAll || showRaw === "all" ? "all" : showRaw === "archived" ? "archived" : "active";
+    legacyAll || showRaw === "all"
+      ? "all"
+      : showRaw === "archived"
+        ? "archived"
+        : showRaw === "active"
+          ? "active"
+          : "all";
 
   const protocolFromRaw = parseIsoDateOnly(String(sp.protocolFrom ?? ""));
   const protocolToRaw = parseIsoDateOnly(String(sp.protocolTo ?? ""));

@@ -79,9 +79,22 @@ describe("attestation critical path (validation + domain)", () => {
       certificateIssueDate: "2026-01-20",
       certificateIssueLocation: "Київ",
       headId: "00000000-0000-4000-8000-000000000010",
-      memberIds: [],
+      memberIds: ["00000000-0000-4000-8000-000000000011"],
     });
     expect(parsed.success).toBe(true);
+  });
+
+  it("requires at least one commission member for new group", () => {
+    const parsed = certificationGroupCreateSchema.safeParse({
+      groupNumber: "12",
+      protocolDate: "2026-01-15",
+      inspectionDate: "2026-01-10",
+      certificateIssueDate: "2026-01-20",
+      certificateIssueLocation: "Київ",
+      headId: "00000000-0000-4000-8000-000000000010",
+      memberIds: [],
+    });
+    expect(parsed.success).toBe(false);
   });
 
   it("chains certificate number with validity window", () => {

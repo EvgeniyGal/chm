@@ -90,10 +90,25 @@ function fmtCertFilingDate(d: Date): string {
   return `${day}.${month}.${year} р.`;
 }
 
+/** Дата видачі + місце з групи атестації, напр. `17.07.2006 р., ТОВ "Чорномормонтаж"`. */
+function fmtCertificateIssuedLine(issueDate: Date, issueLocation: string): string {
+  const loc = issueLocation.trim();
+  const d = fmtCertFilingDate(issueDate);
+  return loc ? `${d}, ${loc}` : d;
+}
+
 function decStr(v: string | null | undefined): string | null {
   if (v == null || v === "") return null;
   const n = Number(v);
   return Number.isFinite(n) ? String(n) : v;
+}
+
+/** Стаж у .docx: без зайвого «.0» (decimal у БД); дробові роки — як є (напр. 3,5). */
+function formatWorkExperienceYearsDocx(v: string | number): string {
+  const n = typeof v === "number" ? v : Number(String(v).trim().replace(",", "."));
+  if (!Number.isFinite(n)) return String(v);
+  if (Number.isInteger(n)) return String(n);
+  return n.toFixed(1).replace(",", ".").replace(/\.0$/, "");
 }
 
 /** `ПІБ - посада` для полів протоколу / відомості (напр. голова, члени комісії). */
@@ -122,16 +137,14 @@ export type WelderDocContext = {
  * Payload keys for docxtemplater (`forms/certificate.docx`, `forms/protocol.docx`, `forms/report.docx`).
  * `welded-parts-type` — факт зразка: `P(пластина)` або `T(труба)`.
  * `admission-welded-parts-type` — допуск: пластина → лише `P(пластина)`; труба → `T(труба), P(пластина)`.
- * `admission-thickness-scope` + `admission-thickness-table-ref` (табл. 2: лист / стінка труби).
- * Непорожні `manualThicknessAdmission` / `manualDiameterAdmission` (труба) підставляються замість авто у відповідні `admission-*-scope`.
+ * `admission-thickness-scope` / `admission-sample-thickness` — лише текст «Допуск (товщина)»; `admission-diameter-scope` / `admission-pipe-outer-diameter` — лише «Допуск (діаметр труби)» для труби (для пластини діаметр у допуску не виводиться).
+ * `admission-thickness-table-ref` / `admission-diameter-table-ref` — довідкові підписи до табл. 2–3.
  * `admission-seam-type` — лише розрахунок: `BW` / `FW` / `BW, FW` (без ручного допуску характеристики шва — він у `admission-performing-weld`).
  * `welding-position` — коди ISO: `PA` або `PA, PF`; `admission-welding-position` — лише `manualWeldingPositionAdmission`.
  * `performing-weld` — характеристика шва: `ss nb`, `bs gg` (код з підкреслення → пробіл); `admission-performing-weld` — лише `manualJointCharacteristicsAdmission`.
- * `admission-diameter-scope` + `admission-diameter-table-ref` (табл. 3 для труби; п.6.2.2–6.2.3 для пластини).
- * Короткі межі, напр. `3≤t≤20`,
- * `admission-diameter-scope` (табл. 3 або `D>500` / `D>150` для пластини п.6.2.2–6.2.3), інші `admission-*`.
  * `sample-material-grade` — `W01 (Ст3пс)`; `admission-sample-material-grade` — коротко `W01` / `W01, W02` / … за табл. 6–7 (п. 6.3).
  * `electrode-or-wire` — `B (марка)` або `B (марка) / C (марка)` при комбінованому зварюванні; `admission-electrode-or-wire` — коротко типи покриття за табл. 8 (перетин для обох матеріалів).
+ * `certificate issued` — дата видачі посвідчень + місце видачі з групи: `ДД.ММ.РРРР р., {місце}`.
  */
 export function buildCertificateDocxPayload(ctx: WelderDocContext): Record<string, unknown> {
   const { welder, group, company, head, sampleMaterial, consumable1, consumable2, regulatoryDocs } = ctx;
@@ -183,7 +196,7 @@ export function buildCertificateDocxPayload(ctx: WelderDocContext): Record<strin
 
   const birthdayStr = welder.birthday ? fmtCertFilingDate(new Date(welder.birthday)) : "—";
 
-  const admissionScopeComputed = buildAdmissionScopeFields({
+  const admissionScope = buildAdmissionScopeFields({
     weldedPartsType: welder.weldedPartsType,
     jointType: welder.jointType,
     sampleMaterialGroupCode: sampleMaterial.groupCode,
@@ -192,6 +205,8 @@ export function buildCertificateDocxPayload(ctx: WelderDocContext): Record<strin
     isCombined: welder.isCombined,
     weldingPosition1: welder.weldingPosition1,
     weldingPosition2: welder.weldingPosition2,
+    manualThicknessAdmission: welder.manualThicknessAdmission ?? "",
+    manualDiameterAdmission: welder.manualDiameterAdmission ?? "",
     thickness1: welder.thickness1,
     thickness2: welder.thickness2,
     thickness3: welder.thickness3,
@@ -201,17 +216,6 @@ export function buildCertificateDocxPayload(ctx: WelderDocContext): Record<strin
     consumableCoating1: consumable1.coatingType,
     consumableCoating2: consumable2?.coatingType ?? null,
   });
-
-  const manualThickness = welder.manualThicknessAdmission?.trim();
-  const manualDiameter = welder.manualDiameterAdmission?.trim();
-  const admissionScope: Record<string, string> = {
-    ...admissionScopeComputed,
-    "admission-thickness-scope": manualThickness || admissionScopeComputed["admission-thickness-scope"],
-    "admission-diameter-scope":
-      welder.weldedPartsType === "pipe"
-        ? manualDiameter || admissionScopeComputed["admission-diameter-scope"]
-        : admissionScopeComputed["admission-diameter-scope"],
-  };
 
   const base: Record<string, unknown> = {
     "last-name": welder.lastName,
@@ -224,7 +228,7 @@ export function buildCertificateDocxPayload(ctx: WelderDocContext): Record<strin
     "sert-number": certNum,
     "protocol-number": group.groupNumber,
     "protocol-date": fmtCertFilingDate(protocolDate),
-    "certificate issued": fmtCertFilingDate(issueDate),
+    "certificate issued": fmtCertificateIssuedLine(issueDate, group.certificateIssueLocation),
     "next-certification-date": fmtCertFilingDate(nextCertificationDate),
     "standards-list": standardsList,
     "standards-list-admission": standardsAdmission,
@@ -244,7 +248,7 @@ export function buildCertificateDocxPayload(ctx: WelderDocContext): Record<strin
     "electrode-or-wire": electrodeOrWire,
     "joint-type": jointTypeLabelUa(welder.jointType),
     "certification-type": certificationTypeLabelUa(welder.certificationType),
-    "work-experience-years": String(welder.workExperienceYears),
+    "work-experience-years": formatWorkExperienceYearsDocx(welder.workExperienceYears),
     "sample-mark": welder.sampleMark,
     "work-company": company.shortName,
     "certificate-valid-until": fmtDate(certificateValidUntil),
@@ -276,14 +280,17 @@ export function buildCertificateDocxPayload(ctx: WelderDocContext): Record<strin
   return base;
 }
 
-/** Поля з `forms/protocol.docx` (і сумісних завантажених шаблонів протоколу). */
+/**
+ * Поля з `forms/protocol.docx` (і сумісних завантажених шаблонів протоколу).
+ * `{chairperson-with-position}` — ПІБ голови та посада: `ПІБ - посада` (як у звіті).
+ */
 export function buildProtocolDocxPayload(
   ctx: WelderDocContext,
   commissionMemberDisplayLines: string[],
   commissionMemberNamesForItems: string[],
 ): Record<string, unknown> {
   const cert = buildCertificateDocxPayload(ctx);
-  const { welder, regulatoryDocs } = ctx;
+  const { welder, regulatoryDocs, head } = ctx;
 
   const fullName = [welder.lastName, welder.firstName, welder.middleName].filter(Boolean).join(" ").trim();
 
@@ -310,6 +317,7 @@ export function buildProtocolDocxPayload(
 
   return {
     ...cert,
+    "chairperson-with-position": formatCommissionMemberDocxLine(head.fullName, head.position),
     "full-name": fullName,
     "birth-year-location": birthYearLocation,
     "qualification-doc-number": welder.prevQualificationDoc?.trim() || "—",
@@ -421,7 +429,7 @@ export function buildReportItemRow(ctx: WelderDocContext): Record<string, unknow
   return {
     ...certPayload,
     "full-name-birthday": `${fullNameBirthday}, ${certPayload.birthday}`,
-    "work-experience-years-work-company": `${welder.workExperienceYears} р.; ${company.shortName}`,
+    "work-experience-years-work-company": `${formatWorkExperienceYearsDocx(welder.workExperienceYears)} р.; ${company.shortName}`,
     "group-oder-number": orderStr,
     "group-order-number": orderStr,
   };

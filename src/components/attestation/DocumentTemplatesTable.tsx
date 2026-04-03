@@ -8,7 +8,8 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 
-import { TemplateRowActions } from "@/components/attestation/TemplateRowActions";
+import { TemplateDeleteButton } from "@/components/attestation/TemplateDeleteButton";
+import { TemplateDownloadButton } from "@/components/attestation/TemplateDownloadButton";
 import { TemplateActivateButton } from "@/components/attestation/TemplateUploadForm";
 import { listTableHeaderClass } from "@/components/data-table/list-styles";
 
@@ -41,7 +42,10 @@ export function DocumentTemplatesTable({ rows }: { rows: DocumentTemplateRow[] }
         id: "name",
         header: "Назва",
         cell: ({ row }) => (
-          <TemplateRowActions templateId={row.original.id} initialName={row.original.name} isActive={row.original.isActive} />
+          <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+            <span className="min-w-0 break-words font-medium">{row.original.name}</span>
+            <TemplateDownloadButton templateId={row.original.id} fileLabel={row.original.name} />
+          </div>
         ),
       },
       {
@@ -58,6 +62,16 @@ export function DocumentTemplatesTable({ rows }: { rows: DocumentTemplateRow[] }
             <TemplateActivateButton templateId={row.original.id} />
           ) : (
             <span className="text-muted-foreground">—</span>
+          ),
+      },
+      {
+        id: "delete",
+        header: () => <span className="sr-only">Видалити</span>,
+        cell: ({ row }) =>
+          row.original.isActive ? (
+            <span className="text-muted-foreground">—</span>
+          ) : (
+            <TemplateDeleteButton templateId={row.original.id} templateName={row.original.name} />
           ),
       },
     ],
@@ -82,7 +96,7 @@ export function DocumentTemplatesTable({ rows }: { rows: DocumentTemplateRow[] }
     <>
       <div className="hidden md:block">
         <div className="overflow-x-auto rounded-md border border-border">
-          <table className="w-full min-w-[640px] border-collapse text-sm">
+          <table className="w-full min-w-[700px] border-collapse text-sm">
             <thead className={listTableHeaderClass}>
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>
@@ -119,14 +133,17 @@ export function DocumentTemplatesTable({ rows }: { rows: DocumentTemplateRow[] }
             >
               <div className="mb-2 text-base font-semibold leading-tight">{typeLabel(t.templateType)}</div>
               <dl className="mb-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-sm">
+                <dt className="text-muted-foreground">Назва</dt>
+                <dd className="min-w-0 break-words font-medium">{t.name}</dd>
                 <dt className="text-muted-foreground">Активний</dt>
                 <dd>{t.isActive ? "так" : "ні"}</dd>
               </dl>
               <div className="space-y-3 border-t border-border pt-3">
-                <TemplateRowActions templateId={t.id} initialName={t.name} isActive={t.isActive} />
+                <TemplateDownloadButton templateId={t.id} fileLabel={t.name} />
                 {!t.isActive ? (
-                  <div>
+                  <div className="flex flex-wrap items-center gap-2">
                     <TemplateActivateButton templateId={t.id} />
+                    <TemplateDeleteButton templateId={t.id} templateName={t.name} />
                   </div>
                 ) : null}
               </div>

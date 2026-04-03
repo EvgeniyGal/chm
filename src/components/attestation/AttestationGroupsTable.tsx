@@ -27,6 +27,7 @@ export type AttestationGroupListRow = {
   groupNumber: string;
   protocolDate: string;
   certificateIssueLocation: string;
+  welderCount: number;
   status: string;
 };
 
@@ -155,6 +156,14 @@ export function AttestationGroupsTable({
         ),
       },
       {
+        id: "welderCount",
+        accessorKey: "welderCount",
+        header: "Зварників",
+        cell: ({ row }) => (
+          <span className="tabular-nums text-foreground">{row.original.welderCount}</span>
+        ),
+      },
+      {
         id: "status",
         accessorKey: "status",
         header: "Статус",
@@ -235,7 +244,7 @@ export function AttestationGroupsTable({
                   });
                 }}
               >
-                <option value="">Усі (з урахуванням «Показати»)</option>
+                <option value="">Усі</option>
                 <option value="draft">Чернетка</option>
                 <option value="active">Активна</option>
                 <option value="completed">Завершена</option>
@@ -251,14 +260,14 @@ export function AttestationGroupsTable({
                 onChange={(e) => {
                   const v = e.target.value;
                   updateParams({
-                    show: v === "active" || v === "all" || v === "archived" ? v : "active",
+                    show: v === "active" || v === "all" || v === "archived" ? v : "all",
                     page: 1,
                   });
                 }}
               >
-                <option value="active">Без архівних</option>
-                <option value="all">Усі статуси</option>
-                <option value="archived">Лише архівні</option>
+                <option value="all">Усі</option>
+                <option value="archived">Архівні</option>
+                <option value="active">Активні</option>
               </NativeSelect>
             </div>
           </div>
@@ -292,7 +301,7 @@ export function AttestationGroupsTable({
 
       <Card className="overflow-hidden p-0">
         <div className="hidden overflow-x-auto md:block">
-          <table className="w-full min-w-[880px] border-collapse text-sm">
+          <table className="w-full min-w-[960px] border-collapse text-sm">
             <thead className={listTableHeaderClass}>
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>
@@ -346,7 +355,7 @@ export function AttestationGroupsTable({
             <tbody>
               {rows.length === 0 ? (
                 <tr>
-                  <td className="border-t border-border px-3 py-8 text-center text-muted-foreground" colSpan={5}>
+                  <td className="border-t border-border px-3 py-8 text-center text-muted-foreground" colSpan={6}>
                     {emptyMessage}
                   </td>
                 </tr>
@@ -356,7 +365,7 @@ export function AttestationGroupsTable({
                     {row.getVisibleCells().map((cell) => (
                       <td
                         key={cell.id}
-                        className={`px-3 py-3 align-top ${cell.column.id === "certificateIssueLocation" ? "min-w-0 max-w-[min(24rem,40vw)]" : ""} ${cell.column.id === "actions" ? "text-right" : ""}`}
+                        className={`px-3 py-3 align-top ${cell.column.id === "certificateIssueLocation" ? "min-w-0 max-w-[min(24rem,40vw)]" : ""} ${cell.column.id === "welderCount" ? "text-right" : ""} ${cell.column.id === "actions" ? "text-right" : ""}`}
                       >
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </td>
@@ -389,6 +398,8 @@ export function AttestationGroupsTable({
                         </dd>
                         <dt className="text-muted-foreground">Місце видачі</dt>
                         <dd className="min-w-0 break-words text-foreground">{g.certificateIssueLocation}</dd>
+                        <dt className="text-muted-foreground">Зварників</dt>
+                        <dd className="tabular-nums text-foreground">{g.welderCount}</dd>
                         <dt className="text-muted-foreground">Статус</dt>
                         <dd>{certificationGroupStatusLabelUa(g.status)}</dd>
                       </dl>

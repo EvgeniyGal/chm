@@ -32,11 +32,14 @@ export function CommissionGroupPickers({
   rosterRows,
   initialHeadId = "",
   initialMemberIds = [],
+  variant = "edit",
 }: {
   members: CommissionMemberOption[];
   rosterRows: CommissionRosterRow[];
   initialHeadId?: string;
   initialMemberIds?: string[];
+  /** На сторінці створення групи — хоча б один член комісії обов’язковий (узгоджено з валідацією). */
+  variant?: "create" | "edit";
 }) {
   const memberIdAllowed = useCallback(
     (id: string) => members.find((m) => m.id === id)?.role === "member",
@@ -145,6 +148,7 @@ export function CommissionGroupPickers({
 
       <fieldset
         aria-labelledby="commission-members-heading"
+        aria-required={variant === "create"}
         className="flex min-w-0 flex-col gap-3 rounded-lg border border-border bg-white p-4 shadow-sm"
       >
         <div className="flex min-w-0 flex-row items-center justify-between gap-2">
@@ -165,8 +169,17 @@ export function CommissionGroupPickers({
           </button>
         </div>
         <p className="text-xs text-zinc-600">
-          Лише особи з роллю «член комісії» у довіднику (до п’яти); голову оберіть вище. Обраний голова тут не
-          показується.
+          {variant === "create" ? (
+            <>
+              Оберіть хоча б одного члена комісії (до п’яти). Лише особи з роллю «член комісії» у довіднику; голову
+              вкажіть полем вище. Обраний голова тут не показується.
+            </>
+          ) : (
+            <>
+              Лише особи з роллю «член комісії» у довіднику (до п’яти); голову оберіть вище. Обраний голова тут не
+              показується.
+            </>
+          )}
         </p>
         <div className="flex flex-wrap gap-2">
           <button
