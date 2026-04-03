@@ -44,7 +44,11 @@ export default async function AttestationSettingsPage() {
       <AttestationSettingsTabs
         commission={
           <>
-            <GuardedForm action={addCommissionMemberAction} className="flex max-w-xl flex-col gap-2 rounded-md border border-border p-3">
+            <GuardedForm
+              action={addCommissionMemberAction}
+              resetOnSuccess
+              className="flex max-w-xl flex-col gap-2 rounded-md border border-border p-3"
+            >
               <div className="text-sm font-medium">Додати члена</div>
               <input name="fullName" required placeholder="ПІБ" className="h-10 rounded-md border border-border px-3" />
               <input name="position" placeholder="Посада (для протоколу)" className="h-10 rounded-md border border-border px-3" />
@@ -70,7 +74,11 @@ export default async function AttestationSettingsPage() {
         }
         regulatory={
           <>
-            <GuardedForm action={addRegulatoryDocumentAction} className="flex max-w-xl flex-col gap-2 rounded-md border border-border p-3">
+            <GuardedForm
+              action={addRegulatoryDocumentAction}
+              resetOnSuccess
+              className="flex max-w-xl flex-col gap-2 rounded-md border border-border p-3"
+            >
               <div className="text-sm font-medium">Додати НД</div>
               <input name="code" required placeholder="Шифр (унікальний)" className="h-10 rounded-md border border-border px-3" />
               <input name="name" required placeholder="Повна назва" className="h-10 rounded-md border border-border px-3" />
@@ -92,7 +100,11 @@ export default async function AttestationSettingsPage() {
         }
         samples={
           <>
-            <GuardedForm action={addSampleMaterialAction} className="flex max-w-xl flex-col gap-2 rounded-md border border-border p-3">
+            <GuardedForm
+              action={addSampleMaterialAction}
+              resetOnSuccess
+              className="flex max-w-xl flex-col gap-2 rounded-md border border-border p-3"
+            >
               <div className="text-sm font-medium">Додати матеріал</div>
               <select name="groupCode" required className="h-10 rounded-md border border-border px-3" defaultValue="W01">
                 <option value="W01">W01</option>
@@ -118,7 +130,11 @@ export default async function AttestationSettingsPage() {
         }
         consumables={
           <>
-            <GuardedForm action={addWeldingConsumableAction} className="flex max-w-xl flex-col gap-2 rounded-md border border-border p-3">
+            <GuardedForm
+              action={addWeldingConsumableAction}
+              resetOnSuccess
+              className="flex max-w-xl flex-col gap-2 rounded-md border border-border p-3"
+            >
               <div className="text-sm font-medium">Додати матеріал</div>
               <input name="materialGrade" required placeholder="Марка (напр. УОНИ 13/45)" className="h-10 rounded-md border border-border px-3" />
               <select name="coatingType" required className="h-10 rounded-md border border-border px-3" defaultValue="B">

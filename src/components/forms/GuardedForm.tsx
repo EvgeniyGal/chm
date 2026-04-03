@@ -28,6 +28,8 @@ type GuardedFormProps = {
   className?: string;
   children: React.ReactNode;
   successMessage?: string;
+  /** Після успішного submit очистити поля (для форм «додати рядок»). */
+  resetOnSuccess?: boolean;
   /** Якщо `true`, у діалозі показується «Зберегти та перейти» — server action має ігнорувати `redirect`, коли в FormData є `_skipRedirect=1`. */
   enableSaveAndProceed?: boolean;
   /** Атрибути для кореневого `<form>` (наприклад `id`, `data-*`), без `action` / `onSubmit` / `className`. */
@@ -38,7 +40,7 @@ type GuardedFormProps = {
 };
 
 export const GuardedForm = forwardRef<GuardedFormHandle, GuardedFormProps>(function GuardedForm(
-  { action, className, children, successMessage, enableSaveAndProceed, formProps },
+  { action, className, children, successMessage, resetOnSuccess, enableSaveAndProceed, formProps },
   ref,
 ) {
   const formRef = useRef<HTMLFormElement | null>(null);
@@ -106,6 +108,11 @@ export const GuardedForm = forwardRef<GuardedFormHandle, GuardedFormProps>(funct
           const formData = new FormData(e.currentTarget);
           try {
             await action(formData);
+            const form = e.currentTarget;
+            if (resetOnSuccess) {
+              form.reset();
+              initialSnapshotRef.current = snapshotForm(form);
+            }
             setIsDirty(false);
             if (successMessage) toast.success(successMessage);
           } catch (err) {

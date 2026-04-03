@@ -78,6 +78,7 @@ export function CommissionManageDialog({
 
               <GuardedForm
                 action={addCommissionMemberAction}
+                resetOnSuccess
                 className="flex flex-col gap-2 rounded-md border border-border p-3"
               >
                 <div className="text-sm font-medium">Додати члена</div>
