@@ -7,12 +7,15 @@ import {
   type ColumnDef,
   flexRender,
   getCoreRowModel,
+  getSortedRowModel,
+  type SortingState,
   useReactTable,
 } from "@tanstack/react-table";
 import { toast } from "sonner";
 
 import { ArchiveSettingsRowConfirmDialog } from "@/components/attestation/ArchiveSettingsRowConfirmDialog";
 import { listTableHeaderClass } from "@/components/data-table/list-styles";
+import { SortableHeader, sortRowsLocaleUk } from "@/components/data-table/sortable-column-header";
 import {
   archiveSampleMaterialAction,
   restoreSampleMaterialAction,
@@ -42,6 +45,7 @@ export function SampleMaterialsTable({ rows }: { rows: SampleMaterialRow[] }) {
   const [archiveConfirm, setArchiveConfirm] = useState<{ id: string; groupCode: string; steelGrade: string } | null>(null);
   const [archiving, setArchiving] = useState(false);
   const [restoringId, setRestoringId] = useState<string | null>(null);
+  const [sorting, setSorting] = useState<SortingState>([{ id: "groupCode", desc: false }]);
 
   async function confirmArchive() {
     if (!archiveConfirm) return;
@@ -81,22 +85,26 @@ export function SampleMaterialsTable({ rows }: { rows: SampleMaterialRow[] }) {
     () => [
       {
         accessorKey: "groupCode",
-        header: "Група",
+        header: ({ column }) => <SortableHeader column={column}>Група</SortableHeader>,
+        sortingFn: sortRowsLocaleUk,
         cell: ({ row }) => <span className="font-medium">{row.original.groupCode}</span>,
       },
       {
         accessorKey: "steelGrade",
-        header: "Марка сталі",
+        header: ({ column }) => <SortableHeader column={column}>Марка сталі</SortableHeader>,
+        sortingFn: sortRowsLocaleUk,
         cell: ({ row }) => <span className="break-words">{row.original.steelGrade}</span>,
       },
       {
         id: "status",
         accessorFn: (r) => (r.isActive ? "активний" : "архів"),
-        header: "Статус",
+        header: ({ column }) => <SortableHeader column={column}>Статус</SortableHeader>,
+        sortingFn: sortRowsLocaleUk,
         cell: ({ row }) => <span>{row.original.isActive ? "активний" : "архів"}</span>,
       },
       {
         id: "actions",
+        enableSorting: false,
         header: () => <span className="sr-only">Дії</span>,
         cell: ({ row }) => {
           const r = row.original;
@@ -146,7 +154,10 @@ export function SampleMaterialsTable({ rows }: { rows: SampleMaterialRow[] }) {
   const table = useReactTable({
     data: rows,
     columns,
+    state: { sorting },
+    onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
   });
 
   function EditForm({ row }: { row: SampleMaterialRow }) {
@@ -216,11 +227,18 @@ export function SampleMaterialsTable({ rows }: { rows: SampleMaterialRow[] }) {
             <thead className={listTableHeaderClass}>
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => (
-                    <th key={header.id} className="px-2 py-2 text-left">
-                      {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                    </th>
-                  ))}
+                  {headerGroup.headers.map((header) => {
+                    const sort = header.column.getIsSorted();
+                    return (
+                      <th
+                        key={header.id}
+                        className="px-2 py-2 text-left"
+                        aria-sort={sort === "asc" ? "ascending" : sort === "desc" ? "descending" : "none"}
+                      >
+                        {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                      </th>
+                    );
+                  })}
                 </tr>
               ))}
             </thead>
