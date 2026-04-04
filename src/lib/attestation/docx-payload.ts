@@ -146,7 +146,8 @@ export type WelderDocContext = {
  * `sample-material-grade` — `W01 (Ст3пс)`; `admission-sample-material-grade` — коротко `W01` / `W01, W02` / … за табл. 6–7 (п. 6.3).
  * `electrode-or-wire` — `B (марка)` або `B (марка) / C (марка)` при комбінованому зварюванні; `admission-electrode-or-wire` — типи за табл. 8: перетин лише між електродами; якщо є `Wm`, до списку додається `Wm` (без перетину з покриттями).
  * `certificate issued` — дата видачі посвідчень + місце видачі з групи: `ДД.ММ.РРРР р., {місце}`.
- * `standards-list` / `standards-list-admission` — коди обраних НД (`regulatory_documents.code`), через кому.
+ * Посвідчення: `{standards-list}` — шифри НД (`code`); `{standards-list-admission}` — текст допуску (`admission_text`), через кому.
+ * Протокол: `{standards-list}` і `{standards-list-admission}` — обидва шифри (друге поле перезаписується в `buildProtocolDocxPayload`); `{admission-type}` — текст допуску з НД.
  */
 export function buildCertificateDocxPayload(ctx: WelderDocContext): Record<string, unknown> {
   const { welder, group, company, head, sampleMaterial, consumable1, consumable2, regulatoryDocs } = ctx;
@@ -178,8 +179,8 @@ export function buildCertificateDocxPayload(ctx: WelderDocContext): Record<strin
   });
 
   const standardsList = regulatoryDocs.map((r) => r.code.trim()).filter(Boolean).join(", ");
-  /** Protocol/certificate `{standards-list-admission}` — коди НД (як `{standards-list}`), не текст допуску. */
-  const standardsAdmission = standardsList;
+  /** У посвідченні — «Текст допуску» з НД; у протоколі ключ перезаписується на шифри. */
+  const standardsAdmission = regulatoryDocs.map((r) => r.admissionText.trim()).filter(Boolean).join(", ");
 
   const electrodeOrWire = formatElectrodeOrWireDocx(consumable1, consumable2, welder.isCombined);
 
@@ -286,6 +287,8 @@ export function buildCertificateDocxPayload(ctx: WelderDocContext): Record<strin
 /**
  * Поля з `forms/protocol.docx` (і сумісних завантажених шаблонів протоколу).
  * `{chairperson-with-position}` — ПІБ голови та посада: `ПІБ - посада` (як у звіті).
+ * `{admission-type}` — те саме, що текст допуску в посвідченні (`cert.standards-list-admission` до перезапису).
+ * `{standards-list-admission}` у протоколі — знову шифри (як `{standards-list}`), щоб не плутати з полем посвідчення.
  */
 export function buildProtocolDocxPayload(
   ctx: WelderDocContext,
@@ -294,6 +297,7 @@ export function buildProtocolDocxPayload(
 ): Record<string, unknown> {
   const cert = buildCertificateDocxPayload(ctx);
   const { welder, head } = ctx;
+  const ndAdmissionText = cert["standards-list-admission"];
 
   const fullName = [welder.lastName, welder.firstName, welder.middleName].filter(Boolean).join(" ").trim();
 
@@ -331,7 +335,8 @@ export function buildProtocolDocxPayload(
     inspectionItems: inspectionRows,
     inspectionitems: inspectionRows,
     commissionItems: itemMemberNames.map((m) => ({ member: m })),
-    "admission-type": cert["standards-list-admission"],
+    "admission-type": ndAdmissionText,
+    "standards-list-admission": cert["standards-list"],
     admission: buildAdmissionSummaryLine(cert),
   };
 }
