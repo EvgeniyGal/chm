@@ -33,7 +33,10 @@ export default async function AttestationSettingsPage() {
     .from(regulatoryDocuments)
     .orderBy(regulatoryDocuments.sortOrder, regulatoryDocuments.code);
   const samples = await db.select().from(sampleMaterials).orderBy(sampleMaterials.steelGrade);
-  const consumablesList = await db.select().from(weldingConsumables).orderBy(weldingConsumables.materialGrade);
+  const consumablesList = await db
+    .select()
+    .from(weldingConsumables)
+    .orderBy(weldingConsumables.coatingType, weldingConsumables.materialGrade);
 
   return (
     <div className="w-full min-w-0">
@@ -136,7 +139,6 @@ export default async function AttestationSettingsPage() {
               className="flex max-w-xl flex-col gap-2 rounded-md border border-border p-3"
             >
               <div className="text-sm font-medium">Додати матеріал</div>
-              <input name="materialGrade" required placeholder="Марка (напр. УОНИ 13/45)" className="h-10 rounded-md border border-border px-3" />
               <select name="coatingType" required className="h-10 rounded-md border border-border px-3" defaultValue="B">
                 {WELDING_COATING_TYPES.map((c) => (
                   <option key={c} value={c}>
@@ -144,6 +146,7 @@ export default async function AttestationSettingsPage() {
                   </option>
                 ))}
               </select>
+              <input name="materialGrade" required placeholder="Марка (напр. УОНИ 13/45)" className="h-10 rounded-md border border-border px-3" />
               <button type="submit" className="crm-btn-primary w-fit">
                 Додати
               </button>

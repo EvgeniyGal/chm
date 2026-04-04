@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 
 import { db } from "@/db";
 import { dropdownOptions } from "@/db/schema";
@@ -10,13 +10,17 @@ function normalizeValues(values: string[]) {
   return [...new Set(values.map((v) => v.trim()).filter(Boolean))];
 }
 
+/** Ukrainian locale alphabetical order (DB `ORDER BY` uses collation, not this). */
+function sortUa(values: string[]) {
+  return [...values].sort((a, b) => a.localeCompare(b, "uk"));
+}
+
 export async function getDropdownOptions(scope: DropdownScope) {
   const rows = await db
     .select({ value: dropdownOptions.value })
     .from(dropdownOptions)
-    .where(eq(dropdownOptions.scope, scope))
-    .orderBy(asc(dropdownOptions.value));
-  return rows.map((r) => r.value);
+    .where(eq(dropdownOptions.scope, scope));
+  return sortUa(rows.map((r) => r.value));
 }
 
 export async function saveDropdownOption(scope: DropdownScope, value: string) {

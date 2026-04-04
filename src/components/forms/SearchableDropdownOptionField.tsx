@@ -12,6 +12,31 @@ function sortUa(values: string[]) {
   return [...values].sort((a, b) => a.localeCompare(b, "uk"));
 }
 
+/**
+ * Merge server list + current value with in-session adds (+) and without session deletes (trash)
+ * until RSC props refresh. Stale `optionsFromBackend` still lists deleted rows until reload.
+ */
+function mergeOptionsWithSession(
+  optionsFromBackend: string[],
+  normalizedValue: string,
+  sessionAdds: Set<string>,
+  sessionDeletes: Set<string>,
+) {
+  const backendTrimmed = new Set(optionsFromBackend.map((v) => v.trim()).filter(Boolean));
+  for (const v of [...sessionAdds]) {
+    if (backendTrimmed.has(v)) sessionAdds.delete(v);
+  }
+  for (const v of [...sessionDeletes]) {
+    if (!backendTrimmed.has(v)) sessionDeletes.delete(v);
+  }
+  const seeded = normalizedValue
+    ? [...optionsFromBackend, normalizedValue]
+    : [...optionsFromBackend];
+  const baseline = sortUa([...new Set(seeded.map((v) => v.trim()).filter(Boolean))]);
+  const merged = sortUa([...new Set([...baseline, ...sessionAdds])]);
+  return merged.filter((x) => !sessionDeletes.has(x));
+}
+
 export type SearchableDropdownScope =
   | "TAX_STATUS"
   | "SIGNER_POSITION_NOM"
@@ -71,12 +96,33 @@ export function SearchableDropdownOptionField({
 
   const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
 
+  const sessionAddsRef = useRef<Set<string>>(new Set());
+  const sessionDeletesRef = useRef<Set<string>>(new Set());
+
   const initialOptions = useMemo(() => {
     const seeded = normalizedValue ? [...optionsFromBackend, normalizedValue] : [...optionsFromBackend];
     return sortUa([...new Set(seeded.map((v) => v.trim()).filter(Boolean))]);
   }, [normalizedValue, optionsFromBackend]);
 
+  const optionsSyncKey = useMemo(() => {
+    const uniq = [...new Set(optionsFromBackend.map((v) => v.trim()).filter(Boolean))];
+    return `${JSON.stringify(sortUa(uniq))}\0${normalizedValue}`;
+  }, [optionsFromBackend, normalizedValue]);
+
   const [options, setOptions] = useState<string[]>(initialOptions);
+
+  useEffect(() => {
+    setOptions(
+      mergeOptionsWithSession(
+        optionsFromBackend,
+        normalizedValue,
+        sessionAddsRef.current,
+        sessionDeletesRef.current,
+      ),
+    );
+    // optionsSyncKey encodes backend list + value; omitting array ref deps avoids setState loops from unstable [] literals.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- synced when optionsSyncKey changes; closure matches that render
+  }, [optionsSyncKey]);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState(normalizedValue);
 
@@ -88,10 +134,16 @@ export function SearchableDropdownOptionField({
     const onChanged = (event: Event) => {
       const detail = (event as CustomEvent<{ scope: string; action: "add" | "delete"; value: string }>).detail;
       if (!detail || detail.scope !== scope) return;
+      const v = detail.value.trim();
+      if (!v) return;
       if (detail.action === "add") {
-        setOptions((prev) => sortUa([...new Set([...prev, detail.value])]));
+        sessionDeletesRef.current.delete(v);
+        sessionAddsRef.current.add(v);
+        setOptions((prev) => sortUa([...new Set([...prev, v])]).filter((x) => !sessionDeletesRef.current.has(x)));
       } else {
-        setOptions((prev) => prev.filter((v) => v !== detail.value));
+        sessionAddsRef.current.delete(v);
+        sessionDeletesRef.current.add(v);
+        setOptions((prev) => prev.filter((x) => x !== v));
       }
     };
     window.addEventListener("dropdown-options:changed", onChanged);
@@ -323,6 +375,16 @@ export function SearchableDropdownOptionField({
                       return;
                     }
                     toast.success("Варіант додано.");
+                    sessionDeletesRef.current.delete(next);
+                    sessionAddsRef.current.add(next);
+                    setOptions(
+                      mergeOptionsWithSession(
+                        optionsFromBackend,
+                        normalizedValue,
+                        sessionAddsRef.current,
+                        sessionDeletesRef.current,
+                      ),
+                    );
                     window.dispatchEvent(
                       new CustomEvent("dropdown-options:changed", {
                         detail: { scope, action: "add", value: next },
@@ -355,10 +417,19 @@ export function SearchableDropdownOptionField({
                       return;
                     }
                     toast.success("Варіант видалено зі списку.");
-                    setOptions((prev) => prev.filter((v) => v !== selected));
+                    sessionAddsRef.current.delete(selected);
+                    sessionDeletesRef.current.add(selected);
                     onChange("");
                     setQuery("");
                     setOpen(false);
+                    setOptions(
+                      mergeOptionsWithSession(
+                        optionsFromBackend,
+                        "",
+                        sessionAddsRef.current,
+                        sessionDeletesRef.current,
+                      ),
+                    );
                     window.dispatchEvent(
                       new CustomEvent("dropdown-options:changed", {
                         detail: { scope, action: "delete", value: selected },

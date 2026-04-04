@@ -15,7 +15,7 @@ import { getServerActionErrorMessage } from "@/lib/server-action-error-message";
 export type WeldingConsumableEditTarget = { id: string; materialGrade: string; coatingType: string };
 
 function labelFor(materialGrade: string, coatingType: string) {
-  return `${materialGrade} (${coatingType})`;
+  return `${coatingType} (${materialGrade})`;
 }
 
 export function QuickCreateWeldingConsumableModal({

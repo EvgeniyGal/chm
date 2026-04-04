@@ -54,7 +54,7 @@ export function QuickCreateSampleMaterialModal({
       fd.set("groupCode", groupCode);
       fd.set("steelGrade", steel);
 
-      const label = `${groupCode} — ${steel}`;
+      const label = `${groupCode} (${steel})`;
       if (isEdit && editTarget) {
         fd.set("id", editTarget.id);
         await updateSampleMaterialAction(fd);

@@ -11,6 +11,16 @@ import {
 
 type SampleMaterialOption = { id: string; groupCode: string; steelGrade: string };
 
+function compareSampleMaterials(a: SampleMaterialOption, b: SampleMaterialOption) {
+  const byGroup = a.groupCode.localeCompare(b.groupCode, "uk");
+  if (byGroup !== 0) return byGroup;
+  return a.steelGrade.localeCompare(b.steelGrade, "uk");
+}
+
+function sortSampleMaterials(list: SampleMaterialOption[]) {
+  return [...list].sort(compareSampleMaterials);
+}
+
 export function SampleMaterialWelderSelect({
   initialOptions,
   defaultSampleMaterialId,
@@ -18,13 +28,17 @@ export function SampleMaterialWelderSelect({
   initialOptions: SampleMaterialOption[];
   defaultSampleMaterialId: string;
 }) {
-  const [optionsState, setOptionsState] = useState(initialOptions);
+  const [optionsState, setOptionsState] = useState(() => sortSampleMaterials(initialOptions));
   const [value, setValue] = useState(defaultSampleMaterialId);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalEditTarget, setModalEditTarget] = useState<SampleMaterialEditTarget | null>(null);
 
   const companyOptions = useMemo(
-    () => optionsState.map((o) => ({ id: o.id, label: `${o.groupCode} — ${o.steelGrade}` })),
+    () =>
+      sortSampleMaterials(optionsState).map((o) => ({
+        id: o.id,
+        label: `${o.groupCode} (${o.steelGrade})`,
+      })),
     [optionsState],
   );
 
@@ -94,7 +108,7 @@ export function SampleMaterialWelderSelect({
               groupCode: row.groupCode,
               steelGrade: row.steelGrade,
             };
-            return [nextRow, ...rest];
+            return sortSampleMaterials([...rest, nextRow]);
           });
           setValue(row.id);
         }}

@@ -7,12 +7,15 @@ import {
   type ColumnDef,
   flexRender,
   getCoreRowModel,
+  getSortedRowModel,
+  type SortingState,
   useReactTable,
 } from "@tanstack/react-table";
 import { toast } from "sonner";
 
 import { ArchiveSettingsRowConfirmDialog } from "@/components/attestation/ArchiveSettingsRowConfirmDialog";
 import { listTableHeaderClass } from "@/components/data-table/list-styles";
+import { SortableHeader, sortRowsLocaleUk } from "@/components/data-table/sortable-column-header";
 import { WELDING_COATING_TYPES } from "@/lib/attestation/welding-consumable-coating-options";
 import {
   archiveWeldingConsumableAction,
@@ -43,6 +46,7 @@ export function WeldingConsumablesTable({ rows }: { rows: WeldingConsumableRow[]
   );
   const [archiving, setArchiving] = useState(false);
   const [restoringId, setRestoringId] = useState<string | null>(null);
+  const [sorting, setSorting] = useState<SortingState>([{ id: "coatingType", desc: false }]);
 
   async function confirmArchive() {
     if (!archiveConfirm) return;
@@ -81,23 +85,27 @@ export function WeldingConsumablesTable({ rows }: { rows: WeldingConsumableRow[]
   const columns = useMemo<ColumnDef<WeldingConsumableRow>[]>(
     () => [
       {
-        accessorKey: "materialGrade",
-        header: "Марка",
-        cell: ({ row }) => <span className="font-medium break-words">{row.original.materialGrade}</span>,
+        accessorKey: "coatingType",
+        header: ({ column }) => <SortableHeader column={column}>Покриття</SortableHeader>,
+        sortingFn: sortRowsLocaleUk,
+        cell: ({ row }) => <span className="font-medium">{row.original.coatingType}</span>,
       },
       {
-        accessorKey: "coatingType",
-        header: "Покриття",
-        cell: ({ row }) => <span>{row.original.coatingType}</span>,
+        accessorKey: "materialGrade",
+        header: ({ column }) => <SortableHeader column={column}>Марка</SortableHeader>,
+        sortingFn: sortRowsLocaleUk,
+        cell: ({ row }) => <span className="break-words">{row.original.materialGrade}</span>,
       },
       {
         id: "status",
         accessorFn: (r) => (r.isActive ? "активний" : "архів"),
-        header: "Статус",
+        header: ({ column }) => <SortableHeader column={column}>Статус</SortableHeader>,
+        sortingFn: sortRowsLocaleUk,
         cell: ({ row }) => <span>{row.original.isActive ? "активний" : "архів"}</span>,
       },
       {
         id: "actions",
+        enableSorting: false,
         header: () => <span className="sr-only">Дії</span>,
         cell: ({ row }) => {
           const r = row.original;
@@ -149,7 +157,10 @@ export function WeldingConsumablesTable({ rows }: { rows: WeldingConsumableRow[]
   const table = useReactTable({
     data: rows,
     columns,
+    state: { sorting },
+    onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
   });
 
   function EditForm({ row }: { row: WeldingConsumableRow }) {
@@ -171,15 +182,6 @@ export function WeldingConsumablesTable({ rows }: { rows: WeldingConsumableRow[]
         <div className="text-xs font-medium text-foreground">Редагування зварювального матеріалу</div>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <label className="flex flex-col gap-1 sm:col-span-2">
-            <span className="text-xs text-muted-foreground">Марка</span>
-            <input
-              name="materialGrade"
-              required
-              defaultValue={row.materialGrade}
-              className="h-10 rounded-md border border-border bg-white px-3 text-sm dark:bg-background"
-            />
-          </label>
-          <label className="flex flex-col gap-1 sm:col-span-2">
             <span className="text-xs text-muted-foreground">Тип покриття</span>
             <select
               name="coatingType"
@@ -193,6 +195,15 @@ export function WeldingConsumablesTable({ rows }: { rows: WeldingConsumableRow[]
                 </option>
               ))}
             </select>
+          </label>
+          <label className="flex flex-col gap-1 sm:col-span-2">
+            <span className="text-xs text-muted-foreground">Марка</span>
+            <input
+              name="materialGrade"
+              required
+              defaultValue={row.materialGrade}
+              className="h-10 rounded-md border border-border bg-white px-3 text-sm dark:bg-background"
+            />
           </label>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -219,11 +230,18 @@ export function WeldingConsumablesTable({ rows }: { rows: WeldingConsumableRow[]
             <thead className={listTableHeaderClass}>
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => (
-                    <th key={header.id} className="px-2 py-2 text-left">
-                      {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                    </th>
-                  ))}
+                  {headerGroup.headers.map((header) => {
+                    const sort = header.column.getIsSorted();
+                    return (
+                      <th
+                        key={header.id}
+                        className="px-2 py-2 text-left"
+                        aria-sort={sort === "asc" ? "ascending" : sort === "desc" ? "descending" : "none"}
+                      >
+                        {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                      </th>
+                    );
+                  })}
                 </tr>
               ))}
             </thead>
@@ -259,10 +277,10 @@ export function WeldingConsumablesTable({ rows }: { rows: WeldingConsumableRow[]
               <div className="rounded-lg border border-border bg-card px-3 py-3 text-card-foreground shadow-sm">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1 space-y-2">
-                    <div className="text-base font-semibold leading-tight break-words">{r.materialGrade}</div>
+                    <div className="text-base font-semibold leading-tight">{r.coatingType}</div>
                     <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-sm">
-                      <dt className="text-muted-foreground">Покриття</dt>
-                      <dd>{r.coatingType}</dd>
+                      <dt className="text-muted-foreground">Марка</dt>
+                      <dd className="break-words">{r.materialGrade}</dd>
                       <dt className="text-muted-foreground">Статус</dt>
                       <dd>{r.isActive ? "активний" : "архів"}</dd>
                     </dl>

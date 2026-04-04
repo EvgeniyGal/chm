@@ -7,12 +7,15 @@ import {
   type ColumnDef,
   flexRender,
   getCoreRowModel,
+  getSortedRowModel,
+  type SortingState,
   useReactTable,
 } from "@tanstack/react-table";
 import { toast } from "sonner";
 
 import { ArchiveCommissionConfirmDialog } from "@/components/attestation/ArchiveCommissionConfirmDialog";
 import { listTableHeaderClass } from "@/components/data-table/list-styles";
+import { SortableHeader, sortRowsLocaleUk } from "@/components/data-table/sortable-column-header";
 import { commissionMemberRoleLabelUk } from "@/lib/attestation/commission-member-labels";
 import {
   archiveCommissionMemberAction,
@@ -50,6 +53,7 @@ export function CommissionRosterTable({
   const [archiveConfirm, setArchiveConfirm] = useState<{ id: string; fullName: string } | null>(null);
   const [archiving, setArchiving] = useState(false);
   const [restoringId, setRestoringId] = useState<string | null>(null);
+  const [sorting, setSorting] = useState<SortingState>([{ id: "fullName", desc: false }]);
 
   async function confirmArchive() {
     if (!archiveConfirm) return;
@@ -89,29 +93,36 @@ export function CommissionRosterTable({
     () => [
       {
         accessorKey: "fullName",
-        header: "ПІБ",
+        header: ({ column }) => <SortableHeader column={column}>ПІБ</SortableHeader>,
+        sortingFn: sortRowsLocaleUk,
         cell: ({ row }) => <span>{row.original.fullName}</span>,
       },
       {
-        accessorKey: "position",
-        header: "Посада",
+        id: "position",
+        accessorFn: (r) => r.position?.trim() ?? "",
+        header: ({ column }) => <SortableHeader column={column}>Посада</SortableHeader>,
+        sortingFn: sortRowsLocaleUk,
         cell: ({ row }) => (
           <span className="text-muted-foreground">{row.original.position?.trim() ? row.original.position : "—"}</span>
         ),
       },
       {
-        accessorKey: "role",
-        header: "Роль",
+        id: "roleLabel",
+        accessorFn: (r) => commissionMemberRoleLabelUk(r.role),
+        header: ({ column }) => <SortableHeader column={column}>Роль</SortableHeader>,
+        sortingFn: sortRowsLocaleUk,
         cell: ({ row }) => <span>{commissionMemberRoleLabelUk(row.original.role)}</span>,
       },
       {
         id: "status",
         accessorFn: (r) => (r.isActive ? "активний" : "архів"),
-        header: "Статус",
+        header: ({ column }) => <SortableHeader column={column}>Статус</SortableHeader>,
+        sortingFn: sortRowsLocaleUk,
         cell: ({ row }) => <span>{row.original.isActive ? "активний" : "архів"}</span>,
       },
       {
         id: "actions",
+        enableSorting: false,
         header: () => <span className="sr-only">Дії</span>,
         cell: ({ row }) => {
           const m = row.original;
@@ -165,7 +176,10 @@ export function CommissionRosterTable({
   const table = useReactTable({
     data: rosterRows,
     columns,
+    state: { sorting },
+    onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
   });
 
   function EditForm({ m }: { m: CommissionRosterRow }) {
@@ -240,11 +254,18 @@ export function CommissionRosterTable({
             <thead className={listTableHeaderClass}>
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => (
-                    <th key={header.id} className="px-2 py-2 text-left">
-                      {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                    </th>
-                  ))}
+                  {headerGroup.headers.map((header) => {
+                    const sort = header.column.getIsSorted();
+                    return (
+                      <th
+                        key={header.id}
+                        className="px-2 py-2 text-left"
+                        aria-sort={sort === "asc" ? "ascending" : sort === "desc" ? "descending" : "none"}
+                      >
+                        {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                      </th>
+                    );
+                  })}
                 </tr>
               ))}
             </thead>

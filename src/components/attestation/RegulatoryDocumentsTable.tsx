@@ -7,12 +7,15 @@ import {
   type ColumnDef,
   flexRender,
   getCoreRowModel,
+  getSortedRowModel,
+  type SortingState,
   useReactTable,
 } from "@tanstack/react-table";
 import { toast } from "sonner";
 
 import { ArchiveRegulatoryConfirmDialog } from "@/components/attestation/ArchiveRegulatoryConfirmDialog";
 import { listTableHeaderClass } from "@/components/data-table/list-styles";
+import { SortableHeader, sortRowsLocaleUk } from "@/components/data-table/sortable-column-header";
 import {
   archiveRegulatoryDocumentAction,
   restoreRegulatoryDocumentAction,
@@ -41,6 +44,7 @@ export function RegulatoryDocumentsTable({ rows }: { rows: RegulatoryDocumentRow
   const [archiveConfirm, setArchiveConfirm] = useState<{ id: string; code: string; name: string } | null>(null);
   const [archiving, setArchiving] = useState(false);
   const [restoringId, setRestoringId] = useState<string | null>(null);
+  const [sorting, setSorting] = useState<SortingState>([{ id: "code", desc: false }]);
 
   async function confirmArchive() {
     if (!archiveConfirm) return;
@@ -80,17 +84,20 @@ export function RegulatoryDocumentsTable({ rows }: { rows: RegulatoryDocumentRow
     () => [
       {
         accessorKey: "code",
-        header: "Шифр",
+        header: ({ column }) => <SortableHeader column={column}>Шифр</SortableHeader>,
+        sortingFn: sortRowsLocaleUk,
         cell: ({ row }) => <span className="font-medium">{row.original.code}</span>,
       },
       {
         accessorKey: "name",
-        header: "Назва",
+        header: ({ column }) => <SortableHeader column={column}>Назва</SortableHeader>,
+        sortingFn: sortRowsLocaleUk,
         cell: ({ row }) => <span className="break-words">{row.original.name}</span>,
       },
       {
         accessorKey: "admissionText",
-        header: "Текст допуску",
+        header: ({ column }) => <SortableHeader column={column}>Текст допуску</SortableHeader>,
+        sortingFn: sortRowsLocaleUk,
         cell: ({ row }) => (
           <p
             className="line-clamp-4 max-w-md break-words text-muted-foreground leading-relaxed"
@@ -103,11 +110,13 @@ export function RegulatoryDocumentsTable({ rows }: { rows: RegulatoryDocumentRow
       {
         id: "status",
         accessorFn: (r) => (r.isActive ? "активний" : "архів"),
-        header: "Статус",
+        header: ({ column }) => <SortableHeader column={column}>Статус</SortableHeader>,
+        sortingFn: sortRowsLocaleUk,
         cell: ({ row }) => <span>{row.original.isActive ? "активний" : "архів"}</span>,
       },
       {
         id: "actions",
+        enableSorting: false,
         header: () => <span className="sr-only">Дії</span>,
         cell: ({ row }) => {
           const r = row.original;
@@ -157,7 +166,10 @@ export function RegulatoryDocumentsTable({ rows }: { rows: RegulatoryDocumentRow
   const table = useReactTable({
     data: rows,
     columns,
+    state: { sorting },
+    onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
   });
 
   function EditForm({ row }: { row: RegulatoryDocumentRow }) {
@@ -231,11 +243,18 @@ export function RegulatoryDocumentsTable({ rows }: { rows: RegulatoryDocumentRow
             <thead className={listTableHeaderClass}>
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => (
-                    <th key={header.id} className="px-2 py-2 text-left">
-                      {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                    </th>
-                  ))}
+                  {headerGroup.headers.map((header) => {
+                    const sort = header.column.getIsSorted();
+                    return (
+                      <th
+                        key={header.id}
+                        className="px-2 py-2 text-left"
+                        aria-sort={sort === "asc" ? "ascending" : sort === "desc" ? "descending" : "none"}
+                      >
+                        {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                      </th>
+                    );
+                  })}
                 </tr>
               ))}
             </thead>

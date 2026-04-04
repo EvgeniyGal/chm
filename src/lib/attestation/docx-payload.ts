@@ -146,6 +146,7 @@ export type WelderDocContext = {
  * `sample-material-grade` — `W01 (Ст3пс)`; `admission-sample-material-grade` — коротко `W01` / `W01, W02` / … за табл. 6–7 (п. 6.3).
  * `electrode-or-wire` — `B (марка)` або `B (марка) / C (марка)` при комбінованому зварюванні; `admission-electrode-or-wire` — типи за табл. 8: перетин лише між електродами; якщо є `Wm`, до списку додається `Wm` (без перетину з покриттями).
  * `certificate issued` — дата видачі посвідчень + місце видачі з групи: `ДД.ММ.РРРР р., {місце}`.
+ * `standards-list` / `standards-list-admission` — коди обраних НД (`regulatory_documents.code`), через кому.
  */
 export function buildCertificateDocxPayload(ctx: WelderDocContext): Record<string, unknown> {
   const { welder, group, company, head, sampleMaterial, consumable1, consumable2, regulatoryDocs } = ctx;
@@ -176,8 +177,9 @@ export function buildCertificateDocxPayload(ctx: WelderDocContext): Record<strin
     jointCharacteristics: welder.jointCharacteristics,
   });
 
-  const standardsList = regulatoryDocs.map((r) => r.code).join(", ");
-  const standardsAdmission = regulatoryDocs.map((r) => r.admissionText.trim()).join(", ");
+  const standardsList = regulatoryDocs.map((r) => r.code.trim()).filter(Boolean).join(", ");
+  /** Protocol/certificate `{standards-list-admission}` — коди НД (як `{standards-list}`), не текст допуску. */
+  const standardsAdmission = standardsList;
 
   const electrodeOrWire = formatElectrodeOrWireDocx(consumable1, consumable2, welder.isCombined);
 
@@ -291,7 +293,7 @@ export function buildProtocolDocxPayload(
   commissionMemberNamesForItems: string[],
 ): Record<string, unknown> {
   const cert = buildCertificateDocxPayload(ctx);
-  const { welder, regulatoryDocs, head } = ctx;
+  const { welder, head } = ctx;
 
   const fullName = [welder.lastName, welder.firstName, welder.middleName].filter(Boolean).join(" ").trim();
 
@@ -309,8 +311,6 @@ export function buildProtocolDocxPayload(
   );
   const jointDesc = `${seamTypeDocxUa(welder.jointType)}, ${jc}`;
 
-  const standardsAdmission = regulatoryDocs.map((r) => r.admissionText.trim()).join(", ");
-
   const memberLines = commissionMemberDisplayLines.map((n) => n.trim()).filter(Boolean);
   const itemMemberNames = commissionMemberNamesForItems.map((n) => n.trim()).filter(Boolean);
 
@@ -327,12 +327,11 @@ export function buildProtocolDocxPayload(
     "preheat-and-interpass": welder.preheat ? "Так" : "Ні",
     "heat-treatment": welder.heatTreatment ? "Так" : "Ні",
     members: memberLines.join(", "),
-    "standards-list-admission": standardsAdmission,
     items: inspectionRows,
     inspectionItems: inspectionRows,
     inspectionitems: inspectionRows,
     commissionItems: itemMemberNames.map((m) => ({ member: m })),
-    "admission-type": standardsAdmission,
+    "admission-type": cert["standards-list-admission"],
     admission: buildAdmissionSummaryLine(cert),
   };
 }

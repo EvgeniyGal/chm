@@ -11,6 +11,16 @@ import {
 
 type WeldingConsumableOption = { id: string; materialGrade: string; coatingType: string };
 
+function compareWeldingConsumables(a: WeldingConsumableOption, b: WeldingConsumableOption) {
+  const byCoating = a.coatingType.localeCompare(b.coatingType, "uk");
+  if (byCoating !== 0) return byCoating;
+  return a.materialGrade.localeCompare(b.materialGrade, "uk");
+}
+
+function sortWeldingConsumables(list: WeldingConsumableOption[]) {
+  return [...list].sort(compareWeldingConsumables);
+}
+
 export function WeldingConsumableWelderSelect({
   name,
   initialOptions,
@@ -27,13 +37,17 @@ export function WeldingConsumableWelderSelect({
 }) {
   const required = requiredProp ?? true;
 
-  const [optionsState, setOptionsState] = useState(initialOptions);
+  const [optionsState, setOptionsState] = useState(() => sortWeldingConsumables(initialOptions));
   const [value, setValue] = useState(defaultConsumableId);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalEditTarget, setModalEditTarget] = useState<WeldingConsumableEditTarget | null>(null);
 
   const companyOptions = useMemo(
-    () => optionsState.map((o) => ({ id: o.id, label: `${o.materialGrade} (${o.coatingType})` })),
+    () =>
+      sortWeldingConsumables(optionsState).map((o) => ({
+        id: o.id,
+        label: `${o.coatingType} (${o.materialGrade})`,
+      })),
     [optionsState],
   );
 
@@ -107,7 +121,7 @@ export function WeldingConsumableWelderSelect({
               materialGrade: row.materialGrade,
               coatingType: row.coatingType,
             };
-            return [nextRow, ...rest];
+            return sortWeldingConsumables([...rest, nextRow]);
           });
           setValue(row.id);
         }}
