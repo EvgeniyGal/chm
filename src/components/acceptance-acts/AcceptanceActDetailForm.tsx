@@ -126,6 +126,23 @@ export function AcceptanceActDetailForm({
   const suppressBeforeUnloadOnce = useUnsavedChangesGuard(canEdit && form.formState.isDirty);
   const [docLoading, setDocLoading] = useState(false);
 
+  async function downloadAcceptanceActDocxBlob() {
+    const res = await fetch(`/api/documents/acceptance-act/${actId}`, { method: "GET" });
+    if (!res.ok) throw new Error("DOCX_GENERATION_FAILED");
+    const blob = await res.blob();
+    const cd = res.headers.get("content-disposition");
+    const fn =
+      cd?.match(/filename="([^"]+)"/)?.[1] ?? `acceptance-act-${actNumber.replaceAll("/", "_")}.docx`;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fn;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <FormProvider {...form}>
       <form
@@ -358,27 +375,31 @@ export function AcceptanceActDetailForm({
             className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-border bg-background px-4 text-sm hover:bg-muted disabled:opacity-60 md:w-auto"
             onClick={() => {
               setDocLoading(true);
-              if (!canEdit) {
-                window.location.href = `/api/documents/acceptance-act/${actId}`;
-                setDocLoading(false);
-                return;
-              }
-              void form
-                .handleSubmit(async (values) => {
-                  try {
-                    await onSave(values);
-                    toast.success("Акт збережено.");
-                    form.reset(values);
-                    window.location.href = `/api/documents/acceptance-act/${actId}`;
-                  } catch (e) {
-                    if (!isNextNavigationError(e)) toast.error(getServerActionErrorMessage(e));
-                    throw e;
+              void (async () => {
+                try {
+                  if (!canEdit) {
+                    await downloadAcceptanceActDocxBlob();
+                    return;
                   }
-                })()
-                .finally(() => setDocLoading(false));
+                  const hadDirty = form.formState.isDirty;
+                  if (hadDirty) {
+                    await form.handleSubmit(async (values) => {
+                      await onSave(values);
+                      form.reset(values);
+                    })();
+                    await router.refresh();
+                  }
+                  await downloadAcceptanceActDocxBlob();
+                  toast.success(hadDirty ? "Акт збережено. Документ завантажено." : "Документ завантажено.");
+                } catch (e) {
+                  if (!isNextNavigationError(e)) toast.error(getServerActionErrorMessage(e));
+                } finally {
+                  setDocLoading(false);
+                }
+              })();
             }}
-            aria-label="Зберегти та завантажити акт"
-            title="Зберегти та завантажити акт"
+            aria-label="Зберегти (якщо є зміни) та завантажити акт"
+            title="За потреби зберегти зміни, потім завантажити DOCX з номером акту з бази"
           >
             <FiFileText className="size-4 shrink-0" aria-hidden />
             Акт

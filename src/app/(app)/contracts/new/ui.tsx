@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Controller, FormProvider, useForm } from "react-hook-form";
 import { FileText, List, Plus, Receipt, Save } from "lucide-react";
 import { toast } from "sonner";
@@ -52,38 +53,8 @@ function toDecimal(value: number | string): number {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
 }
 
-async function downloadTreatyDocx(
-  variant: "full" | "short",
-  values: ContractFormValues,
-  contractNumberPreview: string,
-) {
-  const items = values.items.map((item) => ({
-    title: item.title,
-    unit: item.unit,
-    quantity: toDecimal(item.quantity),
-    price: toDecimal(item.price),
-  }));
-  const res = await fetch("/api/contracts/generate-treaty", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      variant,
-      contractNumber: contractNumberPreview.trim() || undefined,
-      date: values.date,
-      signingLocation: values.signingLocation,
-      workType: values.workType,
-      customerCompanyId: values.customerCompanyId,
-      contractorCompanyId: values.contractorCompanyId,
-      projectTimeline: values.projectTimeline,
-      contractDuration: values.contractDuration,
-      signerFullNameNom: values.signerFullNameNom,
-      signerFullNameGen: values.signerFullNameGen,
-      signerPositionNom: values.signerPositionNom,
-      signerPositionGen: values.signerPositionGen,
-      signerActingUnder: values.signerActingUnder,
-      items,
-    }),
-  });
+async function downloadSavedContractTreatyDocx(contractId: string, variant: "full" | "short") {
+  const res = await fetch(`/api/documents/contract/${contractId}?variant=${variant}`, { method: "GET" });
   if (!res.ok) {
     const err = (await res.json().catch(() => null)) as { error?: string } | null;
     throw new Error(err?.error ?? "GENERATE_FAILED");
@@ -112,6 +83,7 @@ export function ContractForm({
   initialContractNumber,
   onSubmit,
   onSubmitAndCreateInvoice,
+  onCreateReturningId,
 }: {
   companies: CompanyOpt[];
   signingLocationOptions: string[];
@@ -127,7 +99,9 @@ export function ContractForm({
   onSubmitAndCreateInvoice: (
     payload: ContractFormValues,
   ) => Promise<{ contractId: string; lines: ContractLineInvoiceRemaining[] }>;
+  onCreateReturningId: (payload: ContractFormValues) => Promise<{ id: string }>;
 }) {
+  const router = useRouter();
   const form = useForm<ContractFormValues>({
     defaultValues: {
       date: new Date().toISOString().slice(0, 10),
@@ -281,6 +255,54 @@ export function ContractForm({
       throw e;
     } finally {
       setSubmitLoading(null);
+    }
+  }
+
+  function buildCreatePayload(values: ContractFormValues): ContractFormValues {
+    return {
+      ...values,
+      items: values.items.map((item) => ({
+        ...item,
+        quantity: toDecimal(item.quantity),
+        price: toDecimal(item.price),
+      })),
+    };
+  }
+
+  async function saveThenDownloadTreaty(variant: "full" | "short") {
+    setTreatyError(null);
+    const ok = await form.trigger();
+    if (!ok) {
+      const msg = "Заповніть усі обов’язкові поля перед формуванням договору.";
+      setTreatyError(msg);
+      toast.error(msg);
+      return;
+    }
+    setTreatyLoading(variant);
+    const values = form.getValues();
+    const payload = buildCreatePayload(values);
+    let newId: string;
+    try {
+      const created = await onCreateReturningId(payload);
+      newId = created.id;
+    } catch (e) {
+      const msg = getServerActionErrorMessage(e);
+      setTreatyError(msg);
+      toast.error(msg);
+      setTreatyLoading(null);
+      return;
+    }
+    try {
+      await downloadSavedContractTreatyDocx(newId, variant);
+      toast.success("Договір збережено. Документ завантажено.");
+      router.push(`/contracts/${newId}/edit`);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Не вдалося сформувати файл.";
+      setTreatyError(msg);
+      toast.error(msg);
+      router.push(`/contracts/${newId}/edit`);
+    } finally {
+      setTreatyLoading(null);
     }
   }
 
@@ -573,82 +595,18 @@ export function ContractForm({
           </a>
           <button
             type="button"
-            disabled={!!treatyLoading}
+            disabled={!!treatyLoading || submitLoading !== null}
             className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-zinc-300 bg-zinc-50 px-4 text-sm text-zinc-800 hover:bg-zinc-100 disabled:opacity-50 sm:w-auto"
-            onClick={async () => {
-              setTreatyError(null);
-              const ok = await form.trigger();
-              if (!ok) {
-                const msg = "Заповніть усі обов’язкові поля перед формуванням договору.";
-                setTreatyError(msg);
-                toast.error(msg);
-                return;
-              }
-              setTreatyLoading("full");
-              try {
-                const v = form.getValues();
-                await downloadTreatyDocx(
-                  "full",
-                  {
-                    ...v,
-                    items: v.items.map((item) => ({
-                      ...item,
-                      quantity: toDecimal(item.quantity),
-                      price: toDecimal(item.price),
-                    })),
-                  },
-                  previewContractNumber,
-                );
-                toast.success("Документ завантажено.");
-              } catch (e) {
-                const msg = e instanceof Error ? e.message : "Не вдалося сформувати файл.";
-                setTreatyError(msg);
-                toast.error(msg);
-              } finally {
-                setTreatyLoading(null);
-              }
-            }}
+            onClick={() => void saveThenDownloadTreaty("full")}
           >
             <FileText className="size-4" aria-hidden="true" />
             {treatyLoading === "full" ? "…" : "Повний договір"}
           </button>
           <button
             type="button"
-            disabled={!!treatyLoading}
+            disabled={!!treatyLoading || submitLoading !== null}
             className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-zinc-300 bg-zinc-50 px-4 text-sm text-zinc-800 hover:bg-zinc-100 disabled:opacity-50 sm:w-auto"
-            onClick={async () => {
-              setTreatyError(null);
-              const ok = await form.trigger();
-              if (!ok) {
-                const msg = "Заповніть усі обов’язкові поля перед формуванням договору.";
-                setTreatyError(msg);
-                toast.error(msg);
-                return;
-              }
-              setTreatyLoading("short");
-              try {
-                const v = form.getValues();
-                await downloadTreatyDocx(
-                  "short",
-                  {
-                    ...v,
-                    items: v.items.map((item) => ({
-                      ...item,
-                      quantity: toDecimal(item.quantity),
-                      price: toDecimal(item.price),
-                    })),
-                  },
-                  previewContractNumber,
-                );
-                toast.success("Документ завантажено.");
-              } catch (e) {
-                const msg = e instanceof Error ? e.message : "Не вдалося сформувати файл.";
-                setTreatyError(msg);
-                toast.error(msg);
-              } finally {
-                setTreatyLoading(null);
-              }
-            }}
+            onClick={() => void saveThenDownloadTreaty("short")}
           >
             <FileText className="size-4" aria-hidden="true" />
             {treatyLoading === "short" ? "…" : "Скорочений договір"}

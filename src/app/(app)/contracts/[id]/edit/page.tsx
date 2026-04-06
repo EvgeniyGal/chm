@@ -104,7 +104,6 @@ export default async function EditContractPage({ params }: { params: Promise<{ i
         }}
         onSubmit={update}
         cancelHref="/contracts"
-        contractNumber={contract.number}
         contractId={id}
         linesForInvoicing={linesForInvoicing}
         signedScansInitial={signedScansInitial}

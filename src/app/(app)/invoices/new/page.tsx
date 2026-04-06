@@ -60,23 +60,8 @@ export default async function NewInvoicePage({
     redirect(`/invoices/${newId}/edit`);
   }
 
-  async function createAndStartAcceptanceAct(payload: any) {
-    "use server";
-    await requireRole("ADMIN");
-    const res = await internalApiFetch("/api/invoices", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(payload),
-      cache: "no-store",
-    });
-    const data = (await res.json().catch(() => null)) as { data?: { id: string }; error?: string } | null;
-    if (!res.ok) throw new Error(data?.error ?? "CREATE_FAILED");
-    const newId = data?.data?.id;
-    if (!newId) throw new Error("CREATE_FAILED");
-    redirect(`/acceptance-acts/new?invoiceId=${newId}`);
-  }
-
-  async function createAndDownloadInvoiceDocx(payload: any) {
+  /** POST invoice and return id (no redirect). Used before DOCX download or navigating to new act — ensures saved number in documents. */
+  async function createInvoiceReturningId(payload: any): Promise<{ invoiceId: string }> {
     "use server";
     await requireRole("ADMIN");
     const res = await internalApiFetch("/api/invoices", {
@@ -159,8 +144,7 @@ export default async function NewInvoicePage({
         }}
         previewInvoiceNumberInitial={previewInvoiceNumberInitial}
         onSubmit={create}
-        onSubmitAndCreateAcceptanceAct={createAndStartAcceptanceAct}
-        onSubmitAndDownloadInvoiceDocx={createAndDownloadInvoiceDocx}
+        onCreateInvoiceReturningId={createInvoiceReturningId}
       />
     </div>
   );

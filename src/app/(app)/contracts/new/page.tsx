@@ -74,6 +74,23 @@ export default async function NewContractPage() {
     return { contractId: newId, lines };
   }
 
+  /** Create contract and return id (no redirect) — used before generating treaty DOCX from saved data. */
+  async function createReturningId(payload: any): Promise<{ id: string }> {
+    "use server";
+    await requireRole("ADMIN");
+    const res = await internalApiFetch("/api/contracts", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload),
+      cache: "no-store",
+    });
+    const data = (await res.json().catch(() => null)) as { data?: { id: string }; error?: string } | null;
+    if (!res.ok) throw new Error(data?.error ?? "CREATE_FAILED");
+    const newId = data?.data?.id;
+    if (!newId) throw new Error("CREATE_FAILED");
+    return { id: newId };
+  }
+
   return (
     <div className="w-full min-w-0">
       <div className="mb-4">
@@ -100,6 +117,7 @@ export default async function NewContractPage() {
         initialContractNumber={initialContractNumber}
         onSubmit={create}
         onSubmitAndCreateInvoice={createAndStartInvoice}
+        onCreateReturningId={createReturningId}
       />
     </div>
   );

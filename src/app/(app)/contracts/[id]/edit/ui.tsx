@@ -54,38 +54,8 @@ function toDecimal(value: number | string): number {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
 }
 
-async function downloadTreatyDocx(
-  variant: "full" | "short",
-  values: ContractFormValues,
-  contractNumber: string,
-) {
-  const items = values.items.map((item) => ({
-    title: item.title,
-    unit: item.unit,
-    quantity: toDecimal(item.quantity),
-    price: toDecimal(item.price),
-  }));
-  const res = await fetch("/api/contracts/generate-treaty", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      variant,
-      contractNumber,
-      date: values.date,
-      signingLocation: values.signingLocation,
-      workType: values.workType,
-      customerCompanyId: values.customerCompanyId,
-      contractorCompanyId: values.contractorCompanyId,
-      projectTimeline: values.projectTimeline,
-      contractDuration: values.contractDuration,
-      signerFullNameNom: values.signerFullNameNom,
-      signerFullNameGen: values.signerFullNameGen,
-      signerPositionNom: values.signerPositionNom,
-      signerPositionGen: values.signerPositionGen,
-      signerActingUnder: values.signerActingUnder,
-      items,
-    }),
-  });
+async function downloadSavedContractTreatyDocx(contractId: string, variant: "full" | "short") {
+  const res = await fetch(`/api/documents/contract/${contractId}?variant=${variant}`, { method: "GET" });
   if (!res.ok) {
     const err = (await res.json().catch(() => null)) as { error?: string } | null;
     throw new Error(err?.error ?? "GENERATE_FAILED");
@@ -114,7 +84,6 @@ export function ContractEditForm({
   initial,
   onSubmit,
   cancelHref,
-  contractNumber,
   contractId,
   linesForInvoicing,
   signedScansInitial,
@@ -131,7 +100,6 @@ export function ContractEditForm({
   initial: ContractFormValues;
   onSubmit: (payload: ContractFormValues) => Promise<void>;
   cancelHref: string;
-  contractNumber: string;
   contractId: string;
   linesForInvoicing: ContractLineInvoiceRemaining[];
   signedScansInitial: SignedScanListItem[];
@@ -212,7 +180,11 @@ export function ContractEditForm({
     setCustomerSignerActingUnder(selectedCustomerCompany.contractSignerActingUnder ?? "");
   }, [selectedCustomerCompany]);
 
-  async function submitEditedContract(values: ContractFormValues) {
+  async function submitEditedContract(
+    values: ContractFormValues,
+    options?: { successToast?: boolean },
+  ) {
+    const successToast = options?.successToast ?? true;
     const payload = {
       ...values,
       items: values.items.map((item) => ({
@@ -221,18 +193,54 @@ export function ContractEditForm({
         price: toDecimal(item.price),
       })),
     };
+    const normalizedValues: ContractFormValues = {
+      ...values,
+      items: payload.items.map((it) => ({
+        title: it.title,
+        unit: it.unit,
+        quantity: it.quantity,
+        price: it.price,
+      })),
+    };
     try {
       await onSubmit(payload);
-      toast.success("Договір збережено.");
+      if (successToast) toast.success("Договір збережено.");
       router.refresh();
-      form.reset(values);
+      form.reset(normalizedValues);
     } catch (e) {
       if (isNextNavigationError(e)) {
-        toast.success("Договір збережено.");
+        if (successToast) toast.success("Договір збережено.");
         throw e;
       }
       toast.error(getServerActionErrorMessage(e));
       throw e;
+    }
+  }
+
+  async function saveThenDownloadTreaty(variant: "full" | "short") {
+    setTreatyError(null);
+    const ok = await form.trigger();
+    if (!ok) {
+      const msg = "Заповніть усі обов’язкові поля перед формуванням договору.";
+      setTreatyError(msg);
+      toast.error(msg);
+      return;
+    }
+    setTreatyLoading(variant);
+    try {
+      const hadDirty = form.formState.isDirty;
+      const v = form.getValues();
+      if (hadDirty) {
+        await submitEditedContract(v, { successToast: false });
+      }
+      await downloadSavedContractTreatyDocx(contractId, variant);
+      toast.success(hadDirty ? "Договір збережено. Документ завантажено." : "Документ завантажено.");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Не вдалося сформувати файл.";
+      setTreatyError(msg);
+      toast.error(msg);
+    } finally {
+      setTreatyLoading(null);
     }
   }
 
@@ -541,7 +549,21 @@ export function ContractEditForm({
           <button
             type="button"
             className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-zinc-300 bg-white px-4 text-sm text-zinc-800 hover:bg-zinc-50 sm:w-auto"
-            onClick={() => setInvoiceDialogOpen(true)}
+            onClick={async () => {
+              const ok = await form.trigger();
+              if (!ok) {
+                toast.error("Заповніть усі обов’язкові поля перед формуванням рахунку.");
+                return;
+              }
+              if (form.formState.isDirty) {
+                try {
+                  await form.handleSubmit(async (values) => submitEditedContract(values))();
+                } catch {
+                  return;
+                }
+              }
+              setInvoiceDialogOpen(true);
+            }}
           >
             <Receipt className="size-4" aria-hidden="true" />
             Сформувати рахунок
@@ -560,35 +582,7 @@ export function ContractEditForm({
             type="button"
             disabled={!!treatyLoading}
             className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-zinc-300 bg-zinc-50 px-4 text-sm text-zinc-800 hover:bg-zinc-100 disabled:opacity-50 sm:w-auto"
-            onClick={async () => {
-              setTreatyError(null);
-              const ok = await form.trigger();
-              if (!ok) {
-                const msg = "Заповніть усі обов’язкові поля перед формуванням договору.";
-                setTreatyError(msg);
-                toast.error(msg);
-                return;
-              }
-              setTreatyLoading("full");
-              try {
-                const v = form.getValues();
-                await downloadTreatyDocx("full", {
-                  ...v,
-                  items: v.items.map((item) => ({
-                    ...item,
-                    quantity: toDecimal(item.quantity),
-                    price: toDecimal(item.price),
-                  })),
-                }, contractNumber);
-                toast.success("Документ завантажено.");
-              } catch (e) {
-                const msg = e instanceof Error ? e.message : "Не вдалося сформувати файл.";
-                setTreatyError(msg);
-                toast.error(msg);
-              } finally {
-                setTreatyLoading(null);
-              }
-            }}
+            onClick={() => void saveThenDownloadTreaty("full")}
           >
             <FileText className="size-4" aria-hidden="true" />
             {treatyLoading === "full" ? "…" : "Повний договір"}
@@ -597,35 +591,7 @@ export function ContractEditForm({
             type="button"
             disabled={!!treatyLoading}
             className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-zinc-300 bg-zinc-50 px-4 text-sm text-zinc-800 hover:bg-zinc-100 disabled:opacity-50 sm:w-auto"
-            onClick={async () => {
-              setTreatyError(null);
-              const ok = await form.trigger();
-              if (!ok) {
-                const msg = "Заповніть усі обов’язкові поля перед формуванням договору.";
-                setTreatyError(msg);
-                toast.error(msg);
-                return;
-              }
-              setTreatyLoading("short");
-              try {
-                const v = form.getValues();
-                await downloadTreatyDocx("short", {
-                  ...v,
-                  items: v.items.map((item) => ({
-                    ...item,
-                    quantity: toDecimal(item.quantity),
-                    price: toDecimal(item.price),
-                  })),
-                }, contractNumber);
-                toast.success("Документ завантажено.");
-              } catch (e) {
-                const msg = e instanceof Error ? e.message : "Не вдалося сформувати файл.";
-                setTreatyError(msg);
-                toast.error(msg);
-              } finally {
-                setTreatyLoading(null);
-              }
-            }}
+            onClick={() => void saveThenDownloadTreaty("short")}
           >
             <FileText className="size-4" aria-hidden="true" />
             {treatyLoading === "short" ? "…" : "Скорочений договір"}

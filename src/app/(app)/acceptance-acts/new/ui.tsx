@@ -176,10 +176,12 @@ export function AcceptanceActForm({
     const res = await fetch(`/api/documents/acceptance-act/${acceptanceActId}`, { method: "GET" });
     if (!res.ok) throw new Error("DOCX_GENERATION_FAILED");
     const blob = await res.blob();
+    const cd = res.headers.get("content-disposition");
+    const fn = cd?.match(/filename="([^"]+)"/)?.[1] ?? `acceptance-act-${acceptanceActId}.docx`;
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "";
+    a.download = fn;
     document.body.appendChild(a);
     a.click();
     a.remove();

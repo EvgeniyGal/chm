@@ -84,8 +84,7 @@ export function InvoiceForm({
   previewInvoiceNumberInitial,
   existingAcceptanceActId,
   onSubmit,
-  onSubmitAndCreateAcceptanceAct,
-  onSubmitAndDownloadInvoiceDocx,
+  onCreateInvoiceReturningId,
 }: {
   mode?: "create" | "edit";
   companies: InvoiceCompanyRow[];
@@ -111,8 +110,8 @@ export function InvoiceForm({
   /** Якщо для рахунку вже є акт — показуємо посилання на нього замість «Сформувати акт». */
   existingAcceptanceActId?: string | null;
   onSubmit: (payload: InvoiceFormValues) => Promise<void>;
-  onSubmitAndCreateAcceptanceAct?: (payload: InvoiceFormValues) => Promise<void>;
-  onSubmitAndDownloadInvoiceDocx?: (payload: InvoiceFormValues) => Promise<{ invoiceId: string }>;
+  /** POST new invoice and return id — used for «Рахунок» DOCX and «Сформувати акт» after persist. */
+  onCreateInvoiceReturningId?: (payload: InvoiceFormValues) => Promise<{ invoiceId: string }>;
 }) {
   const defaultValues = useMemo((): InvoiceFormValues => {
     if (mode === "edit" && editInitialValues) {
@@ -160,6 +159,8 @@ export function InvoiceForm({
 
   const [actLoading, setActLoading] = useState(false);
   const [docLoading, setDocLoading] = useState(false);
+  const [editInvoiceDocLoading, setEditInvoiceDocLoading] = useState(false);
+  const [editAcceptanceActNavLoading, setEditAcceptanceActNavLoading] = useState(false);
   const [analogueLoading, setAnalogueLoading] = useState(false);
 
   useEffect(() => {
@@ -382,10 +383,12 @@ export function InvoiceForm({
     const res = await fetch(`/api/documents/invoice/${invoiceId}`, { method: "GET" });
     if (!res.ok) throw new Error("DOCX_GENERATION_FAILED");
     const blob = await res.blob();
+    const cd = res.headers.get("content-disposition");
+    const fn = cd?.match(/filename="([^"]+)"/)?.[1] ?? `invoice-${invoiceId}.docx`;
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "";
+    a.download = fn;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -650,58 +653,60 @@ export function InvoiceForm({
               До договору
             </a>
           ) : null}
-          {mode === "create" && onSubmitAndDownloadInvoiceDocx ? (
-            <button
-              type="button"
-              disabled={docLoading}
-              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-border bg-background px-4 text-sm hover:bg-muted disabled:opacity-60 md:w-auto"
-              onClick={() => {
-                setDocLoading(true);
-                void form
-                  .handleSubmit(async (values) => {
-                    try {
-                      const result = await onSubmitAndDownloadInvoiceDocx(values);
-                      await downloadInvoiceDocx(result.invoiceId);
-                      toast.success("Рахунок створено та завантажено.");
-                      router.push(`/invoices/${result.invoiceId}/edit`);
-                    } catch (e) {
-                      if (!isNextNavigationError(e)) {
-                        toast.error(getServerActionErrorMessage(e));
+          {mode === "create" && onCreateInvoiceReturningId ? (
+            <>
+              <button
+                type="button"
+                disabled={docLoading || actLoading}
+                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-border bg-background px-4 text-sm hover:bg-muted disabled:opacity-60 md:w-auto"
+                onClick={() => {
+                  setDocLoading(true);
+                  void form
+                    .handleSubmit(async (values) => {
+                      try {
+                        const { invoiceId } = await onCreateInvoiceReturningId(values);
+                        await downloadInvoiceDocx(invoiceId);
+                        toast.success("Рахунок збережено. Документ завантажено.");
+                        router.push(`/invoices/${invoiceId}/edit`);
+                      } catch (e) {
+                        if (!isNextNavigationError(e)) {
+                          toast.error(getServerActionErrorMessage(e));
+                        }
                       }
-                    }
-                  })()
-                  .finally(() => setDocLoading(false));
-              }}
-              title="Зберегти рахунок і сформувати DOCX"
-            >
-              <FiFileText className="size-4 shrink-0" aria-hidden />
-              Рахунок
-            </button>
-          ) : null}
-          {mode === "create" && onSubmitAndCreateAcceptanceAct ? (
-            <button
-              type="button"
-              disabled={actLoading}
-              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-border bg-background px-4 text-sm hover:bg-muted disabled:opacity-60 md:w-auto"
-              onClick={() => {
-                setActLoading(true);
-                void form
-                  .handleSubmit(async (values) => {
-                    try {
-                      await onSubmitAndCreateAcceptanceAct(values);
-                    } catch (e) {
-                      if (!isNextNavigationError(e)) {
-                        toast.error(getServerActionErrorMessage(e));
+                    })()
+                    .finally(() => setDocLoading(false));
+                }}
+                title="Спочатку зберегти рахунок у базі, потім завантажити DOCX з номером рахунку з бази"
+              >
+                <FiFileText className="size-4 shrink-0" aria-hidden />
+                {docLoading ? "…" : "Рахунок"}
+              </button>
+              <button
+                type="button"
+                disabled={docLoading || actLoading}
+                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-border bg-background px-4 text-sm hover:bg-muted disabled:opacity-60 md:w-auto"
+                onClick={() => {
+                  setActLoading(true);
+                  void form
+                    .handleSubmit(async (values) => {
+                      try {
+                        const { invoiceId } = await onCreateInvoiceReturningId(values);
+                        toast.success("Рахунок збережено.");
+                        router.push(`/acceptance-acts/new?invoiceId=${invoiceId}`);
+                      } catch (e) {
+                        if (!isNextNavigationError(e)) {
+                          toast.error(getServerActionErrorMessage(e));
+                        }
                       }
-                    }
-                  })()
-                  .finally(() => setActLoading(false));
-              }}
-              title="Зберегти рахунок і перейти до створення акта"
-            >
-              <FiClipboard className="size-4 shrink-0" aria-hidden />
-              Сформувати акт
-            </button>
+                    })()
+                    .finally(() => setActLoading(false));
+                }}
+                title="Спочатку зберегти рахунок у базі, потім перейти до створення акта"
+              >
+                <FiClipboard className="size-4 shrink-0" aria-hidden />
+                {actLoading ? "…" : "Сформувати акт"}
+              </button>
+            </>
           ) : null}
           {mode === "edit" && invoiceId ? (
             <>
@@ -717,15 +722,32 @@ export function InvoiceForm({
                   {analogueLoading ? "Створення…" : "Згенерувати аналог"}
                 </button>
               ) : null}
-              <a
-                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-border bg-background px-4 text-sm hover:bg-muted md:w-auto"
-                href={`/api/documents/invoice/${invoiceId}`}
+              <button
+                type="button"
+                disabled={editInvoiceDocLoading || editAcceptanceActNavLoading}
+                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-border bg-background px-4 text-sm hover:bg-muted disabled:opacity-60 md:w-auto"
                 aria-label="Завантажити рахунок (DOCX)"
-                title="Завантажити DOCX"
+                title="Зберегти зміни (якщо є) і завантажити DOCX з номером рахунку з бази"
+                onClick={() => {
+                  setEditInvoiceDocLoading(true);
+                  void (async () => {
+                    try {
+                      if (form.formState.isDirty) {
+                        await form.handleSubmit(async (values) => submitInvoice(values))();
+                      }
+                      if (!invoiceId) return;
+                      await downloadInvoiceDocx(invoiceId);
+                    } catch {
+                      /* submitInvoice already shows toast */
+                    } finally {
+                      setEditInvoiceDocLoading(false);
+                    }
+                  })();
+                }}
               >
                 <FiFileText className="size-4 shrink-0" aria-hidden />
-                Рахунок
-              </a>
+                {editInvoiceDocLoading ? "…" : "Рахунок"}
+              </button>
               {existingAcceptanceActId ? (
                 <a
                   className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-border bg-background px-4 text-sm hover:bg-muted md:w-auto"
@@ -736,14 +758,31 @@ export function InvoiceForm({
                   Відкрити акт
                 </a>
               ) : (
-                <a
-                  className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-border bg-background px-4 text-sm hover:bg-muted md:w-auto"
-                  href={`/acceptance-acts/new?invoiceId=${invoiceId}`}
-                  title="Створити акт приймання-передачі на основі цього рахунку (позиції копіюються з рахунку)"
+                <button
+                  type="button"
+                  disabled={editInvoiceDocLoading || editAcceptanceActNavLoading}
+                  className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-border bg-background px-4 text-sm hover:bg-muted disabled:opacity-60 md:w-auto"
+                  title="Зберегти зміни (якщо є), потім створити акт на основі збереженого рахунку"
+                  onClick={() => {
+                    setEditAcceptanceActNavLoading(true);
+                    void (async () => {
+                      try {
+                        if (form.formState.isDirty) {
+                          await form.handleSubmit(async (values) => submitInvoice(values))();
+                        }
+                        if (!invoiceId) return;
+                        router.push(`/acceptance-acts/new?invoiceId=${invoiceId}`);
+                      } catch {
+                        /* submitInvoice already shows toast */
+                      } finally {
+                        setEditAcceptanceActNavLoading(false);
+                      }
+                    })();
+                  }}
                 >
                   <FiClipboard className="size-4 shrink-0" aria-hidden />
-                  Сформувати акт
-                </a>
+                  {editAcceptanceActNavLoading ? "…" : "Сформувати акт"}
+                </button>
               )}
             </>
           ) : null}
