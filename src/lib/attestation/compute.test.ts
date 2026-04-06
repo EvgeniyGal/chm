@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  addDays,
   computeCertificateBlankNumber,
   computeCertificateNumber,
   computeValidityDates,
@@ -16,9 +15,11 @@ describe("attestation compute", () => {
     expect(computeCertificateBlankNumber("3", 15, new Date(2026, 0, 1))).toBe("ОД-1/3.15-26");
   });
 
-  it("adds 730 calendar days for validity", () => {
-    const protocol = new Date(2026, 0, 10);
-    const { certificateValidUntil } = computeValidityDates(protocol);
-    expect(certificateValidUntil.getTime()).toBe(addDays(protocol, 730).getTime());
+  it("adds two calendar years for validity and next certification", () => {
+    const protocol = new Date(2026, 1, 15);
+    const { certificateValidUntil, nextCertificationDate } = computeValidityDates(protocol);
+    const expected = new Date(2028, 1, 15);
+    expect(certificateValidUntil.getTime()).toBe(expected.getTime());
+    expect(nextCertificationDate.getTime()).toBe(expected.getTime());
   });
 });

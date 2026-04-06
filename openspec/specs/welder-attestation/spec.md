@@ -106,9 +106,9 @@ The system MUST allow associating regulatory documents to a welder attestation r
 ### Requirement: Compute derived certificate dates
 The system MUST compute certificate validity and next certification date from group protocol date.
 
-#### Scenario: Compute validity dates as +730 days
+#### Scenario: Compute validity dates as +2 calendar years
 - **WHEN** a welder attestation is viewed or documents are generated
-- **THEN** `certificate_valid_until` and `next_certification_date` are treated as `protocol_date + 730 days`
+- **THEN** `certificate_valid_until` and `next_certification_date` are treated as the same calendar day two years after `protocol_date` (e.g. 15.02.2026 → 15.02.2028)
 
 ### Requirement: Compute certificate number for display and documents
 The system MUST compute a certificate number based on group and order.

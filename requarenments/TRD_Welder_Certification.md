@@ -187,9 +187,9 @@ DB constraint: UNIQUE (template\_type) WHERE is\_active \= true — гарант
 
 ## **4.3. Строки дії посвідчення**
 
-certificate\_valid\_until \= protocol\_date \+ 730 днів (2 роки)
+certificate\_valid\_until \= protocol\_date \+ 2 календарні роки (той самий день і місяць)
 
-next\_certification\_date \= protocol\_date \+ 730 днів (2 роки)
+next\_certification\_date \= protocol\_date \+ 2 календарні роки (той самий день і місяць)
 
 Базується на п.8.1 Правил атестації: посвідчення дійсне протягом двох років.
 
