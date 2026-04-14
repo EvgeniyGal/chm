@@ -133,6 +133,7 @@ export function AcceptanceActsTable({
   filterDateTo,
   dateRangeInvalid,
   canManageActs = true,
+  canGenerateDocuments = false,
 }: {
   rows: AcceptanceActRow[];
   total: number;
@@ -148,6 +149,7 @@ export function AcceptanceActsTable({
   filterDateTo: string | null;
   dateRangeInvalid: boolean;
   canManageActs?: boolean;
+  canGenerateDocuments?: boolean;
 }) {
   const router = useRouter();
   const { updateParams } = useListUrlParams();
@@ -434,13 +436,13 @@ export function AcceptanceActsTable({
                   <DetailRow label="Разом з ПДВ" value={act.totalWithVat} />
                 </div>
               </InfoDialog>
-              {!canManageActs ? (
+              {canGenerateDocuments ? (
                 <>
                   <a
                     className={tableActionIconClassName}
                     href={`/api/documents/acceptance-act/${act.id}`}
-                    aria-label="Завантажити акт"
-                    title="Завантажити акт"
+                    aria-label="Сформувати акт"
+                    title="Сформувати акт"
                   >
                     <FiFileText aria-hidden="true" className="size-4" />
                   </a>
@@ -484,7 +486,7 @@ export function AcceptanceActsTable({
         },
       },
     ],
-    [allVisibleSelected, canManageActs, deleteBusy, paperPendingId, selectedIds, visibleIds],
+    [allVisibleSelected, canGenerateDocuments, canManageActs, deleteBusy, paperPendingId, selectedIds, visibleIds],
   );
 
   const table = useReactTable({
@@ -811,13 +813,13 @@ export function AcceptanceActsTable({
                       <DetailRow label="Разом з ПДВ" value={act.totalWithVat} />
                     </div>
                   </InfoDialog>
-                  {!canManageActs ? (
+                  {canGenerateDocuments ? (
                     <>
                       <a
                         className={tableActionIconClassName}
                         href={`/api/documents/acceptance-act/${act.id}`}
-                        aria-label="Завантажити акт"
-                        title="Завантажити акт"
+                        aria-label="Сформувати акт"
+                        title="Сформувати акт"
                       >
                         <FiFileText aria-hidden="true" className="size-4" />
                       </a>

@@ -56,6 +56,7 @@ export default async function InvoicesPage({
   const { role } = await requireRole("MANAGER");
   const canManageInvoices = role !== "MANAGER";
   const canGenerateAnalogue = role === "ADMIN" || role === "OWNER";
+  const canGenerateDocuments = role === "MANAGER" || role === "ADMIN" || role === "OWNER";
   const sp = await searchParams;
   const q = String(sp.q ?? "").trim();
   const sortByRaw = String(sp.sortBy ?? "date");
@@ -191,6 +192,7 @@ export default async function InvoicesPage({
         dateRangeInvalid={dateRangeInvalid}
         canManageInvoices={canManageInvoices}
         canGenerateAnalogue={canGenerateAnalogue}
+        canGenerateDocuments={canGenerateDocuments}
         rows={rows.map((inv) => ({
           id: inv.id,
           number: inv.number,

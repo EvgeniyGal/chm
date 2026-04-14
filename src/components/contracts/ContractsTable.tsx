@@ -139,6 +139,7 @@ export function ContractsTable({
   canManageContracts = true,
   canDeleteContracts = false,
   canGenerateAnalogue = false,
+  canGenerateDocuments = false,
 }: {
   rows: ContractRow[];
   total: number;
@@ -157,6 +158,7 @@ export function ContractsTable({
   canManageContracts?: boolean;
   canDeleteContracts?: boolean;
   canGenerateAnalogue?: boolean;
+  canGenerateDocuments?: boolean;
 }) {
   const router = useRouter();
   const { updateParams } = useListUrlParams();
@@ -473,7 +475,7 @@ export function ContractsTable({
                   <DetailRow label="Разом з ПДВ" value={c.totalWithVat} />
                 </div>
               </InfoDialog>
-              {!canManageContracts ? (
+              {canGenerateDocuments ? (
                 <>
                   <a
                     className={tableActionIconClassName}
@@ -548,6 +550,7 @@ export function ContractsTable({
       canManageContracts,
       canDeleteContracts,
       canGenerateAnalogue,
+      canGenerateDocuments,
       applyDuplicateContract,
       deletePendingId,
       duplicatePendingId,
@@ -919,7 +922,7 @@ export function ContractsTable({
                       <DetailRow label="Разом з ПДВ" value={c.totalWithVat} />
                     </div>
                   </InfoDialog>
-                  {!canManageContracts ? (
+                  {canGenerateDocuments ? (
                     <>
                       <a
                         className={tableActionIconClassName}

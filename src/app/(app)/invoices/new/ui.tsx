@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Controller, FormProvider, useForm } from "react-hook-form";
 import { Plus } from "lucide-react";
 import { FiClipboard, FiCopy, FiExternalLink, FiFileText, FiList, FiSave } from "react-icons/fi";
@@ -151,6 +151,7 @@ export function InvoiceForm({
     mode: "onBlur",
   });
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const formDate = form.watch("date");
   const [invoicePreviewNumber, setInvoicePreviewNumber] = useState(
@@ -162,6 +163,19 @@ export function InvoiceForm({
   const [editInvoiceDocLoading, setEditInvoiceDocLoading] = useState(false);
   const [editAcceptanceActNavLoading, setEditAcceptanceActNavLoading] = useState(false);
   const [analogueLoading, setAnalogueLoading] = useState(false);
+
+  useEffect(() => {
+    const saveStatus = searchParams.get("saved");
+    if (saveStatus !== "1") return;
+    const created = searchParams.get("created") === "1";
+    toast.success(created ? "Рахунок створено." : "Рахунок збережено.");
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("saved");
+    params.delete("created");
+    const nextUrl = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}`;
+    window.history.replaceState(null, "", nextUrl);
+  }, [searchParams]);
 
   useEffect(() => {
     if (readonlyInvoiceNumber) return;
@@ -653,6 +667,16 @@ export function InvoiceForm({
               До договору
             </a>
           ) : null}
+          {mode === "edit" && existingAcceptanceActId ? (
+            <a
+              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border px-4 text-sm md:w-auto"
+              href={`/acceptance-acts/${existingAcceptanceActId}`}
+              title="Для цього рахунку вже створено акт приймання-передачі"
+            >
+              <FiExternalLink className="size-4 shrink-0" aria-hidden />
+              До акта
+            </a>
+          ) : null}
           {mode === "create" && onCreateInvoiceReturningId ? (
             <>
               <button
@@ -748,16 +772,7 @@ export function InvoiceForm({
                 <FiFileText className="size-4 shrink-0" aria-hidden />
                 {editInvoiceDocLoading ? "…" : "Рахунок"}
               </button>
-              {existingAcceptanceActId ? (
-                <a
-                  className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-border bg-background px-4 text-sm hover:bg-muted md:w-auto"
-                  href={`/acceptance-acts/${existingAcceptanceActId}`}
-                  title="Для цього рахунку вже створено акт приймання-передачі"
-                >
-                  <FiClipboard className="size-4 shrink-0" aria-hidden />
-                  Відкрити акт
-                </a>
-              ) : (
+              {existingAcceptanceActId ? null : (
                 <button
                   type="button"
                   disabled={editInvoiceDocLoading || editAcceptanceActNavLoading}

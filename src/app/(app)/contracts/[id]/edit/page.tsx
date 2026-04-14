@@ -1,9 +1,9 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { db } from "@/db";
-import { companies, contracts, lineItems } from "@/db/schema";
+import { companies, contracts, invoices, lineItems } from "@/db/schema";
 import { requireRole } from "@/lib/authz";
 import { getContractLinesWithRemainingForInvoicing } from "@/lib/contract-invoice-remaining";
 import { DROPDOWN_SCOPE, getDropdownOptions } from "@/lib/dropdown-options";
@@ -19,6 +19,25 @@ export default async function EditContractPage({ params }: { params: Promise<{ i
   const contract = await db.query.contracts.findFirst({ where: eq(contracts.id, id) });
   if (!contract) redirect("/contracts");
   const items = await db.query.lineItems.findMany({ where: eq(lineItems.contractId, id) });
+  const createdInvoices = await db.query.invoices.findMany({
+    where: eq(invoices.contractId, id),
+    orderBy: [desc(invoices.date), desc(invoices.createdAt)],
+  });
+  const createdInvoiceIds = createdInvoices.map((inv) => inv.id);
+  const invoiceLineItemsByInvoiceId = new Map<string, string[]>();
+  if (createdInvoiceIds.length > 0) {
+    const invoiceLineRows = await db
+      .select({ invoiceId: lineItems.invoiceId, title: lineItems.title })
+      .from(lineItems)
+      .where(inArray(lineItems.invoiceId, createdInvoiceIds))
+      .orderBy(asc(lineItems.invoiceId), asc(lineItems.id));
+    for (const row of invoiceLineRows) {
+      if (!row.invoiceId) continue;
+      const titles = invoiceLineItemsByInvoiceId.get(row.invoiceId) ?? [];
+      titles.push(row.title);
+      invoiceLineItemsByInvoiceId.set(row.invoiceId, titles);
+    }
+  }
   const linesForInvoicing = await getContractLinesWithRemainingForInvoicing(id);
   const signedScansInitial = await getSignedScansForEntity("CONTRACT", id);
   const companyRows = await db.select().from(companies).orderBy(desc(companies.createdAt));
@@ -105,6 +124,13 @@ export default async function EditContractPage({ params }: { params: Promise<{ i
         onSubmit={update}
         cancelHref="/contracts"
         contractId={id}
+        createdInvoices={createdInvoices.map((inv) => ({
+          id: inv.id,
+          number: inv.number,
+          date: inv.date instanceof Date ? inv.date.toISOString().slice(0, 10) : String(inv.date).slice(0, 10),
+          totalWithVat: String(inv.totalWithVat),
+          lineItems: invoiceLineItemsByInvoiceId.get(inv.id) ?? [],
+        }))}
         linesForInvoicing={linesForInvoicing}
         signedScansInitial={signedScansInitial}
       />

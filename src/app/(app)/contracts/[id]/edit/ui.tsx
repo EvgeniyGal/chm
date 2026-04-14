@@ -3,10 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Controller, FormProvider, useForm } from "react-hook-form";
-import { Copy, FileText, List, Plus, Receipt, Save } from "lucide-react";
+import { Copy, ExternalLink, FileText, List, Plus, Receipt, Save } from "lucide-react";
 import { toast } from "sonner";
 
 import { useUnsavedChangesGuard } from "@/components/forms/useUnsavedChangesGuard";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { getServerActionErrorMessage } from "@/lib/server-action-error-message";
 import { isNextNavigationError } from "@/lib/is-next-navigation-error";
 import { LineItemsTable } from "@/components/line-items/LineItemsTable";
@@ -48,6 +50,28 @@ type ContractFormValues = {
   items: Array<{ title: string; unit: string; quantity: number | string; price: number | string }>;
 };
 
+type RelatedInvoiceLinkItem = {
+  id: string;
+  number: string;
+  date: string;
+  totalWithVat: string;
+  lineItems: string[];
+};
+
+function formatInvoiceTotal(raw: string): string {
+  const n = Number.parseFloat(raw.replace(",", "."));
+  if (!Number.isFinite(n)) return `${raw} грн`;
+  return `${n.toLocaleString("uk-UA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} грн`;
+}
+
+function formatInvoiceLineItemsPreview(items: string[]): string {
+  if (items.length === 0) return "Позиції не вказані";
+  const maxVisible = 2;
+  const visible = items.slice(0, maxVisible).join(" · ");
+  if (items.length <= maxVisible) return visible;
+  return `${visible}… (+${items.length - maxVisible})`;
+}
+
 function toDecimal(value: number | string): number {
   if (typeof value === "number") return Number.isFinite(value) && value >= 0 ? value : 0;
   const parsed = Number.parseFloat(value.replace(",", "."));
@@ -85,6 +109,7 @@ export function ContractEditForm({
   onSubmit,
   cancelHref,
   contractId,
+  createdInvoices,
   linesForInvoicing,
   signedScansInitial,
 }: {
@@ -101,6 +126,7 @@ export function ContractEditForm({
   onSubmit: (payload: ContractFormValues) => Promise<void>;
   cancelHref: string;
   contractId: string;
+  createdInvoices: RelatedInvoiceLinkItem[];
   linesForInvoicing: ContractLineInvoiceRemaining[];
   signedScansInitial: SignedScanListItem[];
 }) {
@@ -128,6 +154,8 @@ export function ContractEditForm({
   const [treatyError, setTreatyError] = useState<string | null>(null);
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
   const [analogueLoading, setAnalogueLoading] = useState(false);
+  const [invoicePickerOpen, setInvoicePickerOpen] = useState(false);
+  const [invoicePickerDesktopView, setInvoicePickerDesktopView] = useState(false);
 
   useEffect(() => {
     if (!selectedContractorCompany) {
@@ -179,6 +207,15 @@ export function ContractEditForm({
     setCustomerSignerPositionGen(selectedCustomerCompany.contractSignerPositionGen ?? "");
     setCustomerSignerActingUnder(selectedCustomerCompany.contractSignerActingUnder ?? "");
   }, [selectedCustomerCompany]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mql = window.matchMedia("(min-width: 520px)");
+    const apply = () => setInvoicePickerDesktopView(mql.matches);
+    apply();
+    mql.addEventListener("change", apply);
+    return () => mql.removeEventListener("change", apply);
+  }, []);
 
   async function submitEditedContract(
     values: ContractFormValues,
@@ -568,6 +605,27 @@ export function ContractEditForm({
             <Receipt className="size-4" aria-hidden="true" />
             Сформувати рахунок
           </button>
+          {createdInvoices.length === 1 ? (
+            <a
+              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-zinc-300 bg-white px-4 text-sm text-zinc-800 hover:bg-zinc-50 sm:w-auto"
+              href={`/invoices/${createdInvoices[0]!.id}/edit`}
+              title={`Відкрити рахунок ${createdInvoices[0]!.number}`}
+            >
+              <ExternalLink className="size-4" aria-hidden="true" />
+              До рахунку
+            </a>
+          ) : null}
+          {createdInvoices.length > 1 ? (
+            <button
+              type="button"
+              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-zinc-300 bg-white px-4 text-sm text-zinc-800 hover:bg-zinc-50 sm:w-auto"
+              onClick={() => setInvoicePickerOpen(true)}
+              title="Відкрити вибір рахунку для цього договору"
+            >
+              <ExternalLink className="size-4" aria-hidden="true" />
+              До рахунку
+            </button>
+          ) : null}
           <button
             type="button"
             disabled={analogueLoading}
@@ -616,6 +674,85 @@ export function ContractEditForm({
         contractId={contractId}
         lines={linesForInvoicing}
       />
+      <Dialog open={invoicePickerOpen} onOpenChange={setInvoicePickerOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogTitle>Оберіть рахунок</DialogTitle>
+          <div className="mt-2 max-h-[min(55vh,420px)] overflow-auto rounded-md border">
+            {invoicePickerDesktopView ? (
+              <table className="w-full border-collapse text-sm">
+                <thead className="sticky top-0 bg-muted/80">
+                  <tr>
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      # і дата
+                    </th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Роботи
+                    </th>
+                    <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Сума
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {createdInvoices.map((inv) => (
+                    <tr
+                      key={inv.id}
+                      className="cursor-pointer border-t hover:bg-muted/50"
+                      onClick={() => {
+                        setInvoicePickerOpen(false);
+                        router.push(`/invoices/${inv.id}/edit`);
+                      }}
+                    >
+                      <td className="px-3 py-2 align-top">
+                        <div className="font-medium text-foreground">{inv.number}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {new Date(`${inv.date}T12:00:00.000Z`).toLocaleDateString("uk-UA")}
+                        </div>
+                      </td>
+                      <td className="px-3 py-2 align-top text-xs text-muted-foreground">
+                        {formatInvoiceLineItemsPreview(inv.lineItems)}
+                      </td>
+                      <td className="px-3 py-2 align-top text-right font-medium text-foreground">
+                        {formatInvoiceTotal(inv.totalWithVat)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div className="flex flex-col gap-2 p-2">
+                {createdInvoices.map((inv) => (
+                  <button
+                    key={inv.id}
+                    type="button"
+                    className="rounded-md border bg-background p-3 text-left hover:bg-muted/50"
+                    onClick={() => {
+                      setInvoicePickerOpen(false);
+                      router.push(`/invoices/${inv.id}/edit`);
+                    }}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="font-medium text-foreground">{inv.number}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {new Date(`${inv.date}T12:00:00.000Z`).toLocaleDateString("uk-UA")}
+                        </div>
+                      </div>
+                      <div className="text-right text-sm font-medium text-foreground">{formatInvoiceTotal(inv.totalWithVat)}</div>
+                    </div>
+                    <div className="mt-2 text-xs text-muted-foreground">{formatInvoiceLineItemsPreview(inv.lineItems)}</div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="mt-3 flex justify-end border-t pt-3">
+            <Button type="button" variant="ghost" onClick={() => setInvoicePickerOpen(false)}>
+              Закрити
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       <QuickCreateCompanyModal
         open={companyModalFor !== null}
         onOpenChange={(next) => {

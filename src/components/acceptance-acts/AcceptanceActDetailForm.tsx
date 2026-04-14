@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Controller, FormProvider, useForm } from "react-hook-form";
-import { FiArrowRight, FiFileText, FiList } from "react-icons/fi";
+import { FiExternalLink, FiFileText, FiList } from "react-icons/fi";
 import { toast } from "sonner";
 
 import { CompanySearchSelect } from "@/components/forms/CompanySearchSelect";
@@ -361,12 +361,12 @@ export function AcceptanceActDetailForm({
             До списку актів
           </a>
           <a
-            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-border bg-background px-4 text-sm hover:bg-muted md:w-auto"
+            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border px-4 text-sm md:w-auto"
             href={`/invoices/${invoice.id}/edit`}
             aria-label={`Перейти до рахунку №${invoice.number}`}
             title={`Рахунок №${invoice.number}`}
           >
-            <FiArrowRight className="size-4 shrink-0" aria-hidden />
+            <FiExternalLink className="size-4 shrink-0" aria-hidden />
             До рахунку
           </a>
           <button

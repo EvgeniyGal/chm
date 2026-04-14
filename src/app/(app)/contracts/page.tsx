@@ -50,6 +50,7 @@ export default async function ContractsPage({
   const { role } = await requireRole("MANAGER");
   const canManageContracts = role !== "MANAGER";
   const canDeleteContracts = role === "ADMIN" || role === "OWNER";
+  const canGenerateDocuments = role === "MANAGER" || role === "ADMIN" || role === "OWNER";
   const sp = await searchParams;
   const q = String(sp.q ?? "").trim();
   const sortByRaw = String(sp.sortBy ?? "date");
@@ -188,6 +189,7 @@ export default async function ContractsPage({
         canManageContracts={canManageContracts}
         canDeleteContracts={canDeleteContracts}
         canGenerateAnalogue={canDeleteContracts}
+        canGenerateDocuments={canGenerateDocuments}
         rows={rows.map((c) => ({
           id: c.id,
           number: c.number,

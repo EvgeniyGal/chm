@@ -115,6 +115,7 @@ export function InvoicesTable({
   dateRangeInvalid,
   canManageInvoices = true,
   canGenerateAnalogue = false,
+  canGenerateDocuments = false,
 }: {
   rows: InvoiceRow[];
   total: number;
@@ -131,6 +132,7 @@ export function InvoicesTable({
   dateRangeInvalid: boolean;
   canManageInvoices?: boolean;
   canGenerateAnalogue?: boolean;
+  canGenerateDocuments?: boolean;
 }) {
   const router = useRouter();
   const { updateParams } = useListUrlParams();
@@ -335,13 +337,13 @@ export function InvoicesTable({
                   <DetailRow label="Разом з ПДВ" value={inv.totalWithVat} />
                 </div>
               </InfoDialog>
-              {!canManageInvoices ? (
+              {canGenerateDocuments ? (
                 <>
                   <a
                     className={tableActionIconClassName}
                     href={`/api/documents/invoice/${inv.id}`}
-                    aria-label="Завантажити рахунок"
-                    title="Завантажити рахунок"
+                    aria-label="Сформувати рахунок"
+                    title="Сформувати рахунок"
                   >
                     <FiFileText aria-hidden="true" className="size-4" />
                   </a>
@@ -397,7 +399,16 @@ export function InvoicesTable({
         },
       },
     ],
-    [allVisibleSelected, canGenerateAnalogue, canManageInvoices, duplicateInvoice, duplicatePendingId, selectedIds, visibleIds],
+    [
+      allVisibleSelected,
+      canGenerateAnalogue,
+      canGenerateDocuments,
+      canManageInvoices,
+      duplicateInvoice,
+      duplicatePendingId,
+      selectedIds,
+      visibleIds,
+    ],
   );
 
   const table = useReactTable({
@@ -640,13 +651,13 @@ export function InvoicesTable({
                       <DetailRow label="Разом з ПДВ" value={inv.totalWithVat} />
                     </div>
                   </InfoDialog>
-                  {!canManageInvoices ? (
+                  {canGenerateDocuments ? (
                     <>
                       <a
                         className={tableActionIconClassName}
                         href={`/api/documents/invoice/${inv.id}`}
-                        aria-label="Завантажити рахунок"
-                        title="Завантажити рахунок"
+                        aria-label="Сформувати рахунок"
+                        title="Сформувати рахунок"
                       >
                         <FiFileText aria-hidden="true" className="size-4" />
                       </a>

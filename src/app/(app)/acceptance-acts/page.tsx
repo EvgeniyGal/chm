@@ -62,6 +62,7 @@ export default async function AcceptanceActsPage({
 }) {
   const { role } = await requireRole("MANAGER");
   const canManageActs = role !== "MANAGER";
+  const canGenerateDocuments = role === "MANAGER" || role === "ADMIN" || role === "OWNER";
   const sp = await searchParams;
   const q = String(sp.q ?? "").trim();
   const sortByRaw = String(sp.sortBy ?? "date");
@@ -229,6 +230,7 @@ export default async function AcceptanceActsPage({
         filterDateTo={dateToRaw}
         dateRangeInvalid={dateRangeInvalid}
         canManageActs={canManageActs}
+        canGenerateDocuments={canGenerateDocuments}
         rows={rows.map((r) => ({
           id: r.id,
           number: r.number,

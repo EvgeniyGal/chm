@@ -57,7 +57,7 @@ export default async function NewInvoicePage({
     if (!res.ok) throw new Error(data?.error ?? "CREATE_FAILED");
     const newId = data?.data?.id;
     if (!newId) throw new Error("CREATE_FAILED");
-    redirect(`/invoices/${newId}/edit`);
+    redirect(`/invoices/${newId}/edit?saved=1&created=1`);
   }
 
   /** POST invoice and return id (no redirect). Used before DOCX download or navigating to new act — ensures saved number in documents. */
