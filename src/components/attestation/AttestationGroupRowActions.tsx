@@ -1,6 +1,6 @@
 "use client";
 
-import { ChartColumn, Pencil, UserPlus } from "lucide-react";
+import { ChartColumn, UserPlus } from "lucide-react";
 import Link from "next/link";
 
 import { tableActionIconClassName } from "@/components/data-table/list-styles";
@@ -29,16 +29,6 @@ export function AttestationGroupRowActions({
       >
         <ChartColumn className="size-4 shrink-0" aria-hidden />
       </a>
-      {canMutate ? (
-        <Link
-          className={tableActionIconClassName}
-          href={`/attestation/groups/${groupId}/edit`}
-          title="Редагувати групу"
-          aria-label="Редагувати групу"
-        >
-          <Pencil className="size-4 shrink-0" aria-hidden />
-        </Link>
-      ) : null}
       {canMutate ? (
         <Link
           className={iconPrimaryClassName}

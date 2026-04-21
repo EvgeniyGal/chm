@@ -1,7 +1,6 @@
 "use client";
 
-import { Award, Copy, FileText, Pencil, Trash2 } from "lucide-react";
-import Link from "next/link";
+import { Award, Copy, FileText, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -82,16 +81,6 @@ export function WelderListRowActions({
         >
           <Award className="size-4 shrink-0" aria-hidden />
         </a>
-        {canMutate ? (
-          <Link
-            className={tableActionIconClassName}
-            href={`/attestation/welders/${welderId}/edit`}
-            title="Редагувати атестацію"
-            aria-label="Редагувати атестацію"
-          >
-            <Pencil className="size-4 shrink-0" aria-hidden />
-          </Link>
-        ) : null}
         {canMutate ? (
           <button
             type="button"

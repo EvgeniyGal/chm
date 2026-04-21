@@ -8,6 +8,7 @@ import {
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
+import { useRouter } from "next/navigation";
 
 import { EmptyListState } from "@/components/data-table/empty-list-state";
 import { ListPagePagination } from "@/components/data-table/list-page-pagination";
@@ -123,6 +124,7 @@ export function AttestationWeldersTable({
   dateRangeInvalid: boolean;
   isDatabaseEmpty: boolean;
 }) {
+  const router = useRouter();
   const { updateParams } = useListUrlParams();
 
   const onSearchCommit = useCallback(
@@ -407,11 +409,23 @@ export function AttestationWeldersTable({
                 </tr>
               ) : (
                 table.getRowModel().rows.map((row) => (
-                  <tr key={row.id} className="border-t border-border">
+                  <tr
+                    key={row.id}
+                    className="cursor-pointer border-t border-border hover:bg-muted/40"
+                    title={[
+                      `№ групи: ${row.original.groupNumber}`,
+                      `Дата протоколу: ${new Date(row.original.protocolDate).toLocaleDateString("uk-UA")}`,
+                      `№ у групі: ${row.original.orderInGroup}`,
+                      `ПІБ: ${fullName(row.original)}`,
+                      `Статус групи: ${certificationGroupStatusLabelUa(row.original.groupStatus)}`,
+                    ].join("\n")}
+                    onClick={() => router.push(`/attestation/welders/${row.original.id}/edit`)}
+                  >
                     {row.getVisibleCells().map((cell) => (
                       <td
                         key={cell.id}
                         className={`px-3 py-3 align-top ${cell.column.id === "fullName" ? "min-w-0 max-w-[min(24rem,40vw)]" : ""} ${cell.column.id === "actions" ? "text-right" : ""}`}
+                        onClick={cell.column.id === "actions" ? (e) => e.stopPropagation() : undefined}
                       >
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </td>
@@ -432,7 +446,8 @@ export function AttestationWeldersTable({
               return (
                 <div
                   key={w.id}
-                  className="rounded-lg border border-border bg-card px-3 py-3 text-card-foreground shadow-sm"
+                  className="cursor-pointer rounded-lg border border-border bg-card px-3 py-3 text-card-foreground shadow-sm hover:bg-muted/40"
+                  onClick={() => router.push(`/attestation/welders/${w.id}/edit`)}
                 >
                   <div className="flex flex-col gap-3">
                     <div className="min-w-0 space-y-2">
@@ -450,7 +465,9 @@ export function AttestationWeldersTable({
                         <dd>{certificationGroupStatusLabelUa(w.groupStatus)}</dd>
                       </dl>
                     </div>
-                    <WelderListRowActions welderId={w.id} groupStatus={w.groupStatus} />
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <WelderListRowActions welderId={w.id} groupStatus={w.groupStatus} />
+                    </div>
                   </div>
                 </div>
               );

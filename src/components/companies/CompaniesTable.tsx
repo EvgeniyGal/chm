@@ -7,15 +7,13 @@ import {
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { FiEdit2, FiInfo } from "react-icons/fi";
+import { useRouter } from "next/navigation";
 
 import { DeleteCompanyButton } from "@/components/companies/DeleteCompanyButton";
-import { DetailRow } from "@/components/data-table/detail-row";
 import { EmptyListState } from "@/components/data-table/empty-list-state";
 import { ListPagePagination } from "@/components/data-table/list-page-pagination";
 import { ListPageToolbar } from "@/components/data-table/list-page-toolbar";
 import { listTableHeaderClass, tableActionIconClassName } from "@/components/data-table/list-styles";
-import { InfoDialog } from "@/components/modals/InfoDialog";
 import { Card } from "@/components/ui/card";
 import { useDebouncedListSearch } from "@/hooks/use-debounced-list-search";
 import { useListUrlParams } from "@/hooks/use-list-url-params";
@@ -35,6 +33,18 @@ type CompanyRow = {
 type SortBy = "shortName" | "edrpouCode" | "address" | "createdAt";
 type SortDir = "asc" | "desc";
 
+function getCompanyInfoTitle(c: CompanyRow): string {
+  return [
+    `Повна назва: ${c.fullName}`,
+    `ЄДРПОУ: ${c.edrpouCode}`,
+    `ІПН: ${c.vatIdTin ?? "—"}`,
+    `IBAN: ${c.iban}`,
+    `Банк: ${c.bank}`,
+    `Адреса: ${c.address}`,
+    `Контакти: ${formatContacts(c.contacts)}`,
+  ].join("\n");
+}
+
 export function CompaniesTable({
   rows,
   total,
@@ -52,6 +62,7 @@ export function CompaniesTable({
   sortBy: SortBy;
   sortDir: SortDir;
 }) {
+  const router = useRouter();
   const { updateParams } = useListUrlParams();
 
   const onSearchCommit = useCallback(
@@ -84,30 +95,6 @@ export function CompaniesTable({
           const c = row.original;
           return (
             <div className="flex flex-wrap gap-2">
-              <InfoDialog
-                title={`Компанія: ${c.shortName}`}
-                trigger={<FiInfo aria-hidden="true" className="size-4" />}
-                triggerAriaLabel="Інформація про компанію"
-                triggerClassName={tableActionIconClassName}
-              >
-                <div className="grid gap-2">
-                  <DetailRow label="Повна назва" value={c.fullName} />
-                  <DetailRow label="ЄДРПОУ" value={c.edrpouCode} />
-                  <DetailRow label="ІПН" value={c.vatIdTin ?? "—"} />
-                  <DetailRow label="IBAN" value={c.iban} />
-                  <DetailRow label="Банк" value={c.bank} />
-                  <DetailRow label="Адреса" value={c.address} />
-                  <DetailRow label="Контакти" value={formatContacts(c.contacts)} />
-                </div>
-              </InfoDialog>
-              <a
-                className={tableActionIconClassName}
-                href={`/companies/${c.id}/edit`}
-                aria-label="Редагувати компанію"
-                title="Редагувати компанію"
-              >
-                <FiEdit2 aria-hidden="true" className="size-4" />
-              </a>
               <DeleteCompanyButton companyId={c.id} companyName={c.shortName} />
             </div>
           );
@@ -155,7 +142,7 @@ export function CompaniesTable({
                     <th
                       key={header.id}
                       className={`px-4 py-3 ${
-                        header.column.id === "actions" ? "w-[148px] whitespace-nowrap text-center" : ""
+                        header.column.id === "actions" ? "w-0 whitespace-nowrap text-center" : ""
                       }`}
                     >
                       {header.isPlaceholder ? null : (
@@ -180,13 +167,21 @@ export function CompaniesTable({
             </thead>
             <tbody>
               {table.getRowModel().rows.map((row) => (
-                <tr key={row.id} className="border-t">
+                <tr
+                  key={row.id}
+                  className="cursor-pointer border-t hover:bg-muted/40"
+                  title={getCompanyInfoTitle(row.original)}
+                  onClick={() => {
+                    router.push(`/companies/${row.original.id}/edit`);
+                  }}
+                >
                   {row.getVisibleCells().map((cell) => (
                     <td
                       key={cell.id}
                       className={`px-4 py-3 align-top ${
-                        cell.column.id === "actions" ? "w-[148px] whitespace-nowrap" : ""
+                        cell.column.id === "actions" ? "w-0 whitespace-nowrap" : ""
                       }`}
+                      onClick={cell.column.id === "actions" ? (e) => e.stopPropagation() : undefined}
                     >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>
@@ -201,35 +196,17 @@ export function CompaniesTable({
           {table.getRowModel().rows.map((row) => {
             const c = row.original;
             return (
-              <div key={c.id} className="rounded-lg border p-3">
+              <div
+                key={c.id}
+                className="cursor-pointer rounded-lg border p-3 hover:bg-muted/40"
+                onClick={() => {
+                  router.push(`/companies/${c.id}/edit`);
+                }}
+              >
                 <div className="text-base font-medium text-foreground">{c.shortName}</div>
                 <div className="mt-1 text-xs text-muted-foreground">ЄДРПОУ: {c.edrpouCode}</div>
                 <div className="mt-1 text-xs text-muted-foreground">{c.address}</div>
-                <div className="mt-3 flex gap-2">
-                  <InfoDialog
-                    title={`Компанія: ${c.shortName}`}
-                    trigger={<FiInfo aria-hidden="true" className="size-4" />}
-                    triggerAriaLabel="Інформація про компанію"
-                    triggerClassName={tableActionIconClassName}
-                  >
-                    <div className="grid gap-2">
-                      <DetailRow label="Повна назва" value={c.fullName} />
-                      <DetailRow label="ЄДРПОУ" value={c.edrpouCode} />
-                      <DetailRow label="ІПН" value={c.vatIdTin ?? "—"} />
-                      <DetailRow label="IBAN" value={c.iban} />
-                      <DetailRow label="Банк" value={c.bank} />
-                      <DetailRow label="Адреса" value={c.address} />
-                      <DetailRow label="Контакти" value={formatContacts(c.contacts)} />
-                    </div>
-                  </InfoDialog>
-                  <a
-                    className={tableActionIconClassName}
-                    href={`/companies/${c.id}/edit`}
-                    aria-label="Редагувати компанію"
-                    title="Редагувати компанію"
-                  >
-                    <FiEdit2 aria-hidden="true" className="size-4" />
-                  </a>
+                <div className="mt-3 flex gap-2" onClick={(e) => e.stopPropagation()}>
                   <DeleteCompanyButton companyId={c.id} companyName={c.shortName} />
                 </div>
               </div>

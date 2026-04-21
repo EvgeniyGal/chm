@@ -8,15 +8,13 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { useRouter } from "next/navigation";
-import { FiArchive, FiCheckCircle, FiDownload, FiEdit2, FiFileText, FiInfo, FiTrash2, FiUpload } from "react-icons/fi";
+import { FiArchive, FiCheckCircle, FiDownload, FiFileText, FiTrash2, FiUpload } from "react-icons/fi";
 import { toast } from "sonner";
 
-import { DetailRow } from "@/components/data-table/detail-row";
 import { EmptyListState } from "@/components/data-table/empty-list-state";
 import { ListPagePagination } from "@/components/data-table/list-page-pagination";
 import { ListPageToolbar } from "@/components/data-table/list-page-toolbar";
 import { listTableHeaderClass, tableActionIconClassName } from "@/components/data-table/list-styles";
-import { InfoDialog } from "@/components/modals/InfoDialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -116,6 +114,22 @@ function actsTableCellClass(columnId: string): string {
     default:
       return `${base} px-3`;
   }
+}
+
+function getAcceptanceActInfoTitle(act: AcceptanceActRow): string {
+  return [
+    `Дата: ${new Date(act.date).toLocaleDateString("uk-UA")}`,
+    `Тип: ${act.workType === "WORKS" ? "Роботи" : "Послуги"}`,
+    `Рахунок: ${act.invoiceNumber}`,
+    `Договір у базі: ${act.hasContract ? "Так" : "Ні"}`,
+    `Замовник: ${act.customerCompany}`,
+    `Виконавець: ${act.contractorCompany}`,
+    `Місце складання: ${act.signingLocation}`,
+    `Позиції: ${act.lineItemsPreview}`,
+    `Разом (без ПДВ): ${act.totalWithoutVat}`,
+    `ПДВ 20%: ${act.vat20}`,
+    `Разом з ПДВ: ${act.totalWithVat}`,
+  ].join("\n");
 }
 
 export function AcceptanceActsTable({
@@ -416,26 +430,6 @@ export function AcceptanceActsTable({
               >
                 <FiArchive aria-hidden="true" className="size-4" />
               </button>
-              <InfoDialog
-                title={`Акт ${act.number}`}
-                trigger={<FiInfo aria-hidden="true" className="size-4" />}
-                triggerAriaLabel="Інформація про акт"
-                triggerClassName={tableActionIconClassName}
-              >
-                <div className="grid gap-2">
-                  <DetailRow label="Дата" value={new Date(act.date).toLocaleDateString("uk-UA")} />
-                  <DetailRow label="Тип" value={act.workType === "WORKS" ? "Роботи" : "Послуги"} />
-                  <DetailRow label="Рахунок" value={act.invoiceNumber} />
-                  <DetailRow label="Договір у базі" value={act.hasContract ? "Так" : "Ні"} />
-                  <DetailRow label="Замовник" value={act.customerCompany} />
-                  <DetailRow label="Виконавець" value={act.contractorCompany} />
-                  <DetailRow label="Місце складання" value={act.signingLocation} />
-                  <DetailRow label="Позиції" value={act.lineItemsPreview} />
-                  <DetailRow label="Разом (без ПДВ)" value={act.totalWithoutVat} />
-                  <DetailRow label="ПДВ 20%" value={act.vat20} />
-                  <DetailRow label="Разом з ПДВ" value={act.totalWithVat} />
-                </div>
-              </InfoDialog>
               {canGenerateDocuments ? (
                 <>
                   <a
@@ -455,16 +449,6 @@ export function AcceptanceActsTable({
                     <FiUpload aria-hidden="true" className="size-4" />
                   </a>
                 </>
-              ) : null}
-              {canManageActs ? (
-                <a
-                  className={tableActionIconClassName}
-                  href={`/acceptance-acts/${act.id}`}
-                  aria-label="Відкрити акт"
-                  title="Відкрити"
-                >
-                  <FiEdit2 aria-hidden="true" className="size-4" />
-                </a>
               ) : null}
               {canManageActs ? (
                 <button
@@ -724,9 +708,25 @@ export function AcceptanceActsTable({
             </thead>
             <tbody>
               {table.getRowModel().rows.map((row) => (
-                <tr key={row.id} className="border-t">
+                <tr
+                  key={row.id}
+                  className={cn("border-t", canManageActs && "cursor-pointer hover:bg-muted/40")}
+                  title={getAcceptanceActInfoTitle(row.original)}
+                  onClick={() => {
+                    if (!canManageActs) return;
+                    router.push(`/acceptance-acts/${row.original.id}`);
+                  }}
+                >
                   {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className={actsTableCellClass(cell.column.id)}>
+                    <td
+                      key={cell.id}
+                      className={actsTableCellClass(cell.column.id)}
+                      onClick={
+                        cell.column.id === "actions" || cell.column.id === "select"
+                          ? (e) => e.stopPropagation()
+                          : undefined
+                      }
+                    >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>
                   ))}
@@ -741,7 +741,14 @@ export function AcceptanceActsTable({
             const act = row.original;
             const rowBusy = paperPendingId === act.id || deleteBusy;
             return (
-              <div key={act.id} className="rounded-lg border p-3">
+              <div
+                key={act.id}
+                className="cursor-pointer rounded-lg border p-3 hover:bg-muted/40"
+                onClick={() => {
+                  if (!canManageActs) return;
+                  router.push(`/acceptance-acts/${act.id}`);
+                }}
+              >
                 <div className="text-base font-medium text-foreground">{act.number}</div>
                 <div className="mt-1 text-xs text-muted-foreground">
                   {new Date(act.date).toLocaleDateString("uk-UA")} · {act.workType === "WORKS" ? "Роботи" : "Послуги"} ·
@@ -754,7 +761,7 @@ export function AcceptanceActsTable({
                 <div className="mt-1 text-sm font-medium tabular-nums text-foreground">
                   З ПДВ: {formatMoney(Number.parseFloat(act.totalWithVat) || 0)}
                 </div>
-                <div className="mt-3 flex flex-wrap gap-2">
+                <div className="mt-3 flex flex-wrap gap-2" onClick={(e) => e.stopPropagation()}>
                   <button
                     type="button"
                     className={cn(
@@ -793,26 +800,6 @@ export function AcceptanceActsTable({
                   >
                     <FiArchive aria-hidden="true" className="size-4" />
                   </button>
-                  <InfoDialog
-                    title={`Акт ${act.number}`}
-                    trigger={<FiInfo aria-hidden="true" className="size-4" />}
-                    triggerAriaLabel="Інформація про акт"
-                    triggerClassName={tableActionIconClassName}
-                  >
-                    <div className="grid gap-2">
-                      <DetailRow label="Дата" value={new Date(act.date).toLocaleDateString("uk-UA")} />
-                      <DetailRow label="Тип" value={act.workType === "WORKS" ? "Роботи" : "Послуги"} />
-                      <DetailRow label="Рахунок" value={act.invoiceNumber} />
-                      <DetailRow label="Договір у базі" value={act.hasContract ? "Так" : "Ні"} />
-                      <DetailRow label="Замовник" value={act.customerCompany} />
-                      <DetailRow label="Виконавець" value={act.contractorCompany} />
-                      <DetailRow label="Місце складання" value={act.signingLocation} />
-                      <DetailRow label="Позиції" value={act.lineItemsPreview} />
-                      <DetailRow label="Разом (без ПДВ)" value={act.totalWithoutVat} />
-                      <DetailRow label="ПДВ 20%" value={act.vat20} />
-                      <DetailRow label="Разом з ПДВ" value={act.totalWithVat} />
-                    </div>
-                  </InfoDialog>
                   {canGenerateDocuments ? (
                     <>
                       <a
@@ -832,16 +819,6 @@ export function AcceptanceActsTable({
                         <FiUpload aria-hidden="true" className="size-4" />
                       </a>
                     </>
-                  ) : null}
-                  {canManageActs ? (
-                    <a
-                      className={tableActionIconClassName}
-                      href={`/acceptance-acts/${act.id}`}
-                      aria-label="Відкрити акт"
-                      title="Відкрити"
-                    >
-                      <FiEdit2 aria-hidden="true" className="size-4" />
-                    </a>
                   ) : null}
                   {canManageActs ? (
                     <button

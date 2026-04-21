@@ -8,15 +8,13 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { useRouter } from "next/navigation";
-import { FiArchive, FiCheckCircle, FiCopy, FiDownload, FiEdit2, FiFileMinus, FiFileText, FiInfo, FiTrash2, FiUpload } from "react-icons/fi";
+import { FiArchive, FiCheckCircle, FiCopy, FiDownload, FiFileMinus, FiFileText, FiTrash2, FiUpload } from "react-icons/fi";
 import { toast } from "sonner";
 
-import { DetailRow } from "@/components/data-table/detail-row";
 import { EmptyListState } from "@/components/data-table/empty-list-state";
 import { ListPagePagination } from "@/components/data-table/list-page-pagination";
 import { ListPageToolbar } from "@/components/data-table/list-page-toolbar";
 import { listTableHeaderClass, tableActionIconClassName } from "@/components/data-table/list-styles";
-import { InfoDialog } from "@/components/modals/InfoDialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -119,6 +117,22 @@ function contractsTableCellClass(columnId: string): string {
     default:
       return `${base} px-3`;
   }
+}
+
+function getContractInfoTitle(c: ContractRow): string {
+  return [
+    `Дата: ${new Date(c.date).toLocaleDateString("uk-UA")}`,
+    `Тип: ${c.workType === "WORKS" ? "Роботи" : "Послуги"}`,
+    `Замовник: ${c.customerCompanyShortName}`,
+    `Виконавець: ${c.contractorCompanyShortName}`,
+    `Підписаний: ${c.isSigned ? "Так" : "Ні"}`,
+    `В архіві: ${c.isArchived ? "Так" : "Ні"}`,
+    `Місце: ${c.signingLocation}`,
+    `Позиції: ${c.lineItemsPreview}`,
+    `Разом (без ПДВ): ${c.totalWithoutVat}`,
+    `ПДВ 20%: ${c.vat20}`,
+    `Разом з ПДВ: ${c.totalWithVat}`,
+  ].join("\n");
 }
 
 export function ContractsTable({
@@ -455,26 +469,6 @@ export function ContractsTable({
               >
                 <FiArchive aria-hidden="true" className="size-4" />
               </button>
-              <InfoDialog
-                title={`Договір ${c.number}`}
-                trigger={<FiInfo aria-hidden="true" className="size-4" />}
-                triggerAriaLabel="Інформація про договір"
-                triggerClassName={tableActionIconClassName}
-              >
-                <div className="grid gap-2">
-                  <DetailRow label="Дата" value={new Date(c.date).toLocaleDateString("uk-UA")} />
-                  <DetailRow label="Тип" value={c.workType === "WORKS" ? "Роботи" : "Послуги"} />
-                  <DetailRow label="Замовник" value={c.customerCompanyShortName} />
-                  <DetailRow label="Виконавець" value={c.contractorCompanyShortName} />
-                  <DetailRow label="Підписаний" value={c.isSigned ? "Так" : "Ні"} />
-                  <DetailRow label="В архіві" value={c.isArchived ? "Так" : "Ні"} />
-                  <DetailRow label="Місце" value={c.signingLocation} />
-                  <DetailRow label="Позиції" value={c.lineItemsPreview} />
-                  <DetailRow label="Разом (без ПДВ)" value={c.totalWithoutVat} />
-                  <DetailRow label="ПДВ 20%" value={c.vat20} />
-                  <DetailRow label="Разом з ПДВ" value={c.totalWithVat} />
-                </div>
-              </InfoDialog>
               {canGenerateDocuments ? (
                 <>
                   <a
@@ -502,16 +496,6 @@ export function ContractsTable({
                     <FiUpload aria-hidden="true" className="size-4" />
                   </a>
                 </>
-              ) : null}
-              {canManageContracts ? (
-                <a
-                  className={tableActionIconClassName}
-                  href={`/contracts/${c.id}/edit`}
-                  aria-label="Редагувати договір"
-                  title="Редагувати договір"
-                >
-                  <FiEdit2 aria-hidden="true" className="size-4" />
-                </a>
               ) : null}
               {canGenerateAnalogue ? (
                 <button
@@ -827,9 +811,25 @@ export function ContractsTable({
             </thead>
             <tbody>
               {table.getRowModel().rows.map((row) => (
-                <tr key={row.id} className="border-t">
+                <tr
+                  key={row.id}
+                  className={cn("border-t", canManageContracts && "cursor-pointer hover:bg-muted/40")}
+                  title={getContractInfoTitle(row.original)}
+                  onClick={() => {
+                    if (!canManageContracts) return;
+                    router.push(`/contracts/${row.original.id}/edit`);
+                  }}
+                >
                   {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className={contractsTableCellClass(cell.column.id)}>
+                    <td
+                      key={cell.id}
+                      className={contractsTableCellClass(cell.column.id)}
+                      onClick={
+                        cell.column.id === "actions" || cell.column.id === "select"
+                          ? (e) => e.stopPropagation()
+                          : undefined
+                      }
+                    >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>
                   ))}
@@ -844,7 +844,14 @@ export function ContractsTable({
             const c = row.original;
             const rowBusy = paperPendingId === c.id || deletePendingId === c.id || duplicatePendingId === c.id;
             return (
-              <div key={c.id} className="rounded-lg border p-3">
+              <div
+                key={c.id}
+                className="cursor-pointer rounded-lg border p-3 hover:bg-muted/40"
+                onClick={() => {
+                  if (!canManageContracts) return;
+                  router.push(`/contracts/${c.id}/edit`);
+                }}
+              >
                 <div className="text-base font-medium text-foreground">{c.number}</div>
                 <div className="mt-1 text-xs text-muted-foreground">
                   {new Date(c.date).toLocaleDateString("uk-UA")} · {c.workType === "WORKS" ? "Роботи" : "Послуги"}
@@ -863,7 +870,7 @@ export function ContractsTable({
                 <div className="mt-1 text-sm font-medium tabular-nums text-foreground">
                   З ПДВ: {formatMoney(Number.parseFloat(c.totalWithVat) || 0)}
                 </div>
-                <div className="mt-3 flex flex-wrap gap-2">
+                <div className="mt-3 flex flex-wrap gap-2" onClick={(e) => e.stopPropagation()}>
                   <button
                     type="button"
                     className={cn(
@@ -902,26 +909,6 @@ export function ContractsTable({
                   >
                     <FiArchive aria-hidden="true" className="size-4" />
                   </button>
-                  <InfoDialog
-                    title={`Договір ${c.number}`}
-                    trigger={<FiInfo aria-hidden="true" className="size-4" />}
-                    triggerAriaLabel="Інформація про договір"
-                    triggerClassName={tableActionIconClassName}
-                  >
-                    <div className="grid gap-2">
-                      <DetailRow label="Дата" value={new Date(c.date).toLocaleDateString("uk-UA")} />
-                      <DetailRow label="Тип" value={c.workType === "WORKS" ? "Роботи" : "Послуги"} />
-                      <DetailRow label="Замовник" value={c.customerCompanyShortName} />
-                      <DetailRow label="Виконавець" value={c.contractorCompanyShortName} />
-                      <DetailRow label="Підписаний" value={c.isSigned ? "Так" : "Ні"} />
-                      <DetailRow label="В архіві" value={c.isArchived ? "Так" : "Ні"} />
-                      <DetailRow label="Місце" value={c.signingLocation} />
-                      <DetailRow label="Позиції" value={c.lineItemsPreview} />
-                      <DetailRow label="Разом (без ПДВ)" value={c.totalWithoutVat} />
-                      <DetailRow label="ПДВ 20%" value={c.vat20} />
-                      <DetailRow label="Разом з ПДВ" value={c.totalWithVat} />
-                    </div>
-                  </InfoDialog>
                   {canGenerateDocuments ? (
                     <>
                       <a
@@ -949,16 +936,6 @@ export function ContractsTable({
                         <FiUpload aria-hidden="true" className="size-4" />
                       </a>
                     </>
-                  ) : null}
-                  {canManageContracts ? (
-                    <a
-                      className={tableActionIconClassName}
-                      href={`/contracts/${c.id}/edit`}
-                      aria-label="Редагувати договір"
-                      title="Редагувати договір"
-                    >
-                      <FiEdit2 aria-hidden="true" className="size-4" />
-                    </a>
                   ) : null}
                   {canGenerateAnalogue ? (
                     <button

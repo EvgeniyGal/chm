@@ -8,15 +8,13 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { useRouter } from "next/navigation";
-import { FiCopy, FiDownload, FiEdit2, FiFileText, FiInfo, FiTrash2, FiUpload } from "react-icons/fi";
+import { FiCopy, FiDownload, FiFileText, FiTrash2, FiUpload } from "react-icons/fi";
 import { toast } from "sonner";
 
-import { DetailRow } from "@/components/data-table/detail-row";
 import { EmptyListState } from "@/components/data-table/empty-list-state";
 import { ListPagePagination } from "@/components/data-table/list-page-pagination";
 import { ListPageToolbar } from "@/components/data-table/list-page-toolbar";
 import { listTableHeaderClass, tableActionIconClassName } from "@/components/data-table/list-styles";
-import { InfoDialog } from "@/components/modals/InfoDialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -97,6 +95,20 @@ function invoicesTableCellClass(columnId: string): string {
     default:
       return `${base} px-3`;
   }
+}
+
+function getInvoiceInfoTitle(inv: InvoiceRow): string {
+  return [
+    `Дата: ${new Date(inv.date).toLocaleDateString("uk-UA")}`,
+    `Тип: ${inv.workType === "WORKS" ? "Роботи" : "Послуги"}`,
+    `Походження: ${originLabel(inv.origin)}`,
+    `Замовник: ${inv.customerCompany}`,
+    `Виконавець: ${inv.contractorCompany}`,
+    `Позиції: ${inv.lineItemsPreview}`,
+    `Разом (без ПДВ): ${inv.totalWithoutVat}`,
+    `ПДВ 20%: ${inv.vat20}`,
+    `Разом з ПДВ: ${inv.totalWithVat}`,
+  ].join("\n");
 }
 
 export function InvoicesTable({
@@ -319,24 +331,6 @@ export function InvoicesTable({
           const rowBusy = duplicatePendingId === inv.id;
           return (
             <div className="flex flex-nowrap items-center justify-center gap-1">
-              <InfoDialog
-                title={`Рахунок ${inv.number}`}
-                trigger={<FiInfo aria-hidden="true" className="size-4" />}
-                triggerAriaLabel="Інформація про рахунок"
-                triggerClassName={tableActionIconClassName}
-              >
-                <div className="grid gap-2">
-                  <DetailRow label="Дата" value={new Date(inv.date).toLocaleDateString("uk-UA")} />
-                  <DetailRow label="Тип" value={inv.workType === "WORKS" ? "Роботи" : "Послуги"} />
-                  <DetailRow label="Походження" value={originLabel(inv.origin)} />
-                  <DetailRow label="Замовник" value={inv.customerCompany} />
-                  <DetailRow label="Виконавець" value={inv.contractorCompany} />
-                  <DetailRow label="Позиції" value={inv.lineItemsPreview} />
-                  <DetailRow label="Разом (без ПДВ)" value={inv.totalWithoutVat} />
-                  <DetailRow label="ПДВ 20%" value={inv.vat20} />
-                  <DetailRow label="Разом з ПДВ" value={inv.totalWithVat} />
-                </div>
-              </InfoDialog>
               {canGenerateDocuments ? (
                 <>
                   <a
@@ -356,16 +350,6 @@ export function InvoicesTable({
                     <FiUpload aria-hidden="true" className="size-4" />
                   </a>
                 </>
-              ) : null}
-              {canManageInvoices ? (
-                <a
-                  className={tableActionIconClassName}
-                  href={`/invoices/${inv.id}/edit`}
-                  aria-label="Редагувати рахунок"
-                  title="Редагувати"
-                >
-                  <FiEdit2 aria-hidden="true" className="size-4" />
-                </a>
               ) : null}
               {canGenerateAnalogue && inv.origin !== "contract" ? (
                 <button
@@ -605,9 +589,25 @@ export function InvoicesTable({
             </thead>
             <tbody>
               {table.getRowModel().rows.map((row) => (
-                <tr key={row.id} className="border-t">
+                <tr
+                  key={row.id}
+                  className={cn("border-t", canManageInvoices && "cursor-pointer hover:bg-muted/40")}
+                  title={getInvoiceInfoTitle(row.original)}
+                  onClick={() => {
+                    if (!canManageInvoices) return;
+                    router.push(`/invoices/${row.original.id}/edit`);
+                  }}
+                >
                   {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className={invoicesTableCellClass(cell.column.id)}>
+                    <td
+                      key={cell.id}
+                      className={invoicesTableCellClass(cell.column.id)}
+                      onClick={
+                        cell.column.id === "actions" || cell.column.id === "select"
+                          ? (e) => e.stopPropagation()
+                          : undefined
+                      }
+                    >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>
                   ))}
@@ -622,7 +622,14 @@ export function InvoicesTable({
             const inv = row.original;
             const rowBusy = duplicatePendingId === inv.id;
             return (
-              <div key={inv.id} className="rounded-lg border p-3">
+              <div
+                key={inv.id}
+                className="cursor-pointer rounded-lg border p-3 hover:bg-muted/40"
+                onClick={() => {
+                  if (!canManageInvoices) return;
+                  router.push(`/invoices/${inv.id}/edit`);
+                }}
+              >
                 <div className="text-base font-medium text-foreground">{inv.number}</div>
                 <div className="mt-1 text-xs text-muted-foreground">
                   {new Date(inv.date).toLocaleDateString("uk-UA")} · {inv.workType === "WORKS" ? "Роботи" : "Послуги"} ·{" "}
@@ -632,25 +639,7 @@ export function InvoicesTable({
                 <div className="mt-1 text-sm font-medium tabular-nums text-foreground">
                   З ПДВ: {formatMoney(Number.parseFloat(inv.totalWithVat) || 0)}
                 </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <InfoDialog
-                    title={`Рахунок ${inv.number}`}
-                    trigger={<FiInfo aria-hidden="true" className="size-4" />}
-                    triggerAriaLabel="Інформація про рахунок"
-                    triggerClassName={tableActionIconClassName}
-                  >
-                    <div className="grid gap-2">
-                      <DetailRow label="Дата" value={new Date(inv.date).toLocaleDateString("uk-UA")} />
-                      <DetailRow label="Тип" value={inv.workType === "WORKS" ? "Роботи" : "Послуги"} />
-                      <DetailRow label="Походження" value={originLabel(inv.origin)} />
-                      <DetailRow label="Замовник" value={inv.customerCompany} />
-                      <DetailRow label="Виконавець" value={inv.contractorCompany} />
-                      <DetailRow label="Позиції" value={inv.lineItemsPreview} />
-                      <DetailRow label="Разом (без ПДВ)" value={inv.totalWithoutVat} />
-                      <DetailRow label="ПДВ 20%" value={inv.vat20} />
-                      <DetailRow label="Разом з ПДВ" value={inv.totalWithVat} />
-                    </div>
-                  </InfoDialog>
+                <div className="mt-3 flex flex-wrap gap-2" onClick={(e) => e.stopPropagation()}>
                   {canGenerateDocuments ? (
                     <>
                       <a
@@ -670,16 +659,6 @@ export function InvoicesTable({
                         <FiUpload aria-hidden="true" className="size-4" />
                       </a>
                     </>
-                  ) : null}
-                  {canManageInvoices ? (
-                    <a
-                      className={tableActionIconClassName}
-                      href={`/invoices/${inv.id}/edit`}
-                      aria-label="Редагувати рахунок"
-                      title="Редагувати"
-                    >
-                      <FiEdit2 aria-hidden="true" className="size-4" />
-                    </a>
                   ) : null}
                   {canGenerateAnalogue && inv.origin !== "contract" ? (
                     <button
