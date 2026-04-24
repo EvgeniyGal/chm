@@ -21,6 +21,12 @@ function formatContactsLine(contactsJson: string): string {
   }
 }
 
+function formatCustomerContactsForInvoice(customer: CompanyRow): string {
+  const contacts = formatContactsLine(customer.contacts);
+  const registryLine = `ЄДРПОУ ${customer.edrpouCode}, ІПН ${customer.vatIdTin ?? "—"}`;
+  return contacts ? `${contacts}, ${registryLine}` : registryLine;
+}
+
 type InvoiceDocxInput = {
   invoice: InvoiceRow;
   contractor: CompanyRow;
@@ -81,7 +87,7 @@ export function buildInvoiceDocxBuffer(input: InvoiceDocxInput): Buffer {
     "invoice-contractor-cod-edrpou": contractor.edrpouCode,
     "invoice-contractor-cod-tax": contractor.vatIdTin ?? "—",
     "invoice-customer-fullname": customer.fullName,
-    "invoice-customer-contacts": formatContactsLine(customer.contacts),
+    "invoice-customer-contacts": formatCustomerContactsForInvoice(customer),
     "contract-number-date": contractNumberDate,
     items: rowItems,
     "invoice-jobs-price-without-tax": formatMoney(Number(inv.totalWithoutVat)),
