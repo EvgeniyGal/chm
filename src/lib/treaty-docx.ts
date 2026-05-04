@@ -6,6 +6,7 @@ import PizZip from "pizzip";
 
 import type { companies } from "@/db/schema";
 import { calcRowTotal, calcTotals, formatMoney } from "@/lib/totals";
+import { formatUaDateWithYearSuffix } from "@/lib/ua-date";
 import { uahContractPriceLiteral } from "@/lib/uk-amount-words";
 
 type CompanyRow = typeof companies.$inferSelect;
@@ -89,7 +90,7 @@ export function buildTreatyDocxBuffer(input: TreatyGeneratePayload): Buffer {
   const dateObj = new Date(input.date);
   const dateStr = Number.isNaN(dateObj.getTime())
     ? input.date
-    : dateObj.toLocaleDateString("uk-UA") ?? input.date;
+    : formatUaDateWithYearSuffix(input.date);
 
   const rowItems = input.items.map((it, i) => {
     const rowTotal = calcRowTotal(it);

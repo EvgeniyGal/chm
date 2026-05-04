@@ -6,6 +6,7 @@ import PizZip from "pizzip";
 
 import type { companies, invoices } from "@/db/schema";
 import { calcRowTotal, formatMoney } from "@/lib/totals";
+import { formatUaDateWithYearSuffix } from "@/lib/ua-date";
 import { uahInvoicePriceLiteral } from "@/lib/uk-amount-words";
 
 type InvoiceRow = typeof invoices.$inferSelect;
@@ -44,18 +45,18 @@ export function buildInvoiceDocxBuffer(input: InvoiceDocxInput): Buffer {
   const zip = new PizZip(buf);
 
   const inv = input.invoice;
-  const dateStr = new Date(inv.date).toLocaleDateString("uk-UA");
+  const dateStr = formatUaDateWithYearSuffix(inv.date);
 
   const contractor = input.contractor;
   const customer = input.customer;
 
   let contractNumberDate = "—";
   if (input.linkedContract) {
-    const cd = new Date(input.linkedContract.date).toLocaleDateString("uk-UA");
+    const cd = formatUaDateWithYearSuffix(input.linkedContract.date);
     contractNumberDate = `№ ${input.linkedContract.number} від ${cd}`;
   } else if (inv.isExternalContract && inv.externalContractNumber) {
     const ed = inv.externalContractDate
-      ? new Date(inv.externalContractDate).toLocaleDateString("uk-UA")
+      ? formatUaDateWithYearSuffix(inv.externalContractDate)
       : "—";
     contractNumberDate = `№ ${inv.externalContractNumber} від ${ed}`;
   }

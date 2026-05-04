@@ -6,6 +6,7 @@ import PizZip from "pizzip";
 
 import type { acceptanceActs, companies, invoices } from "@/db/schema";
 import { calcRowTotal, formatMoney } from "@/lib/totals";
+import { formatUaDateWithYearSuffix } from "@/lib/ua-date";
 import { uahContractPriceLiteral } from "@/lib/uk-amount-words";
 
 type ActRow = typeof acceptanceActs.$inferSelect;
@@ -30,7 +31,7 @@ function resolveTreatyBasis(input: AcceptanceActDocxInput): {
     return {
       treatyWord: "договором",
       treatyNumber: input.linkedContract.number,
-      treatyDate: new Date(input.linkedContract.date).toLocaleDateString("uk-UA"),
+      treatyDate: formatUaDateWithYearSuffix(input.linkedContract.date),
     };
   }
 
@@ -39,7 +40,7 @@ function resolveTreatyBasis(input: AcceptanceActDocxInput): {
       treatyWord: "договором",
       treatyNumber: input.invoice.externalContractNumber,
       treatyDate: input.invoice.externalContractDate
-        ? new Date(input.invoice.externalContractDate).toLocaleDateString("uk-UA")
+        ? formatUaDateWithYearSuffix(input.invoice.externalContractDate)
         : "—",
     };
   }
@@ -47,7 +48,7 @@ function resolveTreatyBasis(input: AcceptanceActDocxInput): {
   return {
     treatyWord: "рахунком",
     treatyNumber: input.invoice.number,
-    treatyDate: new Date(input.invoice.date).toLocaleDateString("uk-UA"),
+    treatyDate: formatUaDateWithYearSuffix(input.invoice.date),
   };
 }
 
@@ -68,7 +69,7 @@ export function buildAcceptanceActDocxBuffer(input: AcceptanceActDocxInput): Buf
   const actDate =
     input.act.completionDate == null
       ? "«___» ______________ 20___ р."
-      : new Date(input.act.completionDate).toLocaleDateString("uk-UA");
+      : formatUaDateWithYearSuffix(input.act.completionDate);
 
   const rowItems = input.items.map((it, i) => ({
     "act-job-item-number": String(i + 1),
