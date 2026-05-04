@@ -10,6 +10,7 @@ import { requireRole } from "@/lib/authz";
 export const runtime = "nodejs";
 
 const createSchema = z.object({
+  number: z.string().trim().min(1).optional(),
   invoiceId: z.string().uuid(),
   date: z.string().min(1),
   signingLocation: z.string().min(1),
@@ -69,7 +70,15 @@ export async function POST(req: Request) {
     return Response.json({ error: "INVALID_DATE" }, { status: 400 });
   }
 
-  const number = await nextDocumentNumber({ documentType: "ACCEPTANCE_ACT", at: date });
+  const customNumber = parsed.data.number?.trim();
+  if (customNumber) {
+    const existing = await db.query.acceptanceActs.findFirst({
+      where: eq(acceptanceActs.number, customNumber),
+    });
+    if (existing) return Response.json({ error: "NUMBER_ALREADY_EXISTS" }, { status: 409 });
+  }
+  const number =
+    customNumber ?? (await nextDocumentNumber({ documentType: "ACCEPTANCE_ACT", at: date }));
   const now = new Date();
 
   const [created] = await db

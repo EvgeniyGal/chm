@@ -43,6 +43,7 @@ type CompanyOpt = {
 };
 
 type AcceptanceActValues = {
+  number?: string;
   invoiceId: string;
   date: string;
   signingLocation: string;
@@ -73,6 +74,7 @@ export function AcceptanceActForm({
   signerPositionGenOptions,
   signingLocationOptions,
   invoiceSignerById,
+  initialActNumberPreview = "—",
 }: {
   invoices: InvoiceOpt[];
   companies: CompanyOpt[];
@@ -84,11 +86,13 @@ export function AcceptanceActForm({
   signerPositionGenOptions: string[];
   signingLocationOptions: string[];
   invoiceSignerById: Record<string, InvoiceSigner>;
+  initialActNumberPreview?: string;
 }) {
   const initialSigner = invoiceSignerById[initialInvoiceId] ?? null;
 
   const form = useForm<AcceptanceActValues>({
     defaultValues: {
+      number: "",
       invoiceId: initialInvoiceId,
       date: new Date().toISOString().slice(0, 10),
       signingLocation: defaultSigningLocation,
@@ -156,11 +160,37 @@ export function AcceptanceActForm({
     return { totalWithoutVat, vat20, totalWithVat };
   }, [selectedInvoice]);
   const [docLoading, setDocLoading] = useState(false);
+  const [useCustomNumber, setUseCustomNumber] = useState(false);
+  const [previewActNumber, setPreviewActNumber] = useState(initialActNumberPreview);
+  const formDate = form.watch("date");
+
+  useEffect(() => {
+    if (useCustomNumber) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch(`/api/acceptance-acts/preview-number?date=${encodeURIComponent(formDate)}`);
+        if (!res.ok || cancelled) return;
+        const json = (await res.json()) as { data?: { number: string } };
+        if (!cancelled && json.data?.number) setPreviewActNumber(json.data.number);
+      } catch {
+        /* ignore preview failures */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [formDate, useCustomNumber]);
 
   async function submitAct(values: AcceptanceActValues, options?: { allowRedirect?: boolean }) {
+    const customNumber = values.number?.trim() ?? "";
+    if (useCustomNumber && customNumber.length === 0) {
+      toast.error("Вкажіть номер акту або вимкніть ручний режим.");
+      throw new Error("VALIDATION_ERROR");
+    }
     const allowRedirect = options?.allowRedirect ?? true;
     try {
-      await onSubmit(values);
+      await onSubmit({ ...values, number: useCustomNumber ? customNumber : undefined });
     } catch (e) {
       if (isNextNavigationError(e)) {
         toast.success("Акт створено.");
@@ -194,7 +224,28 @@ export function AcceptanceActForm({
         className="flex flex-col gap-4 rounded-xl border bg-white p-4"
         onSubmit={form.handleSubmit(async (values) => submitAct(values))}
       >
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+          <div className="flex min-w-0 flex-col gap-2 text-sm">
+            <label className="inline-flex items-center gap-2 text-zinc-700">
+              <input
+                type="checkbox"
+                className="size-4 rounded border-zinc-300"
+                checked={useCustomNumber}
+                onChange={(e) => setUseCustomNumber(e.target.checked)}
+              />
+              Вказати номер вручну
+            </label>
+            {useCustomNumber ? (
+              <Field
+                label="Номер акту"
+                placeholder="Напр. 15/05-2026 або інший"
+                value={form.watch("number") ?? ""}
+                onChange={(e) => form.setValue("number", e.target.value, { shouldDirty: true })}
+              />
+            ) : (
+              <ReadOnlyField label="Номер акту" value={previewActNumber} />
+            )}
+          </div>
           <label className="flex flex-col gap-1 text-sm min-w-0">
             <span className="text-zinc-700">Рахунок (джерело)</span>
             <select className="h-10 rounded-md border px-3 bg-zinc-50" {...form.register("invoiceId", { required: true })}>
@@ -372,7 +423,10 @@ export function AcceptanceActForm({
                 void form
                   .handleSubmit(async (values) => {
                     try {
-                      const result = await onSubmitAndDownloadActDocx(values);
+                      const result = await onSubmitAndDownloadActDocx({
+                        ...values,
+                        number: useCustomNumber ? (values.number?.trim() ?? "") : undefined,
+                      });
                       await downloadAcceptanceActDocx(result.acceptanceActId);
                       toast.success("Акт створено та завантажено.");
                       form.reset(values);

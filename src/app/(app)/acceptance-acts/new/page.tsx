@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { db } from "@/db";
 import { acceptanceActs, companies, contracts, invoices, lineItems } from "@/db/schema";
+import { peekNextDocumentNumber } from "@/db/numbering";
 import { requireRole } from "@/lib/authz";
 import { internalApiFetch } from "@/lib/internal-api-fetch";
 import { DROPDOWN_SCOPE, getDropdownOptions } from "@/lib/dropdown-options";
@@ -15,6 +16,11 @@ export default async function NewAcceptanceActPage({
 }) {
   await requireRole("ADMIN");
   const { invoiceId } = await searchParams;
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const initialActNumberPreview = await peekNextDocumentNumber({
+    documentType: "ACCEPTANCE_ACT",
+    at: new Date(`${todayIso}T00:00:00.000Z`),
+  });
 
   const allInvoices = await db.select().from(invoices).orderBy(desc(invoices.date));
   const invoiceIdParam =
@@ -176,6 +182,7 @@ export default async function NewAcceptanceActPage({
         signerPositionGenOptions={signerPositionGenOptions}
         signingLocationOptions={signingLocationOptions}
         invoiceSignerById={invoiceSignerById}
+        initialActNumberPreview={initialActNumberPreview}
       />
     </div>
   );

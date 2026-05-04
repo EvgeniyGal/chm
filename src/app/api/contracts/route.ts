@@ -1,4 +1,4 @@
-import { desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { db } from "@/db";
@@ -20,6 +20,7 @@ const itemSchema = z.object({
 
 const createSchema = z
   .object({
+  number: z.string().trim().min(1).optional(),
   date: z.string().min(1),
   signingLocation: z.string().min(1),
   workType: z.enum(["WORKS", "SERVICES"]),
@@ -57,7 +58,12 @@ export async function POST(req: Request) {
   if (Number.isNaN(date.getTime())) return Response.json({ error: "INVALID_DATE" }, { status: 400 });
 
   const totals = calcTotals(parsed.data.items);
-  const number = await nextDocumentNumber({ documentType: "CONTRACT", at: date });
+  const customNumber = parsed.data.number?.trim();
+  if (customNumber) {
+    const existing = await db.query.contracts.findFirst({ where: eq(contracts.number, customNumber) });
+    if (existing) return Response.json({ error: "NUMBER_ALREADY_EXISTS" }, { status: 409 });
+  }
+  const number = customNumber ?? (await nextDocumentNumber({ documentType: "CONTRACT", at: date }));
 
   const now = new Date();
   const [created] = await db

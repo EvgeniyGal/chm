@@ -55,6 +55,7 @@ function formatContractDateUk(isoDate: string) {
 }
 
 export type InvoiceFormValues = {
+  number?: string;
   date: string;
   workType: "WORKS" | "SERVICES";
   customerCompanyId: string;
@@ -130,6 +131,7 @@ export function InvoiceForm({
         : null;
 
     return {
+      number: "",
       date: new Date().toISOString().slice(0, 10),
       workType: contract?.id ? contract.workType : "WORKS",
       customerCompanyId: contract?.customerCompanyId ?? "",
@@ -157,6 +159,11 @@ export function InvoiceForm({
   const [invoicePreviewNumber, setInvoicePreviewNumber] = useState(
     () => previewInvoiceNumberInitial ?? "—",
   );
+  const [useCustomNumber, setUseCustomNumber] = useState(false);
+  const watchedCustomNumber = form.watch("number");
+  const headerInvoiceNumber = useCustomNumber
+    ? (watchedCustomNumber?.trim() || "—")
+    : invoicePreviewNumber;
 
   const [actLoading, setActLoading] = useState(false);
   const [docLoading, setDocLoading] = useState(false);
@@ -178,7 +185,6 @@ export function InvoiceForm({
   }, [searchParams]);
 
   useEffect(() => {
-    if (readonlyInvoiceNumber) return;
     let cancelled = false;
     void (async () => {
       try {
@@ -193,7 +199,7 @@ export function InvoiceForm({
     return () => {
       cancelled = true;
     };
-  }, [formDate, readonlyInvoiceNumber]);
+  }, [formDate]);
 
   const [companiesState, setCompaniesState] = useState(companies);
   const [companyModalFor, setCompanyModalFor] = useState<"customer" | "contractor" | null>(null);
@@ -319,6 +325,11 @@ export function InvoiceForm({
       : "Перелік робіт";
 
   async function submitInvoice(values: InvoiceFormValues, options?: { allowRedirect?: boolean }) {
+    const customNumber = values.number?.trim() ?? "";
+    if (useCustomNumber && customNumber.length === 0) {
+      toast.error("Вкажіть номер рахунку або вимкніть ручний режим.");
+      throw new Error("VALIDATION_ERROR");
+    }
     const allowRedirect = options?.allowRedirect ?? true;
     if (!isFromContract && values.customerCompanyId === values.contractorCompanyId) {
       toast.error("Замовник і виконавець не можуть бути однією компанією.");
@@ -352,7 +363,7 @@ export function InvoiceForm({
     }
 
     try {
-      await onSubmit(values);
+      await onSubmit({ ...values, number: useCustomNumber ? customNumber : undefined });
       if (mode === "edit") {
         toast.success("Рахунок збережено.");
         router.refresh();
@@ -411,6 +422,11 @@ export function InvoiceForm({
 
   return (
     <FormProvider {...form}>
+      {mode === "edit" ? (
+        <div className="mb-4">
+          <h1 className="page-title">Редагувати рахунок {headerInvoiceNumber}</h1>
+        </div>
+      ) : null}
       <form
         className="flex flex-col gap-4 rounded-xl border bg-white p-4"
         onSubmit={form.handleSubmit(async (values) => submitInvoice(values))}
@@ -438,15 +454,35 @@ export function InvoiceForm({
         )}
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <ReadOnlyField
-            label="Номер рахунку"
-            hint={
-              readonlyInvoiceNumber
-                ? undefined
-                : "Присвоюється автоматично при збереженні (залежить від дати)."
-            }
-            value={readonlyInvoiceNumber ?? invoicePreviewNumber}
-          />
+          <div className="flex min-w-0 flex-col gap-2 text-sm">
+            <label className="inline-flex items-center gap-2 text-zinc-700">
+              <input
+                type="checkbox"
+                className="size-4 rounded border-zinc-300"
+                checked={useCustomNumber}
+                onChange={(e) => setUseCustomNumber(e.target.checked)}
+              />
+              Вказати номер вручну
+            </label>
+            {useCustomNumber ? (
+              <Field
+                label="Номер рахунку"
+                placeholder="Напр. 15/05-2026 або інший"
+                value={form.watch("number") ?? ""}
+                onChange={(e) => form.setValue("number", e.target.value, { shouldDirty: true })}
+              />
+            ) : (
+              <ReadOnlyField
+                label="Номер рахунку"
+                hint={
+                  mode === "edit"
+                    ? undefined
+                    : "Присвоюється автоматично при збереженні (залежить від дати)."
+                }
+                value={invoicePreviewNumber}
+              />
+            )}
+          </div>
           <Field label="Дата" type="date" {...form.register("date", { required: true })} />
 
           <label className="flex flex-col gap-1 text-sm">

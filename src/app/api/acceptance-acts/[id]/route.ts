@@ -1,8 +1,9 @@
-import { eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { z } from "zod";
 
 import { db } from "@/db";
 import { acceptanceActs } from "@/db/schema";
+import { nextDocumentNumber } from "@/db/numbering";
 import { writeAuditEvent } from "@/lib/audit";
 import { requireRole } from "@/lib/authz";
 
@@ -10,6 +11,8 @@ export const runtime = "nodejs";
 
 const patchSchema = z
   .object({
+    number: z.string().trim().min(1).optional(),
+    date: z.string().min(1).optional(),
     signingLocation: z.string().min(1).optional(),
     completionDate: z.union([z.string(), z.null()]).optional(),
     signerFullNameNom: z.string().min(1).optional(),
@@ -35,6 +38,22 @@ export async function PATCH(req: Request, ctx: RouteContext<"/api/acceptance-act
 
   const { completionDate, ...rest } = parsed.data;
   const updates: Record<string, unknown> = { ...rest, updatedAt: new Date() };
+  if (parsed.data.number) {
+    const normalizedNumber = parsed.data.number.trim();
+    const existing = await db.query.acceptanceActs.findFirst({
+      where: and(eq(acceptanceActs.number, normalizedNumber), ne(acceptanceActs.id, id)),
+    });
+    if (existing) return Response.json({ error: "NUMBER_ALREADY_EXISTS" }, { status: 409 });
+    updates.number = normalizedNumber;
+  }
+  if (parsed.data.date) {
+    const d = new Date(parsed.data.date);
+    if (Number.isNaN(d.getTime())) return Response.json({ error: "INVALID_DATE" }, { status: 400 });
+    updates.date = d;
+    if (before.date.getTime() !== d.getTime() && !parsed.data.number) {
+      updates.number = await nextDocumentNumber({ documentType: "ACCEPTANCE_ACT", at: d });
+    }
+  }
   if (completionDate !== undefined) {
     if (completionDate === null || completionDate === "") {
       updates.completionDate = null;

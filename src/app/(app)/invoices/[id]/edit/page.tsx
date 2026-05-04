@@ -30,8 +30,9 @@ async function saveInvoiceEdit(invoiceId: string, hasContract: boolean, values: 
   const items = values.items.map(mapLineItem);
 
   const body: Record<string, unknown> = hasContract
-    ? { date: values.date, items }
+    ? { number: values.number, date: values.date, items }
     : {
+        number: values.number,
         date: values.date,
         workType: values.workType,
         customerCompanyId: values.customerCompanyId,
@@ -92,6 +93,7 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ id
       : [];
 
   const editInitialValues: InvoiceFormValues = {
+    number: inv.number,
     date: new Date(inv.date).toISOString().slice(0, 10),
     workType: inv.workType,
     customerCompanyId: inv.customerCompanyId,
@@ -120,14 +122,6 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ id
 
   return (
     <div className="w-full min-w-0">
-      <div className="mb-4">
-        <h1 className="page-title">Редагувати рахунок {inv.number}</h1>
-        <p className="text-sm text-muted-foreground">
-          {new Date(inv.date).toLocaleDateString("uk-UA")}
-          {inv.workType === "SERVICES" ? " · Послуги" : " · Роботи"}
-        </p>
-      </div>
-
       <InvoiceForm
         mode="edit"
         editInitialValues={editInitialValues}
@@ -169,7 +163,7 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ id
           signerPositionGenOptions,
           actingUnderOptions,
         }}
-        readonlyInvoiceNumber={inv.number}
+        previewInvoiceNumberInitial={inv.number}
         existingAcceptanceActId={existingAcceptanceAct?.id ?? null}
         onSubmit={saveInvoiceEdit.bind(null, id, hasContract)}
       />

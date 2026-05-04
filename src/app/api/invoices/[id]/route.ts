@@ -1,4 +1,5 @@
-import { eq, sql } from "drizzle-orm";
+import { and, eq, ne, sql } from "drizzle-orm";
+import { nextDocumentNumber } from "@/db/numbering";
 import { z } from "zod";
 
 import { db } from "@/db";
@@ -16,6 +17,7 @@ const itemSchema = invoiceApiLineItemSchema;
 
 const contractLinkedPatchSchema = z
   .object({
+    number: z.string().trim().min(1).optional(),
     date: z.string().min(1).optional(),
     items: z.array(itemSchema).min(1).optional(),
   })
@@ -31,6 +33,7 @@ const contractLinkedPatchSchema = z
 
 const standalonePatchSchema = z
   .object({
+    number: z.string().trim().min(1).optional(),
     date: z.string().min(1).optional(),
     workType: z.enum(["WORKS", "SERVICES"]).optional(),
     customerCompanyId: z.string().uuid().optional(),
@@ -132,6 +135,13 @@ export async function PATCH(req: Request, ctx: RouteContext<"/api/invoices/[id]"
 
     const itemsPayload = parsed.data.items;
     const totals = itemsPayload ? calcTotals(itemsPayload) : null;
+    const customNumber = parsed.data.number?.trim();
+    if (customNumber) {
+      const existing = await db.query.invoices.findFirst({
+        where: and(eq(invoices.number, customNumber), ne(invoices.id, id)),
+      });
+      if (existing) return Response.json({ error: "NUMBER_ALREADY_EXISTS" }, { status: 409 });
+    }
     const now = new Date();
 
     const [after] = await db.transaction(async (tx) => {
@@ -154,6 +164,11 @@ export async function PATCH(req: Request, ctx: RouteContext<"/api/invoices/[id]"
       const [row] = await tx
         .update(invoices)
         .set({
+          ...(customNumber
+            ? { number: customNumber }
+            : parsed.data.date && before.date.getTime() !== nextDate.getTime()
+              ? { number: await nextDocumentNumber({ documentType: "INVOICE", at: nextDate }) }
+              : {}),
           date: nextDate,
           ...(totals
             ? {
@@ -221,6 +236,13 @@ export async function PATCH(req: Request, ctx: RouteContext<"/api/invoices/[id]"
 
   const itemsPayload = data.items;
   const totals = itemsPayload ? calcTotals(itemsPayload) : null;
+  const customNumber = data.number?.trim();
+  if (customNumber) {
+    const existing = await db.query.invoices.findFirst({
+      where: and(eq(invoices.number, customNumber), ne(invoices.id, id)),
+    });
+    if (existing) return Response.json({ error: "NUMBER_ALREADY_EXISTS" }, { status: 409 });
+  }
   const now = new Date();
 
   const [after] = await db.transaction(async (tx) => {
@@ -245,6 +267,11 @@ export async function PATCH(req: Request, ctx: RouteContext<"/api/invoices/[id]"
     const [row] = await tx
       .update(invoices)
       .set({
+        ...(customNumber
+          ? { number: customNumber }
+          : data.date && before.date.getTime() !== nextDate.getTime()
+            ? { number: await nextDocumentNumber({ documentType: "INVOICE", at: nextDate }) }
+            : {}),
         ...(data.date ? { date: nextDate } : {}),
         ...(data.workType !== undefined ? { workType: data.workType } : {}),
         ...(data.customerCompanyId !== undefined ? { customerCompanyId: data.customerCompanyId } : {}),

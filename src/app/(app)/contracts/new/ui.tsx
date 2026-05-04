@@ -32,6 +32,7 @@ type CompanyOpt = {
 };
 
 type ContractFormValues = {
+  number?: string;
   date: string;
   signingLocation: string;
   workType: "WORKS" | "SERVICES";
@@ -104,6 +105,7 @@ export function ContractForm({
   const router = useRouter();
   const form = useForm<ContractFormValues>({
     defaultValues: {
+      number: "",
       date: new Date().toISOString().slice(0, 10),
       signingLocation: "",
       workType: "SERVICES",
@@ -138,6 +140,7 @@ export function ContractForm({
   const [treatyLoading, setTreatyLoading] = useState<null | "full" | "short">(null);
   const [treatyError, setTreatyError] = useState<string | null>(null);
   const [previewContractNumber, setPreviewContractNumber] = useState(initialContractNumber);
+  const [useCustomNumber, setUseCustomNumber] = useState(false);
   const [createInvoiceConfirmOpen, setCreateInvoiceConfirmOpen] = useState(false);
   const [submitLoading, setSubmitLoading] = useState<null | "save" | "save-and-invoice">(null);
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
@@ -221,9 +224,17 @@ export function ContractForm({
     mode: "save" | "save-and-invoice",
     options?: { allowRedirect?: boolean },
   ) {
+    const customNumber = values.number?.trim() ?? "";
+    if (useCustomNumber && customNumber.length === 0) {
+      const msg = "Вкажіть номер договору або вимкніть ручний режим.";
+      setTreatyError(msg);
+      toast.error(msg);
+      return;
+    }
     const allowRedirect = options?.allowRedirect ?? true;
     const payload = {
       ...values,
+      number: useCustomNumber ? customNumber : undefined,
       items: values.items.map((item) => ({
         ...item,
         quantity: toDecimal(item.quantity),
@@ -259,8 +270,10 @@ export function ContractForm({
   }
 
   function buildCreatePayload(values: ContractFormValues): ContractFormValues {
+    const customNumber = values.number?.trim() ?? "";
     return {
       ...values,
+      number: useCustomNumber ? customNumber : undefined,
       items: values.items.map((item) => ({
         ...item,
         quantity: toDecimal(item.quantity),
@@ -313,11 +326,31 @@ export function ContractForm({
         onSubmit={form.handleSubmit(async (values) => submitContract(values, "save"))}
       >
         <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-          <ReadOnlyField
-            label="Номер договору"
-            hint="Присвоюється автоматично при збереженні (залежить від дати)."
-            value={previewContractNumber}
-          />
+          <div className="flex min-w-0 flex-col gap-2 text-sm">
+            <label className="inline-flex items-center gap-2 text-zinc-700">
+              <input
+                type="checkbox"
+                className="size-4 rounded border-zinc-300"
+                checked={useCustomNumber}
+                onChange={(e) => setUseCustomNumber(e.target.checked)}
+              />
+              Вказати номер вручну
+            </label>
+            {useCustomNumber ? (
+              <Field
+                label="Номер договору"
+                placeholder="Напр. 15/05-2026 або інший"
+                inputClassName="bg-zinc-50"
+                {...form.register("number")}
+              />
+            ) : (
+              <ReadOnlyField
+                label="Номер договору"
+                hint="Присвоюється автоматично при збереженні (залежить від дати)."
+                value={previewContractNumber}
+              />
+            )}
+          </div>
           <Field label="Дата" type="date" {...form.register("date", { required: true })} />
           <label className="flex flex-col gap-1 text-sm">
             <span className="text-zinc-700">Тип</span>

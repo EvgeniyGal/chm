@@ -26,6 +26,7 @@ type LineRow = {
 };
 
 type ActEditValues = {
+  number?: string;
   signingLocation: string;
   /** YYYY-MM-DD or empty when not set */
   completionDate: string;
@@ -110,6 +111,7 @@ export function AcceptanceActDetailForm({
 
   const form = useForm<ActEditValues>({
     defaultValues: {
+      number: actNumber,
       signingLocation,
       completionDate: completionDateIso ? completionDateIso.slice(0, 10) : "",
       signerFullNameNom,
@@ -125,6 +127,9 @@ export function AcceptanceActDetailForm({
   const { register } = form;
   const suppressBeforeUnloadOnce = useUnsavedChangesGuard(canEdit && form.formState.isDirty);
   const [docLoading, setDocLoading] = useState(false);
+  const [useCustomNumber, setUseCustomNumber] = useState(false);
+  const watchedCustomNumber = form.watch("number");
+  const headerActNumber = useCustomNumber ? (watchedCustomNumber?.trim() || "—") : actNumber;
 
   async function downloadAcceptanceActDocxBlob() {
     const res = await fetch(`/api/documents/acceptance-act/${actId}`, { method: "GET" });
@@ -145,13 +150,23 @@ export function AcceptanceActDetailForm({
 
   return (
     <FormProvider {...form}>
+      <div className="mb-4">
+        <h1 className="page-title">Акт {headerActNumber}</h1>
+        <p className="text-sm text-muted-foreground">
+          {new Date(actDateIso).toLocaleDateString("uk-UA")}
+          {workType === "SERVICES" ? " · Послуги" : " · Роботи"}
+        </p>
+      </div>
       <form
         className="flex flex-col gap-4 rounded-xl border bg-white p-4"
         onSubmit={
           canEdit
             ? form.handleSubmit(async (values) => {
                 try {
-                  await onSave(values);
+                  await onSave({
+                    ...values,
+                    number: useCustomNumber ? values.number?.trim() || undefined : undefined,
+                  });
                   toast.success("Акт збережено.");
                   router.refresh();
                   form.reset(values);
@@ -168,7 +183,28 @@ export function AcceptanceActDetailForm({
         </div>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <ReadOnlyField label="Номер акту" value={actNumber} />
+          <div className="flex min-w-0 flex-col gap-2 text-sm">
+            {canEdit ? (
+              <label className="inline-flex items-center gap-2 text-zinc-700">
+                <input
+                  type="checkbox"
+                  className="size-4 rounded border-zinc-300"
+                  checked={useCustomNumber}
+                  onChange={(e) => setUseCustomNumber(e.target.checked)}
+                />
+                Вказати номер вручну
+              </label>
+            ) : null}
+            {canEdit && useCustomNumber ? (
+              <Field
+                label="Номер акту"
+                placeholder="Напр. 15/05-2026 або інший"
+                {...register("number")}
+              />
+            ) : (
+              <ReadOnlyField label="Номер акту" value={actNumber} />
+            )}
+          </div>
           <Field
             label={`${completionDateLabel} (необов’язково)`}
             type="date"
@@ -384,7 +420,10 @@ export function AcceptanceActDetailForm({
                   const hadDirty = form.formState.isDirty;
                   if (hadDirty) {
                     await form.handleSubmit(async (values) => {
-                      await onSave(values);
+                      await onSave({
+                        ...values,
+                        number: useCustomNumber ? values.number?.trim() || undefined : undefined,
+                      });
                       form.reset(values);
                     })();
                     await router.refresh();
@@ -419,7 +458,10 @@ export function AcceptanceActDetailForm({
                 }
                 await form.handleSubmit(async (values) => {
                   try {
-                    await onSave(values);
+                    await onSave({
+                      ...values,
+                      number: useCustomNumber ? values.number?.trim() || undefined : undefined,
+                    });
                     toast.success("Акт збережено.");
                     router.refresh();
                     form.reset(values);

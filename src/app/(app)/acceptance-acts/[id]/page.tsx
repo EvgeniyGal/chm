@@ -13,6 +13,7 @@ import { DROPDOWN_SCOPE, getDropdownOptions } from "@/lib/dropdown-options";
 async function saveAcceptanceActEdit(
   actId: string,
   values: {
+    number?: string;
     signingLocation: string;
     completionDate: string;
     signerFullNameNom: string;
@@ -67,14 +68,6 @@ export default async function AcceptanceActInfoPage({ params }: { params: Promis
 
   return (
     <div className="min-w-0">
-      <div className="mb-4">
-        <h1 className="page-title">Акт {act.number}</h1>
-        <p className="text-sm text-muted-foreground">
-          {new Date(act.date).toLocaleDateString("uk-UA")}
-          {invoiceRow.workType === "SERVICES" ? " · Послуги" : " · Роботи"}
-        </p>
-      </div>
-
       <AcceptanceActDetailForm
         actId={id}
         actNumber={act.number}

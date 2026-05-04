@@ -13,6 +13,7 @@ export const runtime = "nodejs";
 
 const createSchema = z
   .object({
+    number: z.string().trim().min(1).optional(),
     date: z.string().min(1),
     customerCompanyId: z.string().uuid(),
     contractorCompanyId: z.string().uuid(),
@@ -99,7 +100,12 @@ export async function POST(req: Request) {
   }
 
   const totals = calcTotals(parsed.data.items);
-  const number = await nextDocumentNumber({ documentType: "INVOICE", at: date });
+  const customNumber = parsed.data.number?.trim();
+  if (customNumber) {
+    const existing = await db.query.invoices.findFirst({ where: eq(invoices.number, customNumber) });
+    if (existing) return Response.json({ error: "NUMBER_ALREADY_EXISTS" }, { status: 409 });
+  }
+  const number = customNumber ?? (await nextDocumentNumber({ documentType: "INVOICE", at: date }));
   const now = new Date();
 
   const externalDate = parsed.data.externalContractDate ? new Date(parsed.data.externalContractDate) : null;

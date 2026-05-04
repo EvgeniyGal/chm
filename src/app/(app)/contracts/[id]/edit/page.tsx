@@ -78,9 +78,6 @@ export default async function EditContractPage({ params }: { params: Promise<{ i
 
   return (
     <div className="w-full min-w-0">
-      <div className="mb-4">
-        <h1 className="page-title">Редагувати договір {contract.number}</h1>
-      </div>
       <ContractEditForm
         companies={companyRows.map((c) => ({
           id: c.id,
@@ -100,6 +97,7 @@ export default async function EditContractPage({ params }: { params: Promise<{ i
         contractDurationOptions={contractDurationOptions}
         lineItemUnitOptions={lineItemUnitOptions}
         initial={{
+          number: contract.number,
           date: new Date(contract.date).toISOString().slice(0, 10),
           signingLocation: contract.signingLocation,
           workType: contract.workType,
@@ -124,6 +122,7 @@ export default async function EditContractPage({ params }: { params: Promise<{ i
         onSubmit={update}
         cancelHref="/contracts"
         contractId={id}
+        initialContractNumber={contract.number}
         createdInvoices={createdInvoices.map((inv) => ({
           id: inv.id,
           number: inv.number,

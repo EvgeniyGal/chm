@@ -33,6 +33,7 @@ type CompanyOpt = {
 };
 
 type ContractFormValues = {
+  number?: string;
   date: string;
   signingLocation: string;
   workType: "WORKS" | "SERVICES";
@@ -109,6 +110,7 @@ export function ContractEditForm({
   onSubmit,
   cancelHref,
   contractId,
+  initialContractNumber,
   createdInvoices,
   linesForInvoicing,
   signedScansInitial,
@@ -126,6 +128,7 @@ export function ContractEditForm({
   onSubmit: (payload: ContractFormValues) => Promise<void>;
   cancelHref: string;
   contractId: string;
+  initialContractNumber: string;
   createdInvoices: RelatedInvoiceLinkItem[];
   linesForInvoicing: ContractLineInvoiceRemaining[];
   signedScansInitial: SignedScanListItem[];
@@ -138,6 +141,7 @@ export function ContractEditForm({
 
   const suppressBeforeUnloadOnce = useUnsavedChangesGuard(form.formState.isDirty);
   const workType = form.watch("workType");
+  const contractDate = form.watch("date");
   const customerCompanyId = form.watch("customerCompanyId");
   const contractorCompanyId = form.watch("contractorCompanyId");
 
@@ -156,6 +160,27 @@ export function ContractEditForm({
   const [analogueLoading, setAnalogueLoading] = useState(false);
   const [invoicePickerOpen, setInvoicePickerOpen] = useState(false);
   const [invoicePickerDesktopView, setInvoicePickerDesktopView] = useState(false);
+  const [previewContractNumber, setPreviewContractNumber] = useState(initialContractNumber);
+  const [useCustomNumber, setUseCustomNumber] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch(`/api/contracts/preview-number?date=${encodeURIComponent(contractDate)}`);
+        if (!res.ok || cancelled) return;
+        const json = (await res.json()) as { data?: { number: string } };
+        if (!cancelled && json.data?.number) {
+          setPreviewContractNumber(json.data.number);
+        }
+      } catch {
+        /* ignore preview failures */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [contractDate]);
 
   useEffect(() => {
     if (!selectedContractorCompany) {
@@ -221,9 +246,17 @@ export function ContractEditForm({
     values: ContractFormValues,
     options?: { successToast?: boolean },
   ) {
+    const customNumber = values.number?.trim() ?? "";
+    if (useCustomNumber && customNumber.length === 0) {
+      const msg = "Вкажіть номер договору або вимкніть ручний режим.";
+      setTreatyError(msg);
+      toast.error(msg);
+      return;
+    }
     const successToast = options?.successToast ?? true;
     const payload = {
       ...values,
+      number: useCustomNumber ? customNumber : undefined,
       items: values.items.map((item) => ({
         ...item,
         quantity: toDecimal(item.quantity),
@@ -242,7 +275,8 @@ export function ContractEditForm({
     try {
       await onSubmit(payload);
       if (successToast) toast.success("Договір збережено.");
-      router.refresh();
+      // Force route-level re-render so server header with contract number stays in sync.
+      router.replace(`/contracts/${contractId}/edit`);
       form.reset(normalizedValues);
     } catch (e) {
       if (isNextNavigationError(e)) {
@@ -306,11 +340,35 @@ export function ContractEditForm({
 
   return (
     <FormProvider {...form}>
+      <div className="mb-4">
+        <h1 className="page-title">Редагувати договір {useCustomNumber ? (form.watch("number")?.trim() || "—") : previewContractNumber}</h1>
+      </div>
       <form
         className="flex min-w-0 flex-col gap-4 rounded-xl border bg-white p-4"
         onSubmit={form.handleSubmit(async (values) => submitEditedContract(values))}
       >
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="flex min-w-0 flex-col gap-2 text-sm">
+            <label className="inline-flex items-center gap-2 text-zinc-700">
+              <input
+                type="checkbox"
+                className="size-4 rounded border-zinc-300"
+                checked={useCustomNumber}
+                onChange={(e) => setUseCustomNumber(e.target.checked)}
+              />
+              Вказати номер вручну
+            </label>
+            {useCustomNumber ? (
+              <Field
+                label="Номер договору"
+                placeholder="Напр. 15/05-2026 або інший"
+                inputClassName="bg-zinc-50"
+                {...form.register("number")}
+              />
+            ) : (
+              <ReadOnlyField label="Номер договору" value={previewContractNumber} />
+            )}
+          </div>
           <Field label="Дата" type="date" {...form.register("date", { required: true })} />
 
           <label className="flex flex-col gap-1 text-sm">
