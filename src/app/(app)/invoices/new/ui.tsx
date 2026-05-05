@@ -324,13 +324,12 @@ export function InvoiceForm({
       ? "Перелік послуг"
       : "Перелік робіт";
 
-  async function submitInvoice(values: InvoiceFormValues, options?: { allowRedirect?: boolean }) {
+  function buildSubmitPayload(values: InvoiceFormValues): InvoiceFormValues {
     const customNumber = values.number?.trim() ?? "";
     if (useCustomNumber && customNumber.length === 0) {
       toast.error("Вкажіть номер рахунку або вимкніть ручний режим.");
       throw new Error("VALIDATION_ERROR");
     }
-    const allowRedirect = options?.allowRedirect ?? true;
     if (!isFromContract && values.customerCompanyId === values.contractorCompanyId) {
       toast.error("Замовник і виконавець не можуть бути однією компанією.");
       throw new Error("VALIDATION_ERROR");
@@ -362,8 +361,15 @@ export function InvoiceForm({
       }
     }
 
+    return { ...values, number: useCustomNumber ? customNumber : undefined };
+  }
+
+  async function submitInvoice(values: InvoiceFormValues, options?: { allowRedirect?: boolean }) {
+    const payload = buildSubmitPayload(values);
+    const allowRedirect = options?.allowRedirect ?? true;
+
     try {
-      await onSubmit({ ...values, number: useCustomNumber ? customNumber : undefined });
+      await onSubmit(payload);
       if (mode === "edit") {
         toast.success("Рахунок збережено.");
         router.refresh();
@@ -724,7 +730,8 @@ export function InvoiceForm({
                   void form
                     .handleSubmit(async (values) => {
                       try {
-                        const { invoiceId } = await onCreateInvoiceReturningId(values);
+                        const payload = buildSubmitPayload(values);
+                        const { invoiceId } = await onCreateInvoiceReturningId(payload);
                         await downloadInvoiceDocx(invoiceId);
                         toast.success("Рахунок збережено. Документ завантажено.");
                         router.push(`/invoices/${invoiceId}/edit`);
@@ -750,7 +757,8 @@ export function InvoiceForm({
                   void form
                     .handleSubmit(async (values) => {
                       try {
-                        const { invoiceId } = await onCreateInvoiceReturningId(values);
+                        const payload = buildSubmitPayload(values);
+                        const { invoiceId } = await onCreateInvoiceReturningId(payload);
                         toast.success("Рахунок збережено.");
                         router.push(`/acceptance-acts/new?invoiceId=${invoiceId}`);
                       } catch (e) {

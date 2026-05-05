@@ -219,20 +219,15 @@ export function ContractForm({
     setCustomerSignerActingUnder(selectedCustomerCompany.contractSignerActingUnder ?? "");
   }, [selectedCustomerCompany]);
 
-  async function submitContract(
-    values: ContractFormValues,
-    mode: "save" | "save-and-invoice",
-    options?: { allowRedirect?: boolean },
-  ) {
+  function buildSubmitPayload(values: ContractFormValues): ContractFormValues {
     const customNumber = values.number?.trim() ?? "";
     if (useCustomNumber && customNumber.length === 0) {
       const msg = "Вкажіть номер договору або вимкніть ручний режим.";
       setTreatyError(msg);
       toast.error(msg);
-      return;
+      throw new Error("VALIDATION_ERROR");
     }
-    const allowRedirect = options?.allowRedirect ?? true;
-    const payload = {
+    return {
       ...values,
       number: useCustomNumber ? customNumber : undefined,
       items: values.items.map((item) => ({
@@ -241,6 +236,15 @@ export function ContractForm({
         price: toDecimal(item.price),
       })),
     };
+  }
+
+  async function submitContract(
+    values: ContractFormValues,
+    mode: "save" | "save-and-invoice",
+    options?: { allowRedirect?: boolean },
+  ) {
+    const allowRedirect = options?.allowRedirect ?? true;
+    const payload = buildSubmitPayload(values);
     setSubmitLoading(mode);
     try {
       if (mode === "save-and-invoice") {
@@ -269,19 +273,6 @@ export function ContractForm({
     }
   }
 
-  function buildCreatePayload(values: ContractFormValues): ContractFormValues {
-    const customNumber = values.number?.trim() ?? "";
-    return {
-      ...values,
-      number: useCustomNumber ? customNumber : undefined,
-      items: values.items.map((item) => ({
-        ...item,
-        quantity: toDecimal(item.quantity),
-        price: toDecimal(item.price),
-      })),
-    };
-  }
-
   async function saveThenDownloadTreaty(variant: "full" | "short") {
     setTreatyError(null);
     const ok = await form.trigger();
@@ -293,7 +284,7 @@ export function ContractForm({
     }
     setTreatyLoading(variant);
     const values = form.getValues();
-    const payload = buildCreatePayload(values);
+    const payload = buildSubmitPayload(values);
     let newId: string;
     try {
       const created = await onCreateReturningId(payload);

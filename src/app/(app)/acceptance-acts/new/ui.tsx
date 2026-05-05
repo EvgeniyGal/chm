@@ -182,15 +182,20 @@ export function AcceptanceActForm({
     };
   }, [formDate, useCustomNumber]);
 
-  async function submitAct(values: AcceptanceActValues, options?: { allowRedirect?: boolean }) {
+  function buildSubmitPayload(values: AcceptanceActValues): AcceptanceActValues {
     const customNumber = values.number?.trim() ?? "";
     if (useCustomNumber && customNumber.length === 0) {
       toast.error("Вкажіть номер акту або вимкніть ручний режим.");
       throw new Error("VALIDATION_ERROR");
     }
+    return { ...values, number: useCustomNumber ? customNumber : undefined };
+  }
+
+  async function submitAct(values: AcceptanceActValues, options?: { allowRedirect?: boolean }) {
+    const payload = buildSubmitPayload(values);
     const allowRedirect = options?.allowRedirect ?? true;
     try {
-      await onSubmit({ ...values, number: useCustomNumber ? customNumber : undefined });
+      await onSubmit(payload);
     } catch (e) {
       if (isNextNavigationError(e)) {
         toast.success("Акт створено.");
@@ -423,10 +428,8 @@ export function AcceptanceActForm({
                 void form
                   .handleSubmit(async (values) => {
                     try {
-                      const result = await onSubmitAndDownloadActDocx({
-                        ...values,
-                        number: useCustomNumber ? (values.number?.trim() ?? "") : undefined,
-                      });
+                      const payload = buildSubmitPayload(values);
+                      const result = await onSubmitAndDownloadActDocx(payload);
                       await downloadAcceptanceActDocx(result.acceptanceActId);
                       toast.success("Акт створено та завантажено.");
                       form.reset(values);
