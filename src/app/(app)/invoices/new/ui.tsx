@@ -157,7 +157,7 @@ export function InvoiceForm({
 
   const formDate = form.watch("date");
   const [invoicePreviewNumber, setInvoicePreviewNumber] = useState(
-    () => previewInvoiceNumberInitial ?? "—",
+    () => (mode === "edit" ? readonlyInvoiceNumber ?? previewInvoiceNumberInitial ?? "—" : previewInvoiceNumberInitial ?? "—"),
   );
   const [useCustomNumber, setUseCustomNumber] = useState(false);
   const watchedCustomNumber = form.watch("number");
@@ -185,6 +185,7 @@ export function InvoiceForm({
   }, [searchParams]);
 
   useEffect(() => {
+    if (mode === "edit") return;
     let cancelled = false;
     void (async () => {
       try {
@@ -199,7 +200,7 @@ export function InvoiceForm({
     return () => {
       cancelled = true;
     };
-  }, [formDate]);
+  }, [formDate, mode]);
 
   const [companiesState, setCompaniesState] = useState(companies);
   const [companyModalFor, setCompanyModalFor] = useState<"customer" | "contractor" | null>(null);

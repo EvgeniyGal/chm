@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   type ColumnDef,
   flexRender,
@@ -151,6 +151,7 @@ export function InvoicesTable({
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; number: string } | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [duplicatePendingId, setDuplicatePendingId] = useState<string | null>(null);
+  const duplicateInFlightRef = useRef<Set<string>>(new Set());
   const [selectedIds, setSelectedIds] = useState<Record<string, boolean>>({});
 
   const onSearchCommit = useCallback(
@@ -182,6 +183,8 @@ export function InvoicesTable({
 
   const duplicateInvoice = useCallback(
     async (invoiceId: string) => {
+      if (duplicateInFlightRef.current.has(invoiceId)) return;
+      duplicateInFlightRef.current.add(invoiceId);
       setDuplicatePendingId(invoiceId);
       try {
         const res = await fetch(`/api/invoices/${invoiceId}/analogue`, { method: "POST" });
@@ -200,6 +203,7 @@ export function InvoicesTable({
       } catch {
         toast.error("Не вдалося створити аналог.");
       } finally {
+        duplicateInFlightRef.current.delete(invoiceId);
         setDuplicatePendingId(null);
       }
     },

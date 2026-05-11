@@ -141,7 +141,6 @@ export function ContractEditForm({
 
   const suppressBeforeUnloadOnce = useUnsavedChangesGuard(form.formState.isDirty);
   const workType = form.watch("workType");
-  const contractDate = form.watch("date");
   const customerCompanyId = form.watch("customerCompanyId");
   const contractorCompanyId = form.watch("contractorCompanyId");
 
@@ -162,25 +161,6 @@ export function ContractEditForm({
   const [invoicePickerDesktopView, setInvoicePickerDesktopView] = useState(false);
   const [previewContractNumber, setPreviewContractNumber] = useState(initialContractNumber);
   const [useCustomNumber, setUseCustomNumber] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const res = await fetch(`/api/contracts/preview-number?date=${encodeURIComponent(contractDate)}`);
-        if (!res.ok || cancelled) return;
-        const json = (await res.json()) as { data?: { number: string } };
-        if (!cancelled && json.data?.number) {
-          setPreviewContractNumber(json.data.number);
-        }
-      } catch {
-        /* ignore preview failures */
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [contractDate]);
 
   useEffect(() => {
     if (!selectedContractorCompany) {
