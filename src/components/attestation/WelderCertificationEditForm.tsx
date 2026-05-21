@@ -1,5 +1,7 @@
 "use client";
 
+import { List } from "lucide-react";
+import Link from "next/link";
 import { type ReactNode, useRef } from "react";
 
 import { GuardedForm, type GuardedFormHandle } from "@/components/forms/GuardedForm";
@@ -33,9 +35,13 @@ export function WelderCertificationEditForm({
         Перед генерацією файлів зміни у формі зберігаються на сервері.
       </p>
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-        <button type="submit" className="crm-btn-primary inline-flex h-10 items-center justify-center gap-2 px-4">
+        <button type="submit" className="crm-btn-primary w-full sm:w-auto">
           Зберегти
         </button>
+        <Link className="crm-btn-neutral w-full sm:w-auto" href="/attestation/welders">
+          <List className="size-4 shrink-0" aria-hidden />
+          До списку зварників
+        </Link>
         <WelderAttestationDocumentButtons
           formId="welder-attestation-edit-form"
           fixedWelderId={welderId}

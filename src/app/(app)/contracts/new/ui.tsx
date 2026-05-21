@@ -597,7 +597,7 @@ export function ContractForm({
           <button
             type="button"
             disabled={submitLoading !== null}
-            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-zinc-300 bg-white px-4 text-sm text-zinc-800 hover:bg-zinc-50 disabled:opacity-60 sm:w-auto"
+            className="crm-btn-blue w-full disabled:opacity-60 sm:w-auto"
             onClick={async () => {
               setTreatyError(null);
               const ok = await form.trigger();
@@ -613,14 +613,14 @@ export function ContractForm({
             <Receipt className="size-4" aria-hidden="true" />
             {submitLoading === "save-and-invoice" ? "Збереження…" : "Сформувати рахунок"}
           </button>
-          <a className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border px-4 text-sm sm:w-auto" href="/contracts">
+          <a className="crm-btn-neutral w-full sm:w-auto" href="/contracts">
             <List className="size-4 shrink-0" aria-hidden />
             До списку договорів
           </a>
           <button
             type="button"
             disabled={!!treatyLoading || submitLoading !== null}
-            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-zinc-300 bg-zinc-50 px-4 text-sm text-zinc-800 hover:bg-zinc-100 disabled:opacity-50 sm:w-auto"
+            className="crm-btn-amber w-full sm:w-auto"
             onClick={() => void saveThenDownloadTreaty("full")}
           >
             <FileText className="size-4" aria-hidden="true" />
@@ -629,7 +629,7 @@ export function ContractForm({
           <button
             type="button"
             disabled={!!treatyLoading || submitLoading !== null}
-            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-zinc-300 bg-zinc-50 px-4 text-sm text-zinc-800 hover:bg-zinc-100 disabled:opacity-50 sm:w-auto"
+            className="crm-btn-sky w-full sm:w-auto"
             onClick={() => void saveThenDownloadTreaty("short")}
           >
             <FileText className="size-4" aria-hidden="true" />

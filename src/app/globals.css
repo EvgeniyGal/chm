@@ -184,6 +184,36 @@
   .crm-btn-outline {
     @apply inline-flex h-10 items-center justify-center rounded-lg border border-border bg-card px-4 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50;
   }
+
+  /** Neutral navigation (back to list, cancel) */
+  .crm-btn-neutral {
+    @apply inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-zinc-300 bg-zinc-50 px-4 text-sm font-medium text-zinc-800 shadow-sm transition-colors hover:bg-zinc-100 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50;
+  }
+
+  /** Financial / invoice actions */
+  .crm-btn-blue {
+    @apply inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-blue-600/45 bg-blue-50 px-4 text-sm font-medium text-blue-950 shadow-sm transition-colors hover:bg-blue-100 focus-visible:ring-2 focus-visible:ring-blue-500/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50;
+  }
+
+  /** Duplicate / analogue actions */
+  .crm-btn-violet {
+    @apply inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-violet-600/45 bg-violet-50 px-4 text-sm font-medium text-violet-950 shadow-sm transition-colors hover:bg-violet-100 focus-visible:ring-2 focus-visible:ring-violet-500/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50;
+  }
+
+  /** Full document download */
+  .crm-btn-amber {
+    @apply inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-amber-600/45 bg-amber-50 px-4 text-sm font-medium text-amber-950 shadow-sm transition-colors hover:bg-amber-100 focus-visible:ring-2 focus-visible:ring-amber-500/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50;
+  }
+
+  /** Short / compact document download */
+  .crm-btn-sky {
+    @apply inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-sky-600/45 bg-sky-50 px-4 text-sm font-medium text-sky-950 shadow-sm transition-colors hover:bg-sky-100 focus-visible:ring-2 focus-visible:ring-sky-500/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50;
+  }
+
+  /** Link to related entity (invoice from contract) */
+  .crm-btn-teal {
+    @apply inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-teal-600/45 bg-teal-50 px-4 text-sm font-medium text-teal-950 shadow-sm transition-colors hover:bg-teal-100 focus-visible:ring-2 focus-visible:ring-teal-500/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none;
+  }
 }
 
 /* OverlayScrollbars custom warm theme */

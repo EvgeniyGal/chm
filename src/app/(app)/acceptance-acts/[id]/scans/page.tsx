@@ -22,7 +22,7 @@ export default async function AcceptanceActScansPage({ params }: { params: Promi
     <div className="flex flex-col gap-4">
       <div className="flex items-end justify-between gap-3">
         <h1 className="page-title">Скани акту {act.number}</h1>
-        <a className="rounded-md border px-3 py-2 text-sm hover:bg-accent" href="/acceptance-acts">
+        <a className="crm-btn-neutral" href="/acceptance-acts">
           До списку актів
         </a>
       </div>

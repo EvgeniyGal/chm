@@ -186,10 +186,7 @@ export default async function NewAttestationGroupPage() {
             <Save className="size-4" aria-hidden="true" />
             Створити групу
           </button>
-          <Link
-            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border px-4 text-sm sm:w-auto"
-            href="/attestation/groups"
-          >
+          <Link className="crm-btn-neutral w-full sm:w-auto" href="/attestation/groups">
             <List className="size-4 shrink-0" aria-hidden />
             До списку груп
           </Link>

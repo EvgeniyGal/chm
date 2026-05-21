@@ -617,13 +617,13 @@ export function ContractEditForm({
             <Save className="size-4" aria-hidden="true" />
             Зберегти
           </button>
-          <a className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border px-4 text-sm sm:w-auto" href={cancelHref}>
+          <a className="crm-btn-neutral w-full sm:w-auto" href={cancelHref}>
             <List className="size-4 shrink-0" aria-hidden />
             До списку договорів
           </a>
           <button
             type="button"
-            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-zinc-300 bg-white px-4 text-sm text-zinc-800 hover:bg-zinc-50 sm:w-auto"
+            className="crm-btn-blue w-full sm:w-auto"
             onClick={async () => {
               const ok = await form.trigger();
               if (!ok) {
@@ -645,7 +645,7 @@ export function ContractEditForm({
           </button>
           {createdInvoices.length === 1 ? (
             <a
-              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-zinc-300 bg-white px-4 text-sm text-zinc-800 hover:bg-zinc-50 sm:w-auto"
+              className="crm-btn-teal w-full sm:w-auto"
               href={`/invoices/${createdInvoices[0]!.id}/edit`}
               title={`Відкрити рахунок ${createdInvoices[0]!.number}`}
             >
@@ -656,7 +656,7 @@ export function ContractEditForm({
           {createdInvoices.length > 1 ? (
             <button
               type="button"
-              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-zinc-300 bg-white px-4 text-sm text-zinc-800 hover:bg-zinc-50 sm:w-auto"
+              className="crm-btn-teal w-full sm:w-auto"
               onClick={() => setInvoicePickerOpen(true)}
               title="Відкрити вибір рахунку для цього договору"
             >
@@ -667,7 +667,7 @@ export function ContractEditForm({
           <button
             type="button"
             disabled={analogueLoading}
-            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-zinc-300 bg-white px-4 text-sm text-zinc-800 hover:bg-zinc-50 disabled:opacity-50 sm:w-auto"
+            className="crm-btn-violet w-full sm:w-auto"
             onClick={() => void generateAnalogueContract()}
             title="Створити новий договір за аналогією з поточним"
           >
@@ -677,7 +677,7 @@ export function ContractEditForm({
           <button
             type="button"
             disabled={!!treatyLoading}
-            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-zinc-300 bg-zinc-50 px-4 text-sm text-zinc-800 hover:bg-zinc-100 disabled:opacity-50 sm:w-auto"
+            className="crm-btn-amber w-full sm:w-auto"
             onClick={() => void saveThenDownloadTreaty("full")}
           >
             <FileText className="size-4" aria-hidden="true" />
@@ -686,7 +686,7 @@ export function ContractEditForm({
           <button
             type="button"
             disabled={!!treatyLoading}
-            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-zinc-300 bg-zinc-50 px-4 text-sm text-zinc-800 hover:bg-zinc-100 disabled:opacity-50 sm:w-auto"
+            className="crm-btn-sky w-full sm:w-auto"
             onClick={() => void saveThenDownloadTreaty("short")}
           >
             <FileText className="size-4" aria-hidden="true" />

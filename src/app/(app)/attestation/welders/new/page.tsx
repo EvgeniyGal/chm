@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { desc, eq, inArray } from "drizzle-orm";
 import { redirect } from "next/navigation";
 
@@ -187,10 +186,7 @@ export default async function NewWelderCertificationPage({
   return (
     <div className="w-full min-w-0">
       <div className="mb-4">
-        <Link className="text-sm text-muted-foreground underline" href="/attestation/welders">
-          ← До списку зварників
-        </Link>
-        <h1 className="page-title mt-2">Нова атестація зварника</h1>
+        <h1 className="page-title">Нова атестація зварника</h1>
         {duplicateInitial ? (
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
             Заповнено за шаблоном іншого запису: прізвище, імʼя, по батькові, місце народження, дати, попереднє посвідчення, стаж і компанію потрібно ввести заново. Група атестації залишена лише якщо вона була в статусі «Активна».

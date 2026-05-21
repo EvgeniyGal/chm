@@ -400,16 +400,13 @@ export function AcceptanceActForm({
             <FiSave className="size-4 shrink-0" aria-hidden />
             Зберегти
           </button>
-          <a
-            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border px-4 text-sm md:w-auto"
-            href="/acceptance-acts"
-          >
+          <a className="crm-btn-neutral w-full md:w-auto" href="/acceptance-acts">
             <FiList className="size-4 shrink-0" aria-hidden />
             До списку актів
           </a>
           {selectedInvoice ? (
             <a
-              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-border bg-background px-4 text-sm hover:bg-muted md:w-auto"
+              className="crm-btn-teal w-full md:w-auto"
               href={`/invoices/${selectedInvoice.id}/edit`}
               aria-label={`Перейти до рахунку №${selectedInvoice.number}`}
               title={`Рахунок №${selectedInvoice.number}`}
@@ -422,7 +419,7 @@ export function AcceptanceActForm({
             <button
               type="button"
               disabled={docLoading}
-              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-border bg-background px-4 text-sm hover:bg-muted disabled:opacity-60 md:w-auto"
+              className="crm-btn-amber w-full md:w-auto"
               onClick={() => {
                 setDocLoading(true);
                 void form

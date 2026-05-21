@@ -22,7 +22,7 @@ export default async function InvoiceScansPage({ params }: { params: Promise<{ i
     <div className="flex flex-col gap-4">
       <div className="flex items-end justify-between gap-3">
         <h1 className="page-title">Скани рахунку {invoice.number}</h1>
-        <a className="rounded-md border px-3 py-2 text-sm hover:bg-accent" href="/invoices">
+        <a className="crm-btn-neutral" href="/invoices">
           До списку рахунків
         </a>
       </div>

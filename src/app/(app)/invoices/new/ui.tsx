@@ -693,16 +693,13 @@ export function InvoiceForm({
             <FiSave className="size-4 shrink-0" aria-hidden />
             Зберегти
           </button>
-          <a
-            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border px-4 text-sm md:w-auto"
-            href={cancelHref}
-          >
+          <a className="crm-btn-neutral w-full md:w-auto" href={cancelHref}>
             <FiList className="size-4 shrink-0" aria-hidden />
             До списку рахунків
           </a>
           {isFromContract && contract?.id ? (
             <a
-              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border px-4 text-sm md:w-auto"
+              className="crm-btn-teal w-full md:w-auto"
               href={`/contracts/${contract.id}/edit`}
               title="Перейти до договору, на основі якого створено рахунок"
             >
@@ -712,7 +709,7 @@ export function InvoiceForm({
           ) : null}
           {mode === "edit" && existingAcceptanceActId ? (
             <a
-              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border px-4 text-sm md:w-auto"
+              className="crm-btn-teal w-full md:w-auto"
               href={`/acceptance-acts/${existingAcceptanceActId}`}
               title="Для цього рахунку вже створено акт приймання-передачі"
             >
@@ -725,7 +722,7 @@ export function InvoiceForm({
               <button
                 type="button"
                 disabled={docLoading || actLoading}
-                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-border bg-background px-4 text-sm hover:bg-muted disabled:opacity-60 md:w-auto"
+                className="crm-btn-amber w-full md:w-auto"
                 onClick={() => {
                   setDocLoading(true);
                   void form
@@ -752,7 +749,7 @@ export function InvoiceForm({
               <button
                 type="button"
                 disabled={docLoading || actLoading}
-                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-border bg-background px-4 text-sm hover:bg-muted disabled:opacity-60 md:w-auto"
+                className="crm-btn-blue w-full md:w-auto"
                 onClick={() => {
                   setActLoading(true);
                   void form
@@ -783,7 +780,7 @@ export function InvoiceForm({
                 <button
                   type="button"
                   disabled={analogueLoading}
-                  className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-border bg-background px-4 text-sm hover:bg-muted disabled:opacity-60 md:w-auto"
+                  className="crm-btn-violet w-full md:w-auto"
                   onClick={() => void generateAnalogueInvoice()}
                   title="Створити новий рахунок за аналогією з поточним"
                 >
@@ -794,7 +791,7 @@ export function InvoiceForm({
               <button
                 type="button"
                 disabled={editInvoiceDocLoading || editAcceptanceActNavLoading}
-                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-border bg-background px-4 text-sm hover:bg-muted disabled:opacity-60 md:w-auto"
+                className="crm-btn-amber w-full md:w-auto"
                 aria-label="Завантажити рахунок (DOCX)"
                 title="Зберегти зміни (якщо є) і завантажити DOCX з номером рахунку з бази"
                 onClick={() => {
@@ -821,7 +818,7 @@ export function InvoiceForm({
                 <button
                   type="button"
                   disabled={editInvoiceDocLoading || editAcceptanceActNavLoading}
-                  className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-border bg-background px-4 text-sm hover:bg-muted disabled:opacity-60 md:w-auto"
+                  className="crm-btn-blue w-full md:w-auto"
                   title="Зберегти зміни (якщо є), потім створити акт на основі збереженого рахунку"
                   onClick={() => {
                     setEditAcceptanceActNavLoading(true);

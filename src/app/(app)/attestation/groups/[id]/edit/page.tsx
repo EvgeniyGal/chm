@@ -301,17 +301,14 @@ export default async function EditAttestationGroupPage({ params }: { params: Pro
             Зберегти зміни
           </button>
           <a
-            className="crm-btn-outline inline-flex h-10 w-full items-center justify-center gap-2 sm:w-auto"
+            className="crm-btn-amber w-full sm:w-auto"
             href={`/api/attestation/documents/report?groupId=${id}`}
             title="Згенерувати звіт по групі"
           >
             <ChartColumn className="size-4 shrink-0" aria-hidden />
             Згенерувати звіт
           </a>
-          <Link
-            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border px-4 text-sm sm:w-auto"
-            href="/attestation/groups"
-          >
+          <Link className="crm-btn-neutral w-full sm:w-auto" href="/attestation/groups">
             <List className="size-4 shrink-0" aria-hidden />
             До списку груп
           </Link>
@@ -321,7 +318,7 @@ export default async function EditAttestationGroupPage({ params }: { params: Pro
       <div className="mt-6">
         <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-base font-semibold text-foreground">Зварники у групі</h2>
-          <Link className="crm-btn-primary w-full shrink-0 sm:w-auto" href={`/attestation/welders/new?groupId=${id}`}>
+          <Link className="crm-btn-blue w-full shrink-0 sm:w-auto" href={`/attestation/welders/new?groupId=${id}`}>
             Додати зварника
           </Link>
         </div>

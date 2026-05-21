@@ -118,7 +118,7 @@ export function WelderAttestationDocumentButtons({
       <button
         type="button"
         disabled={busy !== null}
-        className="crm-btn-outline inline-flex h-10 items-center justify-center gap-2 px-4"
+        className="crm-btn-amber w-full sm:w-auto"
         onClick={() => void saveThenDownload("protocol")}
       >
         <FileText className="size-4 shrink-0" aria-hidden />
@@ -127,7 +127,7 @@ export function WelderAttestationDocumentButtons({
       <button
         type="button"
         disabled={busy !== null}
-        className="crm-btn-outline inline-flex h-10 items-center justify-center gap-2 px-4"
+        className="crm-btn-sky w-full sm:w-auto"
         onClick={() => void saveThenDownload("certificate")}
       >
         <Award className="size-4 shrink-0" aria-hidden />

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { eq } from "drizzle-orm";
 import { notFound, redirect } from "next/navigation";
 
@@ -163,10 +162,7 @@ export default async function EditWelderCertificationPage({ params }: { params: 
   return (
     <div className="w-full min-w-0">
       <div className="mb-4">
-        <Link className="text-sm text-muted-foreground underline" href="/attestation/welders">
-          ← До списку зварників
-        </Link>
-        <h1 className="page-title mt-2">Редагування атестації</h1>
+        <h1 className="page-title">Редагування атестації</h1>
       </div>
 
       <WelderCertificationEditForm welderId={id} saveWelder={updateWelder} successMessage="Зміни збережено.">

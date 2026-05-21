@@ -25,7 +25,7 @@ export default async function ContractScansPage({ params }: { params: Promise<{ 
     <div className="flex flex-col gap-4">
       <div className="flex items-end justify-between gap-3">
         <h1 className="page-title">Скани договору {contract.number}</h1>
-        <a className="rounded-md border px-3 py-2 text-sm hover:bg-accent" href="/contracts">
+        <a className="crm-btn-neutral" href="/contracts">
           До списку договорів
         </a>
       </div>
