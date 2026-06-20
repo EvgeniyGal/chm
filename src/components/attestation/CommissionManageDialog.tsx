@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { ArchiveCommissionConfirmDialog } from "@/components/attestation/ArchiveCommissionConfirmDialog";
 import { CommissionRosterTable, type CommissionRosterRow } from "@/components/attestation/CommissionRosterTable";
 import { GuardedForm } from "@/components/forms/GuardedForm";
+import { CrmSubmitButton } from "@/components/ui/crm-submit-button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
   addCommissionMemberAction,
@@ -88,9 +89,9 @@ export function CommissionManageDialog({
                   <option value="member">Член комісії</option>
                   <option value="head">Голова комісії</option>
                 </select>
-                <button type="submit" className="crm-btn-primary w-fit">
+                <CrmSubmitButton className="w-fit" loadingText="Додавання…">
                   Додати
-                </button>
+                </CrmSubmitButton>
               </GuardedForm>
             </div>
 

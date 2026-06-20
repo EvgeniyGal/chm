@@ -1,10 +1,11 @@
 "use client";
 
 import { List } from "lucide-react";
-import Link from "next/link";
 import { type ReactNode, useRef } from "react";
 
 import { GuardedForm, type GuardedFormHandle } from "@/components/forms/GuardedForm";
+import { CrmButton } from "@/components/ui/crm-button";
+import { CrmSubmitButton } from "@/components/ui/crm-submit-button";
 
 import { WelderAttestationDocumentButtons } from "./WelderAttestationDocumentButtons";
 
@@ -35,13 +36,13 @@ export function WelderCertificationEditForm({
         Перед генерацією файлів зміни у формі зберігаються на сервері.
       </p>
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-        <button type="submit" className="crm-btn-primary w-full sm:w-auto">
+        <CrmSubmitButton className="w-full sm:w-auto" loadingText="Збереження…">
           Зберегти
-        </button>
-        <Link className="crm-btn-neutral w-full sm:w-auto" href="/attestation/welders">
+        </CrmSubmitButton>
+        <CrmButton variant="neutral" href="/attestation/welders" className="w-full sm:w-auto">
           <List className="size-4 shrink-0" aria-hidden />
           До списку зварників
-        </Link>
+        </CrmButton>
         <WelderAttestationDocumentButtons
           formId="welder-attestation-edit-form"
           fixedWelderId={welderId}

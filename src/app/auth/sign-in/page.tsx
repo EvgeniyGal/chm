@@ -7,12 +7,15 @@ import { Suspense, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
+import { FormPageSkeleton } from "@/components/loading/page-skeletons";
+
 function SignInForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const emailConfirmed = searchParams.get("emailConfirmed") === "1";
 
   useEffect(() => {
@@ -29,28 +32,33 @@ function SignInForm() {
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+    setIsLoading(true);
 
-    const res = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
+    try {
+      const res = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
 
-    if (res?.error) {
-      const msg =
-        res.error === "EMAIL_NOT_VERIFIED"
-          ? "Спочатку підтвердіть email за посиланням після реєстрації (перевірте пошту або відкрийте посилання з екрану реєстрації)."
-          : res.error === "USER_NOT_APPROVED"
-            ? "Ваш акаунт ще не схвалено власником CRM."
-            : "Невірний email або пароль";
-      setError(msg);
-      toast.error(msg);
-      return;
+      if (res?.error) {
+        const msg =
+          res.error === "EMAIL_NOT_VERIFIED"
+            ? "Спочатку підтвердіть email за посиланням після реєстрації (перевірте пошту або відкрийте посилання з екрану реєстрації)."
+            : res.error === "USER_NOT_APPROVED"
+              ? "Ваш акаунт ще не схвалено власником CRM."
+              : "Невірний email або пароль";
+        setError(msg);
+        toast.error(msg);
+        return;
+      }
+
+      toast.success("Ви увійшли в систему.");
+      router.push("/companies");
+      router.refresh();
+    } finally {
+      setIsLoading(false);
     }
-
-    toast.success("Ви увійшли в систему.");
-    router.push("/companies");
-    router.refresh();
   }
 
   return (
@@ -95,7 +103,7 @@ function SignInForm() {
             autoComplete="current-password"
           />
         </label>
-        <Button type="submit" className="mt-2">
+        <Button type="submit" className="mt-2" loading={isLoading} loadingText="Вхід…">
           Увійти
         </Button>
       </form>
@@ -118,7 +126,7 @@ function SignInForm() {
 
 export default function SignInPage() {
   return (
-    <Suspense fallback={<div className="text-sm text-zinc-600">Завантаження…</div>}>
+    <Suspense fallback={<FormPageSkeleton fields={2} />}>
       <SignInForm />
     </Suspense>
   );

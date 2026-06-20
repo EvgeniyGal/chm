@@ -8,13 +8,14 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { useRouter } from "next/navigation";
-import { FiArchive, FiCheckCircle, FiDownload, FiFileText, FiTrash2, FiUpload } from "react-icons/fi";
+import { FiArchive, FiCheckCircle, FiDownload } from "react-icons/fi";
 import { toast } from "sonner";
 
+import { AcceptanceActRowActions } from "@/components/acceptance-acts/AcceptanceActRowActions";
 import { EmptyListState } from "@/components/data-table/empty-list-state";
 import { ListPagePagination } from "@/components/data-table/list-page-pagination";
 import { ListPageToolbar } from "@/components/data-table/list-page-toolbar";
-import { listTableHeaderClass, tableActionIconClassName } from "@/components/data-table/list-styles";
+import { listTableHeaderClass } from "@/components/data-table/list-styles";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -390,81 +391,16 @@ export function AcceptanceActsTable({
           const rowBusy = paperPendingId === act.id || deleteBusy;
           return (
             <div className="flex flex-nowrap items-center justify-center gap-1">
-              <button
-                type="button"
-                className={cn(
-                  tableActionIconClassName,
-                  act.isSigned && "border-emerald-600/60 bg-emerald-50 text-emerald-900",
-                )}
-                aria-label={act.isSigned ? "Зняти статус «підписаний»" : "Позначити як підписаний"}
-                title={act.isSigned ? "Зняти «підписаний»" : "Підписаний"}
-                disabled={rowBusy}
-                onClick={() =>
-                  setPaperConfirm({
-                    actId: act.id,
-                    actNumber: act.number,
-                    field: "isSigned",
-                    nextValue: !act.isSigned,
-                  })
-                }
-              >
-                <FiCheckCircle aria-hidden="true" className="size-4" />
-              </button>
-              <button
-                type="button"
-                className={cn(
-                  tableActionIconClassName,
-                  act.isArchived && "border-sky-600/60 bg-sky-50 text-sky-900",
-                )}
-                aria-label={act.isArchived ? "Зняти з архіву" : "Позначити як в архіві"}
-                title={act.isArchived ? "Зняти «в архіві»" : "В архіві"}
-                disabled={rowBusy}
-                onClick={() =>
-                  setPaperConfirm({
-                    actId: act.id,
-                    actNumber: act.number,
-                    field: "isArchived",
-                    nextValue: !act.isArchived,
-                  })
-                }
-              >
-                <FiArchive aria-hidden="true" className="size-4" />
-              </button>
-              {canGenerateDocuments ? (
-                <>
-                  <a
-                    className={tableActionIconClassName}
-                    href={`/api/documents/acceptance-act/${act.id}`}
-                    aria-label="Сформувати акт"
-                    title="Сформувати акт"
-                  >
-                    <FiFileText aria-hidden="true" className="size-4" />
-                  </a>
-                  <a
-                    className={tableActionIconClassName}
-                    href={`/acceptance-acts/${act.id}/scans`}
-                    aria-label="Додати скан документа"
-                    title="Додати скан документа"
-                  >
-                    <FiUpload aria-hidden="true" className="size-4" />
-                  </a>
-                </>
-              ) : null}
-              {canManageActs ? (
-                <button
-                  type="button"
-                  className={cn(
-                    tableActionIconClassName,
-                    "border-red-200 text-red-600 hover:bg-red-50 dark:border-red-900/50 dark:text-red-400 dark:hover:bg-red-950/40",
-                  )}
-                  aria-label="Видалити акт"
-                  title="Видалити"
-                  disabled={rowBusy}
-                  onClick={() => setDeleteConfirm({ id: act.id, number: act.number })}
-                >
-                  <FiTrash2 aria-hidden="true" className="size-4" />
-                </button>
-              ) : null}
+              <AcceptanceActRowActions
+                act={act}
+                rowBusy={rowBusy}
+                paperPendingId={paperPendingId}
+                deleteLoading={deleteBusy && deleteConfirm?.id === act.id}
+                canGenerateDocuments={canGenerateDocuments}
+                canManageActs={canManageActs}
+                onPaperConfirm={setPaperConfirm}
+                onDeleteConfirm={setDeleteConfirm}
+              />
             </div>
           );
         },
@@ -542,8 +478,14 @@ export function AcceptanceActsTable({
             >
               Скасувати
             </Button>
-            <Button type="button" disabled={paperPendingId !== null} onClick={() => void applyPaperFlag()}>
-              {paperPendingId ? "Збереження…" : "Підтвердити"}
+            <Button
+              type="button"
+              disabled={paperPendingId !== null}
+              loading={paperPendingId !== null}
+              loadingText="Збереження…"
+              onClick={() => applyPaperFlag()}
+            >
+              Підтвердити
             </Button>
           </div>
         </DialogContent>
@@ -577,9 +519,11 @@ export function AcceptanceActsTable({
               type="button"
               variant="destructive"
               disabled={deleteBusy}
-              onClick={() => void confirmDelete()}
+              loading={deleteBusy}
+              loadingText="Видалення…"
+              onClick={() => confirmDelete()}
             >
-              {deleteBusy ? "Видалення…" : "Видалити"}
+              Видалити
             </Button>
           </div>
         </DialogContent>
@@ -762,79 +706,16 @@ export function AcceptanceActsTable({
                   З ПДВ: {formatMoney(Number.parseFloat(act.totalWithVat) || 0)}
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2" onClick={(e) => e.stopPropagation()}>
-                  <button
-                    type="button"
-                    className={cn(
-                      tableActionIconClassName,
-                      act.isSigned && "border-emerald-600/60 bg-emerald-50 text-emerald-900",
-                    )}
-                    aria-label={act.isSigned ? "Зняти статус «підписаний»" : "Позначити як підписаний"}
-                    disabled={rowBusy}
-                    onClick={() =>
-                      setPaperConfirm({
-                        actId: act.id,
-                        actNumber: act.number,
-                        field: "isSigned",
-                        nextValue: !act.isSigned,
-                      })
-                    }
-                  >
-                    <FiCheckCircle aria-hidden="true" className="size-4" />
-                  </button>
-                  <button
-                    type="button"
-                    className={cn(
-                      tableActionIconClassName,
-                      act.isArchived && "border-sky-600/60 bg-sky-50 text-sky-900",
-                    )}
-                    aria-label={act.isArchived ? "Зняти з архіву" : "Позначити як в архіві"}
-                    disabled={rowBusy}
-                    onClick={() =>
-                      setPaperConfirm({
-                        actId: act.id,
-                        actNumber: act.number,
-                        field: "isArchived",
-                        nextValue: !act.isArchived,
-                      })
-                    }
-                  >
-                    <FiArchive aria-hidden="true" className="size-4" />
-                  </button>
-                  {canGenerateDocuments ? (
-                    <>
-                      <a
-                        className={tableActionIconClassName}
-                        href={`/api/documents/acceptance-act/${act.id}`}
-                        aria-label="Сформувати акт"
-                        title="Сформувати акт"
-                      >
-                        <FiFileText aria-hidden="true" className="size-4" />
-                      </a>
-                      <a
-                        className={tableActionIconClassName}
-                        href={`/acceptance-acts/${act.id}/scans`}
-                        aria-label="Додати скан документа"
-                        title="Додати скан документа"
-                      >
-                        <FiUpload aria-hidden="true" className="size-4" />
-                      </a>
-                    </>
-                  ) : null}
-                  {canManageActs ? (
-                    <button
-                      type="button"
-                      className={cn(
-                        tableActionIconClassName,
-                        "border-red-200 text-red-600 hover:bg-red-50 dark:border-red-900/50 dark:text-red-400 dark:hover:bg-red-950/40",
-                      )}
-                      aria-label="Видалити акт"
-                      title="Видалити"
-                      disabled={rowBusy}
-                      onClick={() => setDeleteConfirm({ id: act.id, number: act.number })}
-                    >
-                      <FiTrash2 aria-hidden="true" className="size-4" />
-                    </button>
-                  ) : null}
+                  <AcceptanceActRowActions
+                    act={act}
+                    rowBusy={rowBusy}
+                    paperPendingId={paperPendingId}
+                    deleteLoading={deleteBusy && deleteConfirm?.id === act.id}
+                    canGenerateDocuments={canGenerateDocuments}
+                    canManageActs={canManageActs}
+                    onPaperConfirm={setPaperConfirm}
+                    onDeleteConfirm={setDeleteConfirm}
+                  />
                 </div>
               </div>
             );

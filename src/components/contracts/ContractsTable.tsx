@@ -8,13 +8,14 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { useRouter } from "next/navigation";
-import { FiArchive, FiCheckCircle, FiCopy, FiDownload, FiFileMinus, FiFileText, FiTrash2, FiUpload } from "react-icons/fi";
+import { FiArchive, FiCheckCircle, FiDownload } from "react-icons/fi";
 import { toast } from "sonner";
 
+import { ContractRowActions } from "@/components/contracts/ContractRowActions";
 import { EmptyListState } from "@/components/data-table/empty-list-state";
 import { ListPagePagination } from "@/components/data-table/list-page-pagination";
 import { ListPageToolbar } from "@/components/data-table/list-page-toolbar";
-import { listTableHeaderClass, tableActionIconClassName } from "@/components/data-table/list-styles";
+import { listTableHeaderClass } from "@/components/data-table/list-styles";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -429,101 +430,19 @@ export function ContractsTable({
           const rowBusy = paperPendingId === c.id || deletePendingId === c.id || duplicatePendingId === c.id;
           return (
             <div className="flex flex-nowrap items-center justify-center gap-1">
-              <button
-                type="button"
-                className={cn(
-                  tableActionIconClassName,
-                  c.isSigned && "border-emerald-600/60 bg-emerald-50 text-emerald-900",
-                )}
-                aria-label={c.isSigned ? "Зняти статус «підписаний»" : "Позначити як підписаний"}
-                title={c.isSigned ? "Зняти «підписаний»" : "Підписаний"}
-                disabled={rowBusy}
-                onClick={() =>
-                  setPaperConfirm({
-                    contractId: c.id,
-                    contractNumber: c.number,
-                    field: "isSigned",
-                    nextValue: !c.isSigned,
-                  })
-                }
-              >
-                <FiCheckCircle aria-hidden="true" className="size-4" />
-              </button>
-              <button
-                type="button"
-                className={cn(
-                  tableActionIconClassName,
-                  c.isArchived && "border-sky-600/60 bg-sky-50 text-sky-900",
-                )}
-                aria-label={c.isArchived ? "Зняти з архіву" : "Позначити як в архіві"}
-                title={c.isArchived ? "Зняти «в архіві»" : "В архіві"}
-                disabled={rowBusy}
-                onClick={() =>
-                  setPaperConfirm({
-                    contractId: c.id,
-                    contractNumber: c.number,
-                    field: "isArchived",
-                    nextValue: !c.isArchived,
-                  })
-                }
-              >
-                <FiArchive aria-hidden="true" className="size-4" />
-              </button>
-              {canGenerateDocuments ? (
-                <>
-                  <a
-                    className={tableActionIconClassName}
-                    href={`/api/documents/contract/${c.id}?variant=short`}
-                    aria-label="Сформувати скорочений договір"
-                    title="Сформувати скорочений договір"
-                  >
-                    <FiFileMinus aria-hidden="true" className="size-4" />
-                  </a>
-                  <a
-                    className={tableActionIconClassName}
-                    href={`/api/documents/contract/${c.id}?variant=full`}
-                    aria-label="Сформувати повний договір"
-                    title="Сформувати повний договір"
-                  >
-                    <FiFileText aria-hidden="true" className="size-4" />
-                  </a>
-                  <a
-                    className={tableActionIconClassName}
-                    href={`/contracts/${c.id}/scans`}
-                    aria-label="Додати скан документа"
-                    title="Додати скан документа"
-                  >
-                    <FiUpload aria-hidden="true" className="size-4" />
-                  </a>
-                </>
-              ) : null}
-              {canGenerateAnalogue ? (
-                <button
-                  type="button"
-                  className={tableActionIconClassName}
-                  aria-label="Створити договір-аналог"
-                  title="Згенерувати аналог"
-                  disabled={rowBusy}
-                  onClick={() => void applyDuplicateContract(c.id)}
-                >
-                  <FiCopy aria-hidden="true" className="size-4" />
-                </button>
-              ) : null}
-              {canDeleteContracts ? (
-                <button
-                  type="button"
-                  className={cn(
-                    tableActionIconClassName,
-                    "border-destructive/40 text-destructive hover:bg-destructive/10",
-                  )}
-                  aria-label="Видалити договір"
-                  title="Видалити договір"
-                  disabled={rowBusy}
-                  onClick={() => setDeleteConfirm({ contractId: c.id, contractNumber: c.number })}
-                >
-                  <FiTrash2 aria-hidden="true" className="size-4" />
-                </button>
-              ) : null}
+              <ContractRowActions
+                contract={c}
+                rowBusy={rowBusy}
+                paperPendingId={paperPendingId}
+                duplicatePendingId={duplicatePendingId}
+                deletePendingId={deletePendingId}
+                canGenerateDocuments={canGenerateDocuments}
+                canGenerateAnalogue={canGenerateAnalogue}
+                canDeleteContracts={canDeleteContracts}
+                onPaperConfirm={setPaperConfirm}
+                onDuplicate={(contractId) => void applyDuplicateContract(contractId)}
+                onDeleteConfirm={setDeleteConfirm}
+              />
             </div>
           );
         },
@@ -612,8 +531,14 @@ export function ContractsTable({
             >
               Скасувати
             </Button>
-            <Button type="button" disabled={paperPendingId !== null} onClick={() => void applyPaperFlag()}>
-              {paperPendingId ? "Збереження…" : "Підтвердити"}
+            <Button
+              type="button"
+              disabled={paperPendingId !== null}
+              loading={paperPendingId !== null}
+              loadingText="Збереження…"
+              onClick={() => applyPaperFlag()}
+            >
+              Підтвердити
             </Button>
           </div>
         </DialogContent>
@@ -662,9 +587,11 @@ export function ContractsTable({
               type="button"
               variant="destructive"
               disabled={deletePendingId !== null}
-              onClick={() => void applyDeleteContract()}
+              loading={deletePendingId !== null}
+              loadingText="Видалення…"
+              onClick={() => applyDeleteContract()}
             >
-              {deletePendingId ? "Видалення…" : "Видалити назавжди"}
+              Видалити назавжди
             </Button>
           </div>
         </DialogContent>
@@ -871,99 +798,19 @@ export function ContractsTable({
                   З ПДВ: {formatMoney(Number.parseFloat(c.totalWithVat) || 0)}
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2" onClick={(e) => e.stopPropagation()}>
-                  <button
-                    type="button"
-                    className={cn(
-                      tableActionIconClassName,
-                      c.isSigned && "border-emerald-600/60 bg-emerald-50 text-emerald-900",
-                    )}
-                    aria-label={c.isSigned ? "Зняти статус «підписаний»" : "Позначити як підписаний"}
-                    disabled={rowBusy}
-                    onClick={() =>
-                      setPaperConfirm({
-                        contractId: c.id,
-                        contractNumber: c.number,
-                        field: "isSigned",
-                        nextValue: !c.isSigned,
-                      })
-                    }
-                  >
-                    <FiCheckCircle aria-hidden="true" className="size-4" />
-                  </button>
-                  <button
-                    type="button"
-                    className={cn(
-                      tableActionIconClassName,
-                      c.isArchived && "border-sky-600/60 bg-sky-50 text-sky-900",
-                    )}
-                    aria-label={c.isArchived ? "Зняти з архіву" : "Позначити як в архіві"}
-                    disabled={rowBusy}
-                    onClick={() =>
-                      setPaperConfirm({
-                        contractId: c.id,
-                        contractNumber: c.number,
-                        field: "isArchived",
-                        nextValue: !c.isArchived,
-                      })
-                    }
-                  >
-                    <FiArchive aria-hidden="true" className="size-4" />
-                  </button>
-                  {canGenerateDocuments ? (
-                    <>
-                      <a
-                        className={tableActionIconClassName}
-                        href={`/api/documents/contract/${c.id}?variant=short`}
-                        aria-label="Сформувати скорочений договір"
-                        title="Сформувати скорочений договір"
-                      >
-                        <FiFileMinus aria-hidden="true" className="size-4" />
-                      </a>
-                      <a
-                        className={tableActionIconClassName}
-                        href={`/api/documents/contract/${c.id}?variant=full`}
-                        aria-label="Сформувати повний договір"
-                        title="Сформувати повний договір"
-                      >
-                        <FiFileText aria-hidden="true" className="size-4" />
-                      </a>
-                      <a
-                        className={tableActionIconClassName}
-                        href={`/contracts/${c.id}/scans`}
-                        aria-label="Додати скан документа"
-                        title="Додати скан документа"
-                      >
-                        <FiUpload aria-hidden="true" className="size-4" />
-                      </a>
-                    </>
-                  ) : null}
-                  {canGenerateAnalogue ? (
-                    <button
-                      type="button"
-                      className={tableActionIconClassName}
-                      aria-label="Створити договір-аналог"
-                      title="Згенерувати аналог"
-                      disabled={rowBusy}
-                      onClick={() => void applyDuplicateContract(c.id)}
-                    >
-                      <FiCopy aria-hidden="true" className="size-4" />
-                    </button>
-                  ) : null}
-                  {canDeleteContracts ? (
-                    <button
-                      type="button"
-                      className={cn(
-                        tableActionIconClassName,
-                        "border-destructive/40 text-destructive hover:bg-destructive/10",
-                      )}
-                      aria-label="Видалити договір"
-                      title="Видалити договір"
-                      disabled={rowBusy}
-                      onClick={() => setDeleteConfirm({ contractId: c.id, contractNumber: c.number })}
-                    >
-                      <FiTrash2 aria-hidden="true" className="size-4" />
-                    </button>
-                  ) : null}
+                  <ContractRowActions
+                    contract={c}
+                    rowBusy={rowBusy}
+                    paperPendingId={paperPendingId}
+                    duplicatePendingId={duplicatePendingId}
+                    deletePendingId={deletePendingId}
+                    canGenerateDocuments={canGenerateDocuments}
+                    canGenerateAnalogue={canGenerateAnalogue}
+                    canDeleteContracts={canDeleteContracts}
+                    onPaperConfirm={setPaperConfirm}
+                    onDuplicate={(contractId) => void applyDuplicateContract(contractId)}
+                    onDeleteConfirm={setDeleteConfirm}
+                  />
                 </div>
               </div>
             );

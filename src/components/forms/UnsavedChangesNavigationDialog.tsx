@@ -3,6 +3,8 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { useEffect, useState } from "react";
 
+import { Button } from "@/components/ui/button";
+
 export function UnsavedChangesNavigationDialog({
   isDirty,
   suppressBeforeUnloadOnce,
@@ -64,10 +66,12 @@ export function UnsavedChangesNavigationDialog({
               </button>
             </Dialog.Close>
             {onSaveAndProceed ? (
-              <button
+              <Button
                 type="button"
                 disabled={saving}
-                className="min-h-9 w-full rounded-md border border-emerald-600 bg-emerald-600 px-3 text-center text-sm leading-tight text-white hover:bg-emerald-700 whitespace-normal disabled:opacity-60"
+                loading={saving}
+                loadingText="Збереження…"
+                className="min-h-9 h-auto w-full whitespace-normal py-2"
                 onClick={async () => {
                   if (!pendingHref) return;
                   setSaving(true);
@@ -82,8 +86,8 @@ export function UnsavedChangesNavigationDialog({
                   }
                 }}
               >
-                {saving ? "Збереження…" : "Зберегти та перейти"}
-              </button>
+                Зберегти та перейти
+              </Button>
             ) : null}
             <Dialog.Close asChild>
               <button

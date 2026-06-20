@@ -4,6 +4,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
+import { TableActionButton } from "@/components/data-table/table-action-button";
 import { FiTrash2 } from "react-icons/fi";
 
 export function DeleteCompanyButton({ companyId, companyName }: { companyId: string; companyName: string }) {
@@ -30,14 +31,14 @@ export function DeleteCompanyButton({ companyId, companyName }: { companyId: str
   return (
     <Dialog.Root>
       <Dialog.Trigger asChild>
-        <button
-          type="button"
-          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-red-200 text-red-600 hover:bg-red-50"
+        <TableActionButton
+          className="border-red-200 text-red-600 hover:bg-red-50"
+          loading={busy}
           aria-label="Видалити компанію"
           title="Видалити компанію"
         >
           <FiTrash2 aria-hidden="true" className="size-4" />
-        </button>
+        </TableActionButton>
       </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/40" />

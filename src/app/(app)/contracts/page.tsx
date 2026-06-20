@@ -1,6 +1,7 @@
 import { and, asc, count, desc, eq, gte, ilike, inArray, lte, or, sql } from "drizzle-orm";
 
 import { ContractsTable } from "@/components/contracts/ContractsTable";
+import { CrmButton } from "@/components/ui/crm-button";
 import { db } from "@/db";
 import { companies, contracts, lineItems } from "@/db/schema";
 import { requireRole } from "@/lib/authz";
@@ -163,12 +164,7 @@ export default async function ContractsPage({
       <div className="flex items-end justify-between gap-3">
         <h1 className="page-title">Договори</h1>
         {canManageContracts ? (
-          <a
-            className="crm-btn-primary"
-            href="/contracts/new"
-          >
-            Додати договір
-          </a>
+          <CrmButton href="/contracts/new">Додати договір</CrmButton>
         ) : null}
       </div>
 

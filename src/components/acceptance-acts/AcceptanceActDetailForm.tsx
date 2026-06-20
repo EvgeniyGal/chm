@@ -11,6 +11,8 @@ import { SearchableDropdownOptionField } from "@/components/forms/SearchableDrop
 import { UnsavedChangesNavigationDialog } from "@/components/forms/UnsavedChangesNavigationDialog";
 import { useUnsavedChangesGuard } from "@/components/forms/useUnsavedChangesGuard";
 import { AcceptanceActReadonlyLineItems } from "@/components/acceptance-acts/AcceptanceActReadonlyLineItems";
+import { CrmButton } from "@/components/ui/crm-button";
+import { CrmFormSubmitButton } from "@/components/ui/crm-form-submit-button";
 import { SignedUpload } from "@/components/uploads/SignedUpload";
 import { getServerActionErrorMessage } from "@/lib/server-action-error-message";
 import { isNextNavigationError } from "@/lib/is-next-navigation-error";
@@ -127,6 +129,7 @@ export function AcceptanceActDetailForm({
   const { register } = form;
   const suppressBeforeUnloadOnce = useUnsavedChangesGuard(canEdit && form.formState.isDirty);
   const [docLoading, setDocLoading] = useState(false);
+  const [saveLoading, setSaveLoading] = useState(false);
   const [useCustomNumber, setUseCustomNumber] = useState(false);
   const watchedCustomNumber = form.watch("number");
   const headerActNumber = useCustomNumber ? (watchedCustomNumber?.trim() || "—") : actNumber;
@@ -148,6 +151,33 @@ export function AcceptanceActDetailForm({
     URL.revokeObjectURL(url);
   }
 
+  async function handleDownloadActDocx() {
+    setDocLoading(true);
+    try {
+      if (!canEdit) {
+        await downloadAcceptanceActDocxBlob();
+        return;
+      }
+      const hadDirty = form.formState.isDirty;
+      if (hadDirty) {
+        await form.handleSubmit(async (values) => {
+          await onSave({
+            ...values,
+            number: useCustomNumber ? values.number?.trim() || undefined : undefined,
+          });
+          form.reset(values);
+        })();
+        await router.refresh();
+      }
+      await downloadAcceptanceActDocxBlob();
+      toast.success(hadDirty ? "Акт збережено. Документ завантажено." : "Документ завантажено.");
+    } catch (e) {
+      if (!isNextNavigationError(e)) toast.error(getServerActionErrorMessage(e));
+    } finally {
+      setDocLoading(false);
+    }
+  }
+
   return (
     <FormProvider {...form}>
       <div className="mb-4">
@@ -162,6 +192,7 @@ export function AcceptanceActDetailForm({
         onSubmit={
           canEdit
             ? form.handleSubmit(async (values) => {
+                setSaveLoading(true);
                 try {
                   await onSave({
                     ...values,
@@ -173,6 +204,8 @@ export function AcceptanceActDetailForm({
                 } catch (e) {
                   if (isNextNavigationError(e)) throw e;
                   toast.error(getServerActionErrorMessage(e));
+                } finally {
+                  setSaveLoading(false);
                 }
               })
             : (e) => e.preventDefault()
@@ -355,11 +388,6 @@ export function AcceptanceActDetailForm({
           </div>
         </div>
 
-        <div className="flex flex-col gap-4 rounded-lg border border-border bg-card p-4">
-          <div className="text-sm font-semibold text-foreground">Документ</div>
-          <SignedUpload entityType="ACCEPTANCE_ACT" entityId={actId} initialScans={signedScansInitial} />
-        </div>
-
         <div className="flex flex-col gap-2">
           <div className="text-sm font-semibold text-foreground">{lineHeading}</div>
           <AcceptanceActReadonlyLineItems items={lineItems} />
@@ -382,66 +410,42 @@ export function AcceptanceActDetailForm({
 
         <div className="mt-2 flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center">
           {canEdit ? (
-            <button
-              type="submit"
-              className="crm-btn-primary inline-flex h-10 w-full items-center justify-center md:w-auto"
-            >
+            <CrmFormSubmitButton className="inline-flex h-10 w-full items-center justify-center md:w-auto" loading={saveLoading} loadingText="Збереження…">
               Зберегти
-            </button>
+            </CrmFormSubmitButton>
           ) : null}
-          <a className="crm-btn-neutral w-full md:w-auto" href="/acceptance-acts">
+          <CrmButton variant="neutral" href="/acceptance-acts" className="w-full md:w-auto">
             <FiList className="size-4 shrink-0" aria-hidden />
             До списку актів
-          </a>
-          <a
-            className="crm-btn-teal w-full md:w-auto"
+          </CrmButton>
+          <CrmButton
+            variant="teal"
             href={`/invoices/${invoice.id}/edit`}
+            className="w-full md:w-auto"
             aria-label={`Перейти до рахунку №${invoice.number}`}
             title={`Рахунок №${invoice.number}`}
           >
             <FiExternalLink className="size-4 shrink-0" aria-hidden />
             До рахунку
-          </a>
-          <button
-            type="button"
-            disabled={docLoading}
-            className="crm-btn-amber w-full md:w-auto"
-            onClick={() => {
-              setDocLoading(true);
-              void (async () => {
-                try {
-                  if (!canEdit) {
-                    await downloadAcceptanceActDocxBlob();
-                    return;
-                  }
-                  const hadDirty = form.formState.isDirty;
-                  if (hadDirty) {
-                    await form.handleSubmit(async (values) => {
-                      await onSave({
-                        ...values,
-                        number: useCustomNumber ? values.number?.trim() || undefined : undefined,
-                      });
-                      form.reset(values);
-                    })();
-                    await router.refresh();
-                  }
-                  await downloadAcceptanceActDocxBlob();
-                  toast.success(hadDirty ? "Акт збережено. Документ завантажено." : "Документ завантажено.");
-                } catch (e) {
-                  if (!isNextNavigationError(e)) toast.error(getServerActionErrorMessage(e));
-                } finally {
-                  setDocLoading(false);
-                }
-              })();
-            }}
+          </CrmButton>
+          <CrmButton
+            variant="amber"
+            disabled={docLoading || saveLoading}
+            loading={docLoading}
+            loadingText="Збереження…"
+            className="w-full md:w-auto"
+            onClick={() => void handleDownloadActDocx()}
             aria-label="Зберегти (якщо є зміни) та завантажити акт"
             title="За потреби зберегти зміни, потім завантажити DOCX з номером акту з бази"
           >
             <FiFileText className="size-4 shrink-0" aria-hidden />
             Акт
-          </button>
+          </CrmButton>
         </div>
       </form>
+      <div className="mt-4">
+        <SignedUpload entityType="ACCEPTANCE_ACT" entityId={actId} initialScans={signedScansInitial} />
+      </div>
       <UnsavedChangesNavigationDialog
         isDirty={canEdit && form.formState.isDirty}
         suppressBeforeUnloadOnce={suppressBeforeUnloadOnce}

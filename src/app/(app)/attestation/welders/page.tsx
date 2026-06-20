@@ -1,9 +1,9 @@
-import Link from "next/link";
 import { and, asc, count, desc, eq, gte, ilike, inArray, lte, or, type SQL } from "drizzle-orm";
 
 import { AttestationMigrationMissingNotice } from "@/components/attestation/AttestationMigrationMissingNotice";
 import type { ShowFilter } from "@/components/attestation/AttestationGroupsTable";
 import { AttestationWeldersTable, type WeldersSortBy } from "@/components/attestation/AttestationWeldersTable";
+import { CrmButton } from "@/components/ui/crm-button";
 import { db } from "@/db";
 import { certificationGroups, welderCertifications } from "@/db/schema/attestation";
 import { requireApprovedUser } from "@/lib/authz";
@@ -184,9 +184,9 @@ export default async function AttestationWeldersPage({
     <div className="flex flex-col gap-4">
       <div className="flex items-end justify-between gap-3">
         <h1 className="page-title">Зварники</h1>
-        <Link className="crm-btn-primary shrink-0" href="/attestation/welders/new">
+        <CrmButton href="/attestation/welders/new" className="shrink-0">
           Додати атестацію
-        </Link>
+        </CrmButton>
       </div>
 
       <AttestationWeldersTable

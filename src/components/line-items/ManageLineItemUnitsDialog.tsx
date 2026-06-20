@@ -6,6 +6,7 @@ import { FiTrash2 } from "react-icons/fi";
 import { toast } from "sonner";
 
 import { DROPDOWN_SCOPE } from "@/lib/dropdown-scopes";
+import { CrmButton } from "@/components/ui/crm-button";
 
 function sortUa(values: string[]) {
   return [...values].sort((a, b) => a.localeCompare(b, "uk"));
@@ -149,14 +150,15 @@ export function ManageLineItemUnitsDialog({
                 autoComplete="off"
               />
             </label>
-            <button
-              type="button"
+            <CrmButton
               disabled={busy || !newValue.trim()}
-              className="crm-btn-primary shrink-0 disabled:opacity-50"
-              onClick={() => void addUnit()}
+              loading={busy}
+              loadingText="Додавання…"
+              className="shrink-0 disabled:opacity-50"
+              onClick={() => addUnit()}
             >
               Додати
-            </button>
+            </CrmButton>
           </div>
 
           <div className="mt-4 flex justify-end">

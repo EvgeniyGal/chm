@@ -1,6 +1,7 @@
 import { and, eq, gte, lte, sql } from "drizzle-orm";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { CrmSubmitButton } from "@/components/ui/crm-submit-button";
 import { NativeSelect } from "@/components/ui/native-select";
 import { db } from "@/db";
 import { acceptanceActs, companies, contracts, documents, invoices } from "@/db/schema";
@@ -306,9 +307,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
               ))}
             </NativeSelect>
           </div>
-          <button className="crm-btn-primary" type="submit">
-            Показати
-          </button>
+          <CrmSubmitButton loadingText="Завантаження…">Показати</CrmSubmitButton>
         </form>
       </div>
 

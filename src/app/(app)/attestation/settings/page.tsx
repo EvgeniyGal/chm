@@ -8,6 +8,7 @@ import { SampleMaterialsTable } from "@/components/attestation/SampleMaterialsTa
 import { TemplateUploadForm } from "@/components/attestation/TemplateUploadForm";
 import { WeldingConsumablesTable } from "@/components/attestation/WeldingConsumablesTable";
 import { GuardedForm } from "@/components/forms/GuardedForm";
+import { CrmSubmitButton } from "@/components/ui/crm-submit-button";
 import { db } from "@/db";
 import {
   commissionMembers,
@@ -59,9 +60,9 @@ export default async function AttestationSettingsPage() {
                 <option value="member">Член комісії</option>
                 <option value="head">Голова комісії</option>
               </select>
-              <button type="submit" className="crm-btn-primary w-fit">
+              <CrmSubmitButton className="w-fit" loadingText="Додавання…">
                 Додати
-              </button>
+              </CrmSubmitButton>
             </GuardedForm>
 
             <CommissionRosterTable
@@ -86,9 +87,9 @@ export default async function AttestationSettingsPage() {
               <input name="code" required placeholder="Шифр (унікальний)" className="h-10 rounded-md border border-border px-3" />
               <input name="name" required placeholder="Повна назва" className="h-10 rounded-md border border-border px-3" />
               <textarea name="admissionText" required placeholder="Текст допуску" rows={3} className="rounded-md border border-border px-3 py-2" />
-              <button type="submit" className="crm-btn-primary w-fit">
+              <CrmSubmitButton className="w-fit" loadingText="Додавання…">
                 Додати
-              </button>
+              </CrmSubmitButton>
             </GuardedForm>
             <RegulatoryDocumentsTable
               rows={regulatory.map((r) => ({
@@ -117,9 +118,9 @@ export default async function AttestationSettingsPage() {
                 <option value="W11">W11</option>
               </select>
               <input name="steelGrade" required placeholder="Марка сталі" className="h-10 rounded-md border border-border px-3" />
-              <button type="submit" className="crm-btn-primary w-fit">
+              <CrmSubmitButton className="w-fit" loadingText="Додавання…">
                 Додати
-              </button>
+              </CrmSubmitButton>
             </GuardedForm>
             <SampleMaterialsTable
               rows={samples.map((s) => ({
@@ -147,9 +148,9 @@ export default async function AttestationSettingsPage() {
                 ))}
               </select>
               <input name="materialGrade" required placeholder="Марка (напр. УОНИ 13/45)" className="h-10 rounded-md border border-border px-3" />
-              <button type="submit" className="crm-btn-primary w-fit">
+              <CrmSubmitButton className="w-fit" loadingText="Додавання…">
                 Додати
-              </button>
+              </CrmSubmitButton>
             </GuardedForm>
             <WeldingConsumablesTable
               rows={consumablesList.map((c) => ({

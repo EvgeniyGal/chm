@@ -3,6 +3,7 @@ import { and, asc, count, desc, ilike, or } from "drizzle-orm";
 import { db } from "@/db";
 import { companies } from "@/db/schema";
 import { CompaniesTable } from "@/components/companies/CompaniesTable";
+import { CrmButton } from "@/components/ui/crm-button";
 import { requireRole } from "@/lib/authz";
 
 const pageSizeOptions = new Set([25, 50, 100]);
@@ -63,12 +64,7 @@ export default async function CompaniesPage({
         <div>
           <h1 className="page-title">Компанії</h1>
         </div>
-        <a
-          className="crm-btn-primary"
-          href="/companies/new"
-        >
-          Додати компанію
-        </a>
+        <CrmButton href="/companies/new">Додати компанію</CrmButton>
       </div>
 
       <CompaniesTable

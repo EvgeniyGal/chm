@@ -2,21 +2,56 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { type ReactNode } from "react";
 import { FiUser } from "react-icons/fi";
+
+import { useNavigationPending } from "@/components/navigation/navigation-pending";
+import { Spinner } from "@/components/ui/spinner";
 
 function routeActive(pathname: string, href: string) {
   if (pathname === href) return true;
   return pathname.startsWith(`${href}/`);
 }
 
-function navLinkClass(pathname: string, href: string) {
+function navLinkClass(pathname: string, href: string, pending = false) {
   const on = routeActive(pathname, href);
   return [
     "block rounded-md px-3 py-2 transition-colors",
     on
       ? "bg-sidebar-primary font-medium text-sidebar-primary-foreground"
       : "text-sidebar-foreground hover:bg-sidebar-accent",
+    pending ? "pointer-events-none opacity-80" : "",
   ].join(" ");
+}
+
+function SidebarNavLink({
+  href,
+  pathname,
+  children,
+}: {
+  href: string;
+  pathname: string;
+  children: ReactNode;
+}) {
+  const { pendingHref, startNavigation } = useNavigationPending();
+  const pending = pendingHref === href;
+  const active = routeActive(pathname, href);
+
+  return (
+    <Link
+      className={navLinkClass(pathname, href, pending)}
+      href={href}
+      prefetch={true}
+      aria-current={active ? "page" : undefined}
+      aria-busy={pending || undefined}
+      onClick={() => startNavigation(href)}
+    >
+      <span className="inline-flex items-center gap-2">
+        {pending ? <Spinner className="size-3.5" /> : null}
+        {children}
+      </span>
+    </Link>
+  );
 }
 
 export function AppSidebarNav({ role }: { role?: string }) {
@@ -27,35 +62,19 @@ export function AppSidebarNav({ role }: { role?: string }) {
       <div>
         <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Фінанси</div>
         <div className="flex flex-col gap-1">
-          <Link
-            className={navLinkClass(pathname, "/contracts")}
-            href="/contracts"
-            aria-current={routeActive(pathname, "/contracts") ? "page" : undefined}
-          >
+          <SidebarNavLink href="/contracts" pathname={pathname}>
             Договори
-          </Link>
-          <Link
-            className={navLinkClass(pathname, "/invoices")}
-            href="/invoices"
-            aria-current={routeActive(pathname, "/invoices") ? "page" : undefined}
-          >
+          </SidebarNavLink>
+          <SidebarNavLink href="/invoices" pathname={pathname}>
             Рахунки
-          </Link>
-          <Link
-            className={navLinkClass(pathname, "/acceptance-acts")}
-            href="/acceptance-acts"
-            aria-current={routeActive(pathname, "/acceptance-acts") ? "page" : undefined}
-          >
+          </SidebarNavLink>
+          <SidebarNavLink href="/acceptance-acts" pathname={pathname}>
             Акти
-          </Link>
+          </SidebarNavLink>
           {role !== "MANAGER" ? (
-            <Link
-              className={navLinkClass(pathname, "/reports")}
-              href="/reports"
-              aria-current={routeActive(pathname, "/reports") ? "page" : undefined}
-            >
+            <SidebarNavLink href="/reports" pathname={pathname}>
               Звіти
-            </Link>
+            </SidebarNavLink>
           ) : null}
         </div>
       </div>
@@ -63,46 +82,26 @@ export function AppSidebarNav({ role }: { role?: string }) {
       <div>
         <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Атестація</div>
         <div className="flex flex-col gap-1">
-          <Link
-            className={navLinkClass(pathname, "/attestation/groups")}
-            href="/attestation/groups"
-            aria-current={routeActive(pathname, "/attestation/groups") ? "page" : undefined}
-          >
+          <SidebarNavLink href="/attestation/groups" pathname={pathname}>
             Групи
-          </Link>
-          <Link
-            className={navLinkClass(pathname, "/attestation/welders")}
-            href="/attestation/welders"
-            aria-current={routeActive(pathname, "/attestation/welders") ? "page" : undefined}
-          >
+          </SidebarNavLink>
+          <SidebarNavLink href="/attestation/welders" pathname={pathname}>
             Зварники
-          </Link>
-          <Link
-            className={navLinkClass(pathname, "/attestation/settings")}
-            href="/attestation/settings"
-            aria-current={routeActive(pathname, "/attestation/settings") ? "page" : undefined}
-          >
+          </SidebarNavLink>
+          <SidebarNavLink href="/attestation/settings" pathname={pathname}>
             Налаштування
-          </Link>
+          </SidebarNavLink>
         </div>
       </div>
 
       <div className="flex flex-col gap-1 border-t border-sidebar-border pt-2">
-        <Link
-          className={navLinkClass(pathname, "/companies")}
-          href="/companies"
-          aria-current={routeActive(pathname, "/companies") ? "page" : undefined}
-        >
+        <SidebarNavLink href="/companies" pathname={pathname}>
           Компанії
-        </Link>
+        </SidebarNavLink>
         {role === "OWNER" ? (
-          <Link
-            className={navLinkClass(pathname, "/users")}
-            href="/users"
-            aria-current={routeActive(pathname, "/users") ? "page" : undefined}
-          >
+          <SidebarNavLink href="/users" pathname={pathname}>
             Користувачі
-          </Link>
+          </SidebarNavLink>
         ) : null}
       </div>
     </nav>
@@ -111,21 +110,28 @@ export function AppSidebarNav({ role }: { role?: string }) {
 
 export function ProfileSidebarLink() {
   const pathname = usePathname() ?? "";
-  const on = pathname === "/profile" || pathname.startsWith("/profile/");
+  const href = "/profile";
+  const { pendingHref, startNavigation } = useNavigationPending();
+  const active = pathname === href || pathname.startsWith(`${href}/`);
+  const pending = pendingHref === href;
+
   return (
     <Link
       className={[
         "inline-flex h-8 w-8 items-center justify-center rounded-md border transition-colors",
-        on
+        active
           ? "border-sidebar-primary bg-sidebar-primary text-sidebar-primary-foreground"
           : "border-border text-muted-foreground hover:bg-sidebar-accent",
+        pending ? "pointer-events-none opacity-80" : "",
       ].join(" ")}
-      href="/profile"
+      href={href}
       title="Профіль"
       aria-label="Профіль"
-      aria-current={on ? "page" : undefined}
+      aria-current={active ? "page" : undefined}
+      aria-busy={pending || undefined}
+      onClick={() => startNavigation(href)}
     >
-      <FiUser aria-hidden="true" className="size-4" />
+      {pending ? <Spinner className="size-3.5" /> : <FiUser aria-hidden="true" className="size-4" />}
     </Link>
   );
 }

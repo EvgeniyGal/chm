@@ -6,6 +6,7 @@ import { FiTrash2 } from "react-icons/fi";
 import { toast } from "sonner";
 
 import { FileDropZone } from "@/components/uploads/FileDropZone";
+import { CrmButton } from "@/components/ui/crm-button";
 import { getServerActionErrorMessage } from "@/lib/server-action-error-message";
 import type { SignedScanListItem } from "@/lib/signed-scans";
 
@@ -226,9 +227,15 @@ export function SignedUpload({
           onInputChange={handleFileInputChange}
           onClear={clearPicked}
         />
-        <button type="button" disabled={busy} className="crm-btn-primary w-fit disabled:opacity-50" onClick={upload}>
-          {busy ? "Завантаження…" : "Додати файли у хмару"}
-        </button>
+        <CrmButton
+          disabled={busy}
+          loading={busy}
+          loadingText="Завантаження…"
+          className="w-fit disabled:opacity-50"
+          onClick={upload}
+        >
+          Додати файли у хмару
+        </CrmButton>
         {msg ? <div className="whitespace-pre-wrap text-sm text-zinc-700">{msg}</div> : null}
       </div>
 

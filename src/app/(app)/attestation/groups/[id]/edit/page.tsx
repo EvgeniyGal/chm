@@ -8,6 +8,8 @@ import { ArchiveAttestationGroupButton } from "@/components/attestation/ArchiveA
 import { CommissionGroupPickers } from "@/components/attestation/CommissionGroupPickers";
 import { CertificateIssueLocationField } from "@/components/attestation/CertificateIssueLocationField";
 import { GuardedForm } from "@/components/forms/GuardedForm";
+import { CrmButton } from "@/components/ui/crm-button";
+import { CrmSubmitButton } from "@/components/ui/crm-submit-button";
 import { db } from "@/db";
 import {
   certificationGroupMembers,
@@ -293,13 +295,13 @@ export default async function EditAttestationGroupPage({ params }: { params: Pro
         />
 
         <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-          <button
-            type="submit"
-            className="crm-btn-primary inline-flex h-10 w-full items-center justify-center gap-2 sm:w-auto"
+          <CrmSubmitButton
+            className="inline-flex h-10 w-full items-center justify-center gap-2 sm:w-auto"
+            loadingText="Збереження…"
           >
             <Save className="size-4" aria-hidden="true" />
             Зберегти зміни
-          </button>
+          </CrmSubmitButton>
           <a
             className="crm-btn-amber w-full sm:w-auto"
             href={`/api/attestation/documents/report?groupId=${id}`}
@@ -308,19 +310,23 @@ export default async function EditAttestationGroupPage({ params }: { params: Pro
             <ChartColumn className="size-4 shrink-0" aria-hidden />
             Згенерувати звіт
           </a>
-          <Link className="crm-btn-neutral w-full sm:w-auto" href="/attestation/groups">
+          <CrmButton variant="neutral" href="/attestation/groups" className="w-full sm:w-auto">
             <List className="size-4 shrink-0" aria-hidden />
             До списку груп
-          </Link>
+          </CrmButton>
         </div>
       </GuardedForm>
 
       <div className="mt-6">
         <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-base font-semibold text-foreground">Зварники у групі</h2>
-          <Link className="crm-btn-blue w-full shrink-0 sm:w-auto" href={`/attestation/welders/new?groupId=${id}`}>
+          <CrmButton
+            variant="blue"
+            href={`/attestation/welders/new?groupId=${id}`}
+            className="w-full shrink-0 sm:w-auto"
+          >
             Додати зварника
-          </Link>
+          </CrmButton>
         </div>
         <div className="overflow-x-auto rounded-md border border-border bg-card">
           <table className="w-full min-w-[480px] border-collapse text-sm">
@@ -371,22 +377,22 @@ export default async function EditAttestationGroupPage({ params }: { params: Pro
         <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap">
           {group.status === "draft" ? (
             <GuardedForm action={markActive} className="contents">
-              <button type="submit" className="crm-btn-outline w-full sm:w-auto">
+              <CrmSubmitButton variant="outline" className="w-full sm:w-auto" loadingText="Оновлення…">
                 Позначити як активну
-              </button>
+              </CrmSubmitButton>
             </GuardedForm>
           ) : null}
           {group.status === "active" ? (
             <GuardedForm action={revertToDraft} className="contents">
-              <button type="submit" className="crm-btn-outline w-full sm:w-auto">
+              <CrmSubmitButton variant="outline" className="w-full sm:w-auto" loadingText="Оновлення…">
                 Повернути до чернетки
-              </button>
+              </CrmSubmitButton>
             </GuardedForm>
           ) : null}
           <GuardedForm action={markCompleted} className="contents">
-            <button type="submit" className="crm-btn-outline w-full sm:w-auto">
+            <CrmSubmitButton variant="outline" className="w-full sm:w-auto" loadingText="Оновлення…">
               Позначити як завершену
-            </button>
+            </CrmSubmitButton>
           </GuardedForm>
           <ArchiveAttestationGroupButton archiveGroup={archiveGroup} groupNumber={group.groupNumber} />
         </div>

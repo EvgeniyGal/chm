@@ -1,5 +1,4 @@
 import { List, Save } from "lucide-react";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { and, desc, eq, inArray } from "drizzle-orm";
 
@@ -12,6 +11,8 @@ import {
 import { CommissionGroupPickers } from "@/components/attestation/CommissionGroupPickers";
 import { CertificateIssueLocationField } from "@/components/attestation/CertificateIssueLocationField";
 import { GuardedForm } from "@/components/forms/GuardedForm";
+import { CrmButton } from "@/components/ui/crm-button";
+import { CrmSubmitButton } from "@/components/ui/crm-submit-button";
 import { requireApprovedUser } from "@/lib/authz";
 import { certificationGroupCreateSchema } from "@/lib/attestation/validation";
 import { DROPDOWN_SCOPE, getDropdownOptions, saveDropdownOption } from "@/lib/dropdown-options";
@@ -179,17 +180,17 @@ export default async function NewAttestationGroupPage() {
         />
 
         <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-          <button
-            type="submit"
-            className="crm-btn-primary inline-flex h-10 w-full items-center justify-center gap-2 sm:w-auto"
+          <CrmSubmitButton
+            className="inline-flex h-10 w-full items-center justify-center gap-2 sm:w-auto"
+            loadingText="Створення…"
           >
             <Save className="size-4" aria-hidden="true" />
             Створити групу
-          </button>
-          <Link className="crm-btn-neutral w-full sm:w-auto" href="/attestation/groups">
+          </CrmSubmitButton>
+          <CrmButton variant="neutral" href="/attestation/groups" className="w-full sm:w-auto">
             <List className="size-4 shrink-0" aria-hidden />
             До списку груп
-          </Link>
+          </CrmButton>
         </div>
       </GuardedForm>
     </div>

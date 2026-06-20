@@ -1,10 +1,11 @@
 "use client";
 
-import { Loader2, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 const deleteIconBtn =
@@ -52,23 +53,19 @@ export function TemplateDeleteButton({ templateId, templateName }: { templateId:
             Буде видалено «{templateName.trim() || "шаблон"}» зі сховища. Цю дію не можна скасувати.
           </p>
           <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-3">
-            <button
-              type="button"
-              disabled={pending}
-              className="h-9 rounded-md border border-border px-3 text-sm hover:bg-muted/60 disabled:opacity-60"
-              onClick={() => setOpen(false)}
-            >
+            <Button type="button" variant="outline" disabled={pending} onClick={() => setOpen(false)}>
               Скасувати
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              className="bg-red-600 text-white hover:bg-red-700"
               disabled={pending}
-              className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-red-600 px-3 text-sm text-white hover:bg-red-700 disabled:opacity-60"
-              onClick={() => void confirmDelete()}
+              loading={pending}
+              loadingText="Видалення…"
+              onClick={() => confirmDelete()}
             >
-              {pending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
               Видалити
-            </button>
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

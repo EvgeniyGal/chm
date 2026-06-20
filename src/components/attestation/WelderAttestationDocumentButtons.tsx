@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { CrmButton } from "@/components/ui/crm-button";
+
 import { getServerActionErrorMessage } from "@/lib/server-action-error-message";
 import { isNextNavigationError } from "@/lib/is-next-navigation-error";
 
@@ -115,24 +117,28 @@ export function WelderAttestationDocumentButtons({
 
   return (
     <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-      <button
-        type="button"
+      <CrmButton
+        variant="amber"
         disabled={busy !== null}
-        className="crm-btn-amber w-full sm:w-auto"
-        onClick={() => void saveThenDownload("protocol")}
+        loading={busy === "protocol"}
+        loadingText="Збереження…"
+        className="w-full sm:w-auto"
+        onClick={() => saveThenDownload("protocol")}
       >
         <FileText className="size-4 shrink-0" aria-hidden />
-        {busy === "protocol" ? "Збереження…" : "Протокол"}
-      </button>
-      <button
-        type="button"
+        Протокол
+      </CrmButton>
+      <CrmButton
+        variant="sky"
         disabled={busy !== null}
-        className="crm-btn-sky w-full sm:w-auto"
-        onClick={() => void saveThenDownload("certificate")}
+        loading={busy === "certificate"}
+        loadingText="Збереження…"
+        className="w-full sm:w-auto"
+        onClick={() => saveThenDownload("certificate")}
       >
         <Award className="size-4 shrink-0" aria-hidden />
-        {busy === "certificate" ? "Збереження…" : "Посвідчення"}
-      </button>
+        Посвідчення
+      </CrmButton>
     </div>
   );
 }

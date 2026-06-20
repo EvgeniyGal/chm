@@ -5,6 +5,7 @@ import { auth } from "@/auth";
 import { AppSidebarNav, ProfileSidebarLink } from "@/components/app-sidebar-nav";
 import { MobileSidebar } from "@/components/layout/MobileSidebar";
 import { LogoutButton } from "@/components/logout-button";
+import { NavigationPageContent, NavigationPendingProvider } from "@/components/navigation/navigation-pending";
 import { AppScrollViewport } from "@/components/ui/AppScrollViewport";
 
 function SidebarContent({ name, email, role }: { name?: string | null; email?: string | null; role?: string }) {
@@ -34,20 +35,22 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const role = (session.user as { role?: string }).role;
 
   return (
-    <div className="flex min-h-full flex-1 bg-background">
-      <MobileSidebar name={session.user.name} email={session.user.email} role={role} />
-      <aside className="hidden w-52 border-r border-sidebar-border bg-sidebar p-3 text-sidebar-foreground md:block">
-        <SidebarContent name={session.user.name} email={session.user.email} role={role} />
-      </aside>
-      <main className="min-w-0 flex-1 overflow-hidden">
-        <AppScrollViewport contentClassName="p-4 pt-16 md:p-6 md:pt-6">
-          <div className="md:hidden">
-            <div className="mb-2 text-xs text-muted-foreground">{session.user.email}</div>
-          </div>
-          {children}
-        </AppScrollViewport>
-      </main>
-    </div>
+    <NavigationPendingProvider>
+      <div className="flex min-h-full flex-1 bg-background">
+        <MobileSidebar name={session.user.name} email={session.user.email} role={role} />
+        <aside className="hidden w-52 border-r border-sidebar-border bg-sidebar p-3 text-sidebar-foreground md:block">
+          <SidebarContent name={session.user.name} email={session.user.email} role={role} />
+        </aside>
+        <main className="min-w-0 flex-1 overflow-hidden">
+          <AppScrollViewport contentClassName="p-4 pt-16 md:p-6 md:pt-6">
+            <div className="md:hidden">
+              <div className="mb-2 text-xs text-muted-foreground">{session.user.email}</div>
+            </div>
+            <NavigationPageContent>{children}</NavigationPageContent>
+          </AppScrollViewport>
+        </main>
+      </div>
+    </NavigationPendingProvider>
   );
 }
 

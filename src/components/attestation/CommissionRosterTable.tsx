@@ -14,6 +14,7 @@ import {
 import { toast } from "sonner";
 
 import { ArchiveCommissionConfirmDialog } from "@/components/attestation/ArchiveCommissionConfirmDialog";
+import { CrmSubmitButton } from "@/components/ui/crm-submit-button";
 import { listTableHeaderClass } from "@/components/data-table/list-styles";
 import { SortableHeader, sortRowsLocaleUk } from "@/components/data-table/sortable-column-header";
 import { commissionMemberRoleLabelUk } from "@/lib/attestation/commission-member-labels";
@@ -231,9 +232,9 @@ export function CommissionRosterTable({
           </label>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button type="submit" className="crm-btn-primary h-9 px-3 text-sm">
+          <CrmSubmitButton className="h-9 px-3 text-sm" loadingText="Збереження…">
             Зберегти
-          </button>
+          </CrmSubmitButton>
           <button
             type="button"
             className="inline-flex h-9 items-center rounded-md border px-3 text-sm"

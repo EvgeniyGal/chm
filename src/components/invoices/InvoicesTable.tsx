@@ -8,13 +8,14 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { useRouter } from "next/navigation";
-import { FiCopy, FiDownload, FiFileText, FiTrash2, FiUpload } from "react-icons/fi";
+import { FiDownload } from "react-icons/fi";
 import { toast } from "sonner";
 
+import { InvoiceRowActions } from "@/components/invoices/InvoiceRowActions";
 import { EmptyListState } from "@/components/data-table/empty-list-state";
 import { ListPagePagination } from "@/components/data-table/list-page-pagination";
 import { ListPageToolbar } from "@/components/data-table/list-page-toolbar";
-import { listTableHeaderClass, tableActionIconClassName } from "@/components/data-table/list-styles";
+import { listTableHeaderClass } from "@/components/data-table/list-styles";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -335,53 +336,18 @@ export function InvoicesTable({
           const rowBusy = duplicatePendingId === inv.id;
           return (
             <div className="flex flex-nowrap items-center justify-center gap-1">
-              {canGenerateDocuments ? (
-                <>
-                  <a
-                    className={tableActionIconClassName}
-                    href={`/api/documents/invoice/${inv.id}`}
-                    aria-label="Сформувати рахунок"
-                    title="Сформувати рахунок"
-                  >
-                    <FiFileText aria-hidden="true" className="size-4" />
-                  </a>
-                  <a
-                    className={tableActionIconClassName}
-                    href={`/invoices/${inv.id}/scans`}
-                    aria-label="Додати скан документа"
-                    title="Додати скан документа"
-                  >
-                    <FiUpload aria-hidden="true" className="size-4" />
-                  </a>
-                </>
-              ) : null}
-              {canGenerateAnalogue && inv.origin !== "contract" ? (
-                <button
-                  type="button"
-                  className={tableActionIconClassName}
-                  aria-label="Створити рахунок-аналог"
-                  title="Згенерувати аналог"
-                  disabled={rowBusy}
-                  onClick={() => void duplicateInvoice(inv.id)}
-                >
-                  <FiCopy aria-hidden="true" className="size-4" />
-                </button>
-              ) : null}
-              {canManageInvoices ? (
-                <button
-                  type="button"
-                  className={cn(
-                    tableActionIconClassName,
-                    "border-red-200 text-red-600 hover:bg-red-50 dark:border-red-900/50 dark:text-red-400 dark:hover:bg-red-950/40",
-                  )}
-                  aria-label="Видалити рахунок"
-                  title="Видалити"
-                  onClick={() => setDeleteConfirm({ id: inv.id, number: inv.number })}
-                  disabled={rowBusy}
-                >
-                  <FiTrash2 aria-hidden="true" className="size-4" />
-                </button>
-              ) : null}
+              <InvoiceRowActions
+                invoiceId={inv.id}
+                invoiceNumber={inv.number}
+                origin={inv.origin}
+                rowBusy={rowBusy}
+                duplicatePendingId={duplicatePendingId}
+                canGenerateDocuments={canGenerateDocuments}
+                canGenerateAnalogue={canGenerateAnalogue}
+                canManageInvoices={canManageInvoices}
+                onDuplicate={(invoiceId) => void duplicateInvoice(invoiceId)}
+                onDeleteConfirm={setDeleteConfirm}
+              />
             </div>
           );
         },
@@ -461,9 +427,11 @@ export function InvoicesTable({
               type="button"
               variant="destructive"
               disabled={deleteBusy}
-              onClick={() => void confirmDeleteInvoice()}
+              loading={deleteBusy}
+              loadingText="Видалення…"
+              onClick={() => confirmDeleteInvoice()}
             >
-              {deleteBusy ? "Видалення…" : "Видалити"}
+              Видалити
             </Button>
           </div>
         </DialogContent>
@@ -644,53 +612,18 @@ export function InvoicesTable({
                   З ПДВ: {formatMoney(Number.parseFloat(inv.totalWithVat) || 0)}
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2" onClick={(e) => e.stopPropagation()}>
-                  {canGenerateDocuments ? (
-                    <>
-                      <a
-                        className={tableActionIconClassName}
-                        href={`/api/documents/invoice/${inv.id}`}
-                        aria-label="Сформувати рахунок"
-                        title="Сформувати рахунок"
-                      >
-                        <FiFileText aria-hidden="true" className="size-4" />
-                      </a>
-                      <a
-                        className={tableActionIconClassName}
-                        href={`/invoices/${inv.id}/scans`}
-                        aria-label="Додати скан документа"
-                        title="Додати скан документа"
-                      >
-                        <FiUpload aria-hidden="true" className="size-4" />
-                      </a>
-                    </>
-                  ) : null}
-                  {canGenerateAnalogue && inv.origin !== "contract" ? (
-                    <button
-                      type="button"
-                      className={tableActionIconClassName}
-                      aria-label="Створити рахунок-аналог"
-                      title="Згенерувати аналог"
-                      disabled={rowBusy}
-                      onClick={() => void duplicateInvoice(inv.id)}
-                    >
-                      <FiCopy aria-hidden="true" className="size-4" />
-                    </button>
-                  ) : null}
-                  {canManageInvoices ? (
-                    <button
-                      type="button"
-                      className={cn(
-                        tableActionIconClassName,
-                        "border-red-200 text-red-600 hover:bg-red-50 dark:border-red-900/50 dark:text-red-400 dark:hover:bg-red-950/40",
-                      )}
-                      aria-label="Видалити рахунок"
-                      title="Видалити"
-                      onClick={() => setDeleteConfirm({ id: inv.id, number: inv.number })}
-                      disabled={rowBusy}
-                    >
-                      <FiTrash2 aria-hidden="true" className="size-4" />
-                    </button>
-                  ) : null}
+                  <InvoiceRowActions
+                    invoiceId={inv.id}
+                    invoiceNumber={inv.number}
+                    origin={inv.origin}
+                    rowBusy={rowBusy}
+                    duplicatePendingId={duplicatePendingId}
+                    canGenerateDocuments={canGenerateDocuments}
+                    canGenerateAnalogue={canGenerateAnalogue}
+                    canManageInvoices={canManageInvoices}
+                    onDuplicate={(invoiceId) => void duplicateInvoice(invoiceId)}
+                    onDeleteConfirm={setDeleteConfirm}
+                  />
                 </div>
               </div>
             );

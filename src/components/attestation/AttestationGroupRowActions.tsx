@@ -1,9 +1,8 @@
 "use client";
 
 import { ChartColumn, UserPlus } from "lucide-react";
-import Link from "next/link";
 
-import { tableActionIconClassName } from "@/components/data-table/list-styles";
+import { TableActionButton } from "@/components/data-table/table-action-button";
 import { cn } from "@/lib/utils";
 
 const iconPrimaryClassName = cn(
@@ -21,23 +20,22 @@ export function AttestationGroupRowActions({
 
   return (
     <div className="flex flex-nowrap items-center justify-end gap-1">
-      <a
-        className={tableActionIconClassName}
+      <TableActionButton
         href={`/api/attestation/documents/report?groupId=${groupId}`}
         title="Згенерувати звіт"
         aria-label="Згенерувати звіт по групі"
       >
         <ChartColumn className="size-4 shrink-0" aria-hidden />
-      </a>
+      </TableActionButton>
       {canMutate ? (
-        <Link
-          className={iconPrimaryClassName}
+        <TableActionButton
           href={`/attestation/welders/new?groupId=${groupId}`}
+          className={iconPrimaryClassName}
           title="Додати зварника"
           aria-label="Додати зварника в групу"
         >
           <UserPlus className="size-4 shrink-0" aria-hidden />
-        </Link>
+        </TableActionButton>
       ) : null}
     </div>
   );

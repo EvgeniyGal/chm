@@ -5,6 +5,7 @@ import { type ComponentPropsWithoutRef, forwardRef, useEffect, useImperativeHand
 import { toast } from "sonner";
 
 import { useUnsavedChangesGuard } from "@/components/forms/useUnsavedChangesGuard";
+import { Button } from "@/components/ui/button";
 import { getServerActionErrorMessage } from "@/lib/server-action-error-message";
 import { isNextNavigationError } from "@/lib/is-next-navigation-error";
 
@@ -158,10 +159,12 @@ export const GuardedForm = forwardRef<GuardedFormHandle, GuardedFormProps>(funct
                 </button>
               </Dialog.Close>
               {enableSaveAndProceed ? (
-                <button
+                <Button
                   type="button"
                   disabled={saving}
-                  className="min-h-9 w-full rounded-md border border-emerald-600 bg-emerald-600 px-3 text-center text-sm leading-tight text-white whitespace-normal hover:bg-emerald-700 disabled:opacity-60"
+                  loading={saving}
+                  loadingText="Збереження…"
+                  className="min-h-9 h-auto w-full whitespace-normal border-emerald-600 bg-emerald-600 py-2 text-white hover:bg-emerald-700"
                   onClick={async () => {
                     const form = formRef.current;
                     if (!form || !pendingHref) return;
@@ -195,8 +198,8 @@ export const GuardedForm = forwardRef<GuardedFormHandle, GuardedFormProps>(funct
                     }
                   }}
                 >
-                  {saving ? "Збереження…" : "Зберегти та перейти"}
-                </button>
+                  Зберегти та перейти
+                </Button>
               ) : null}
               <Dialog.Close asChild>
                 <button

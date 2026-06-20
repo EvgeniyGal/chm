@@ -6,14 +6,13 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { WelderListConfirmDialog } from "@/components/attestation/WelderListConfirmDialog";
-import { tableActionIconClassName } from "@/components/data-table/list-styles";
+import { TableActionButton } from "@/components/data-table/table-action-button";
 import { deleteWelderAction } from "@/lib/attestation/delete-welder-action";
 import { getServerActionErrorMessage } from "@/lib/server-action-error-message";
 import { isNextNavigationError } from "@/lib/is-next-navigation-error";
 import { cn } from "@/lib/utils";
 
 const iconDestructiveClassName = cn(
-  tableActionIconClassName,
   "border-destructive/50 text-destructive hover:bg-destructive/10 hover:text-destructive",
 );
 
@@ -28,6 +27,7 @@ export function WelderListRowActions({
   const canMutate = groupStatus !== "completed" && groupStatus !== "archived";
 
   const [dupOpen, setDupOpen] = useState(false);
+  const [dupPending, setDupPending] = useState(false);
   const [delOpen, setDelOpen] = useState(false);
   const [deletePending, setDeletePending] = useState(false);
 
@@ -50,47 +50,44 @@ export function WelderListRowActions({
 
   function confirmDuplicate() {
     setDupOpen(false);
+    setDupPending(true);
     router.push(`/attestation/welders/new?from=${welderId}`);
   }
 
   return (
     <>
       <div className="flex flex-nowrap items-center justify-end gap-1">
-        <button
-          type="button"
-          className={tableActionIconClassName}
+        <TableActionButton
           title="Новий запис за шаблоном (ПІБ, стаж і компанію ввести заново; група — лише якщо активна)"
           aria-label="Дублювати як новий запис"
+          loading={dupPending}
           onClick={() => setDupOpen(true)}
         >
           <Copy className="size-4 shrink-0" aria-hidden />
-        </button>
-        <a
-          className={tableActionIconClassName}
+        </TableActionButton>
+        <TableActionButton
           href={`/api/attestation/documents/protocol?welderId=${welderId}`}
           title="Згенерувати протокол"
           aria-label="Згенерувати протокол"
         >
           <FileText className="size-4 shrink-0" aria-hidden />
-        </a>
-        <a
-          className={tableActionIconClassName}
+        </TableActionButton>
+        <TableActionButton
           href={`/api/attestation/documents/certificate?welderId=${welderId}`}
           title="Згенерувати посвідчення"
           aria-label="Згенерувати посвідчення"
         >
           <Award className="size-4 shrink-0" aria-hidden />
-        </a>
+        </TableActionButton>
         {canMutate ? (
-          <button
-            type="button"
+          <TableActionButton
             className={iconDestructiveClassName}
             title="Видалити запис атестації"
             aria-label="Видалити запис атестації"
             onClick={() => setDelOpen(true)}
           >
             <Trash2 className="size-4 shrink-0" aria-hidden />
-          </button>
+          </TableActionButton>
         ) : null}
       </div>
 

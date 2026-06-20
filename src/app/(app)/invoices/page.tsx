@@ -1,6 +1,7 @@
 import { and, asc, count, desc, eq, gte, ilike, inArray, isNotNull, isNull, lte, or, sql } from "drizzle-orm";
 
 import { InvoicesTable } from "@/components/invoices/InvoicesTable";
+import { CrmButton } from "@/components/ui/crm-button";
 import { db } from "@/db";
 import { companies, invoices, lineItems } from "@/db/schema";
 import { requireRole } from "@/lib/authz";
@@ -171,9 +172,7 @@ export default async function InvoicesPage({
       <div className="flex items-end justify-between gap-3">
         <h1 className="page-title">Рахунки</h1>
         {canManageInvoices ? (
-          <a className="crm-btn-primary" href="/invoices/new">
-            Додати рахунок
-          </a>
+          <CrmButton href="/invoices/new">Додати рахунок</CrmButton>
         ) : null}
       </div>
 

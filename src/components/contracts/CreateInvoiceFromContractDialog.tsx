@@ -1,11 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { CrmButton } from "@/components/ui/crm-button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import type { ContractLineInvoiceRemaining } from "@/lib/contract-invoice-remaining";
 import { invoicePartialSelectionStorageKey } from "@/lib/invoice-from-contract-session";
@@ -23,6 +23,7 @@ export function CreateInvoiceFromContractDialog({
 }) {
   const router = useRouter();
   const [step, setStep] = useState<"menu" | "pick">("menu");
+  const [partialNavLoading, setPartialNavLoading] = useState(false);
   const billable = useMemo(() => lines.filter((l) => l.remaining > 0), [lines]);
 
   const [pick, setPick] = useState<Record<string, { on: boolean; qty: string }>>({});
@@ -38,31 +39,38 @@ export function CreateInvoiceFromContractDialog({
   }, [open, billable]);
 
   function applyPartialAndGo() {
-    const payload: Array<{ sourceContractLineItemId: string; quantity: number }> = [];
-    for (const l of billable) {
-      const row = pick[l.id];
-      if (!row?.on) continue;
-      const q = Number.parseFloat(String(row.qty).replace(",", "."));
-      if (!Number.isFinite(q) || q <= 0) continue;
-      const qty = Math.min(q, l.remaining);
-      if (qty <= 0) continue;
-      payload.push({ sourceContractLineItemId: l.id, quantity: qty });
-    }
-    if (payload.length === 0) {
-      toast.error("Оберіть хоча б одну позицію з кількістю більше нуля.");
-      return;
-    }
+    setPartialNavLoading(true);
     try {
-      sessionStorage.setItem(
-        invoicePartialSelectionStorageKey(contractId),
-        JSON.stringify({ v: 1, lines: payload }),
-      );
+      const payload: Array<{ sourceContractLineItemId: string; quantity: number }> = [];
+      for (const l of billable) {
+        const row = pick[l.id];
+        if (!row?.on) continue;
+        const q = Number.parseFloat(String(row.qty).replace(",", "."));
+        if (!Number.isFinite(q) || q <= 0) continue;
+        const qty = Math.min(q, l.remaining);
+        if (qty <= 0) continue;
+        payload.push({ sourceContractLineItemId: l.id, quantity: qty });
+      }
+      if (payload.length === 0) {
+        toast.error("Оберіть хоча б одну позицію з кількістю більше нуля.");
+        setPartialNavLoading(false);
+        return;
+      }
+      try {
+        sessionStorage.setItem(
+          invoicePartialSelectionStorageKey(contractId),
+          JSON.stringify({ v: 1, lines: payload }),
+        );
+      } catch {
+        toast.error("Не вдалося зберегти вибір. Спробуйте ще раз.");
+        setPartialNavLoading(false);
+        return;
+      }
+      onOpenChange(false);
+      router.push(`/invoices/new?contractId=${contractId}&partial=1`);
     } catch {
-      toast.error("Не вдалося зберегти вибір. Спробуйте ще раз.");
-      return;
+      setPartialNavLoading(false);
     }
-    onOpenChange(false);
-    router.push(`/invoices/new?contractId=${contractId}&partial=1`);
   }
 
   const nothingToBill = billable.length === 0;
@@ -91,13 +99,13 @@ export function CreateInvoiceFromContractDialog({
               позиції з ненульовим залишком.
             </p>
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-              <Link
+              <CrmButton
                 href={`/invoices/new?contractId=${contractId}`}
-                className="crm-btn-primary inline-flex h-10 items-center justify-center rounded-md px-4 text-sm"
+                className="inline-flex h-10 items-center justify-center rounded-md px-4 text-sm"
                 onClick={() => onOpenChange(false)}
               >
                 Усі доступні залишки
-              </Link>
+              </CrmButton>
               <Button type="button" variant="outline" onClick={() => setStep("pick")}>
                 Обрати позиції та кількості
               </Button>
@@ -170,9 +178,9 @@ export function CreateInvoiceFromContractDialog({
               <Button type="button" variant="outline" onClick={() => setStep("menu")}>
                 Назад
               </Button>
-              <Button type="button" className="crm-btn-primary" onClick={() => void applyPartialAndGo()}>
+              <CrmButton type="button" loading={partialNavLoading} loadingText="Перехід…" onClick={() => applyPartialAndGo()}>
                 Далі — оформити рахунок
-              </Button>
+              </CrmButton>
             </div>
           </div>
         )}

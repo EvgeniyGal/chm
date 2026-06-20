@@ -9,6 +9,7 @@ import { ActingUnderField } from "@/components/forms/ActingUnderField";
 import { ContactsField } from "@/components/forms/ContactsField";
 import { SignerPositionField } from "@/components/forms/SignerPositionField";
 import { TaxStatusField } from "@/components/forms/TaxStatusField";
+import { CrmButton } from "@/components/ui/crm-button";
 
 type CreatedCompany = {
   id: string;
@@ -365,14 +366,14 @@ export function QuickCreateCompanyModal({
                 {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
                 <div className="mt-2 flex gap-3">
-                  <button
-                    type="button"
+                  <CrmButton
                     disabled={submitting}
-                    className="crm-btn-primary disabled:opacity-50"
+                    loading={submitting}
+                    loadingText="Створення…"
                     onClick={submit}
                   >
-                    {submitting ? "Створення..." : "Зберегти"}
-                  </button>
+                    Зберегти
+                  </CrmButton>
                   <button
                     type="button"
                     className="inline-flex h-10 items-center rounded-md border px-4 text-sm hover:bg-zinc-50"

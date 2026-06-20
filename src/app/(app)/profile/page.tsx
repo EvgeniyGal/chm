@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { auth } from "@/auth";
 import { FormWithToastAction } from "@/components/forms/FormWithToastAction";
+import { CrmSubmitButton } from "@/components/ui/crm-submit-button";
 import { db } from "@/db";
 import { emailChangeTokens, users } from "@/db/schema";
 import { requireRole } from "@/lib/authz";
@@ -147,12 +148,9 @@ export default async function ProfilePage({
             />
           </label>
           <div className="md:col-span-2">
-            <button
-              className="inline-flex h-10 items-center justify-center rounded-md border px-4 text-sm hover:bg-zinc-50"
-              type="submit"
-            >
+            <CrmSubmitButton variant="outline" className="inline-flex h-10 items-center justify-center rounded-md border px-4 text-sm hover:bg-zinc-50" loadingText="Збереження…">
               Зберегти ім'я
-            </button>
+            </CrmSubmitButton>
           </div>
         </FormWithToastAction>
       </div>
@@ -197,12 +195,9 @@ export default async function ProfilePage({
                 className="h-10 rounded-md border px-3"
               />
             </label>
-            <button
-              className="inline-flex h-10 items-center justify-center rounded-md border px-4 text-sm hover:bg-zinc-50"
-              type="submit"
-            >
+            <CrmSubmitButton variant="outline" className="inline-flex h-10 items-center justify-center rounded-md border px-4 text-sm hover:bg-zinc-50" loadingText="Збереження…">
               Змінити пароль
-            </button>
+            </CrmSubmitButton>
           </FormWithToastAction>
         ) : (
           <p className="mt-2 text-xs text-zinc-600">Для цього акаунта не встановлено пароль (лише зовнішній вхід).</p>
@@ -232,9 +227,9 @@ export default async function ProfilePage({
         <div className="font-semibold text-foreground">Зміна email</div>
         <FormWithToastAction className="mt-3 flex flex-col gap-3" action={requestEmailChange}>
           <input name="newEmail" type="email" required className="h-10 rounded-md border px-3" placeholder="new@email.com" />
-          <button className="inline-flex h-10 items-center justify-center rounded-md border px-4 text-sm hover:bg-zinc-50" type="submit">
+          <CrmSubmitButton variant="outline" className="inline-flex h-10 items-center justify-center rounded-md border px-4 text-sm hover:bg-zinc-50" loadingText="Надсилання…">
             Запросити підтвердження
-          </button>
+          </CrmSubmitButton>
           {emailChangeStatus === "sent" ? (
             <p className="text-xs text-emerald-700">Лист підтвердження надіслано на новий email.</p>
           ) : null}

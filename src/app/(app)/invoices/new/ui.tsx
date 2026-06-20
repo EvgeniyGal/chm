@@ -16,6 +16,8 @@ import { getServerActionErrorMessage } from "@/lib/server-action-error-message";
 import { isNextNavigationError } from "@/lib/is-next-navigation-error";
 import { invoicePartialSelectionStorageKey } from "@/lib/invoice-from-contract-session";
 import { LineItemsTable } from "@/components/line-items/LineItemsTable";
+import { CrmButton } from "@/components/ui/crm-button";
+import { CrmFormSubmitButton } from "@/components/ui/crm-form-submit-button";
 import { SignedUpload } from "@/components/uploads/SignedUpload";
 import type { SignedScanListItem } from "@/lib/signed-scans";
 
@@ -167,6 +169,7 @@ export function InvoiceForm({
 
   const [actLoading, setActLoading] = useState(false);
   const [docLoading, setDocLoading] = useState(false);
+  const [saveLoading, setSaveLoading] = useState(false);
   const [editInvoiceDocLoading, setEditInvoiceDocLoading] = useState(false);
   const [editAcceptanceActNavLoading, setEditAcceptanceActNavLoading] = useState(false);
   const [analogueLoading, setAnalogueLoading] = useState(false);
@@ -366,24 +369,32 @@ export function InvoiceForm({
   }
 
   async function submitInvoice(values: InvoiceFormValues, options?: { allowRedirect?: boolean }) {
-    const payload = buildSubmitPayload(values);
-    const allowRedirect = options?.allowRedirect ?? true;
-
+    setSaveLoading(true);
     try {
-      await onSubmit(payload);
-      if (mode === "edit") {
-        toast.success("Рахунок збережено.");
-        router.refresh();
-        form.reset(values);
+      const payload = buildSubmitPayload(values);
+      const allowRedirect = options?.allowRedirect ?? true;
+
+      try {
+        await onSubmit(payload);
+        if (mode === "edit") {
+          toast.success("Рахунок збережено.");
+          router.refresh();
+          form.reset(values);
+        }
+      } catch (e) {
+        if (isNextNavigationError(e)) {
+          toast.success("Рахунок створено.");
+          if (allowRedirect) throw e;
+          return;
+        }
+        toast.error(getServerActionErrorMessage(e));
+        throw e;
       }
     } catch (e) {
-      if (isNextNavigationError(e)) {
-        toast.success("Рахунок створено.");
-        if (allowRedirect) throw e;
-        return;
-      }
-      toast.error(getServerActionErrorMessage(e));
+      if (e instanceof Error && e.message === "VALIDATION_ERROR") return;
       throw e;
+    } finally {
+      setSaveLoading(false);
     }
   }
 
@@ -425,6 +436,73 @@ export function InvoiceForm({
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
+  }
+
+  async function handleCreateInvoiceDoc() {
+    setDocLoading(true);
+    try {
+      await form.handleSubmit(async (values) => {
+        const payload = buildSubmitPayload(values);
+        const { invoiceId: newId } = await onCreateInvoiceReturningId!(payload);
+        await downloadInvoiceDocx(newId);
+        toast.success("Рахунок збережено. Документ завантажено.");
+        router.push(`/invoices/${newId}/edit`);
+      })();
+    } catch (e) {
+      if (!isNextNavigationError(e)) {
+        toast.error(getServerActionErrorMessage(e));
+      }
+    } finally {
+      setDocLoading(false);
+    }
+  }
+
+  async function handleCreateInvoiceAndAct() {
+    setActLoading(true);
+    try {
+      await form.handleSubmit(async (values) => {
+        const payload = buildSubmitPayload(values);
+        const { invoiceId: newId } = await onCreateInvoiceReturningId!(payload);
+        toast.success("Рахунок збережено.");
+        router.push(`/acceptance-acts/new?invoiceId=${newId}`);
+      })();
+    } catch (e) {
+      if (!isNextNavigationError(e)) {
+        toast.error(getServerActionErrorMessage(e));
+      }
+    } finally {
+      setActLoading(false);
+    }
+  }
+
+  async function handleEditInvoiceDocDownload() {
+    setEditInvoiceDocLoading(true);
+    try {
+      if (form.formState.isDirty) {
+        await form.handleSubmit(async (values) => submitInvoice(values))();
+      }
+      if (!invoiceId) return;
+      await downloadInvoiceDocx(invoiceId);
+    } catch {
+      /* submitInvoice already shows toast */
+    } finally {
+      setEditInvoiceDocLoading(false);
+    }
+  }
+
+  async function handleEditCreateAcceptanceAct() {
+    setEditAcceptanceActNavLoading(true);
+    try {
+      if (form.formState.isDirty) {
+        await form.handleSubmit(async (values) => submitInvoice(values))();
+      }
+      if (!invoiceId) return;
+      router.push(`/acceptance-acts/new?invoiceId=${invoiceId}`);
+    } catch {
+      /* submitInvoice already shows toast */
+    } finally {
+      setEditAcceptanceActNavLoading(false);
+    }
   }
 
   return (
@@ -664,13 +742,6 @@ export function InvoiceForm({
           )}
         </div>
 
-        {mode === "edit" && invoiceId ? (
-          <div className="flex flex-col gap-4 rounded-lg border border-border bg-card p-4">
-            <div className="text-sm font-semibold text-foreground">Документ</div>
-            <SignedUpload entityType="INVOICE" entityId={invoiceId} initialScans={signedScansInitial} />
-          </div>
-        ) : null}
-
         <div className="flex flex-col gap-2">
           <div className="text-sm font-semibold text-foreground">{lineItemsHeading}</div>
           <LineItemsTable
@@ -686,165 +757,121 @@ export function InvoiceForm({
         </div>
 
         <div className="mt-2 flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center">
-          <button
-            type="submit"
-            className="crm-btn-primary inline-flex h-10 w-full items-center justify-center gap-2 md:w-auto"
+          <CrmFormSubmitButton
+            className="inline-flex h-10 w-full items-center justify-center gap-2 md:w-auto"
+            disabled={docLoading || actLoading || analogueLoading || editInvoiceDocLoading || editAcceptanceActNavLoading}
+            loading={saveLoading}
+            loadingText="Збереження…"
           >
             <FiSave className="size-4 shrink-0" aria-hidden />
             Зберегти
-          </button>
-          <a className="crm-btn-neutral w-full md:w-auto" href={cancelHref}>
+          </CrmFormSubmitButton>
+          <CrmButton variant="neutral" href={cancelHref} className="w-full md:w-auto">
             <FiList className="size-4 shrink-0" aria-hidden />
             До списку рахунків
-          </a>
+          </CrmButton>
           {isFromContract && contract?.id ? (
-            <a
-              className="crm-btn-teal w-full md:w-auto"
+            <CrmButton
+              variant="teal"
               href={`/contracts/${contract.id}/edit`}
+              className="w-full md:w-auto"
               title="Перейти до договору, на основі якого створено рахунок"
             >
               <FiExternalLink className="size-4 shrink-0" aria-hidden />
               До договору
-            </a>
+            </CrmButton>
           ) : null}
           {mode === "edit" && existingAcceptanceActId ? (
-            <a
-              className="crm-btn-teal w-full md:w-auto"
+            <CrmButton
+              variant="teal"
               href={`/acceptance-acts/${existingAcceptanceActId}`}
+              className="w-full md:w-auto"
               title="Для цього рахунку вже створено акт приймання-передачі"
             >
               <FiExternalLink className="size-4 shrink-0" aria-hidden />
               До акта
-            </a>
+            </CrmButton>
           ) : null}
           {mode === "create" && onCreateInvoiceReturningId ? (
             <>
-              <button
-                type="button"
-                disabled={docLoading || actLoading}
-                className="crm-btn-amber w-full md:w-auto"
-                onClick={() => {
-                  setDocLoading(true);
-                  void form
-                    .handleSubmit(async (values) => {
-                      try {
-                        const payload = buildSubmitPayload(values);
-                        const { invoiceId } = await onCreateInvoiceReturningId(payload);
-                        await downloadInvoiceDocx(invoiceId);
-                        toast.success("Рахунок збережено. Документ завантажено.");
-                        router.push(`/invoices/${invoiceId}/edit`);
-                      } catch (e) {
-                        if (!isNextNavigationError(e)) {
-                          toast.error(getServerActionErrorMessage(e));
-                        }
-                      }
-                    })()
-                    .finally(() => setDocLoading(false));
-                }}
+              <CrmButton
+                variant="amber"
+                disabled={saveLoading || docLoading || actLoading}
+                loading={docLoading}
+                loadingText="Збереження…"
+                className="w-full md:w-auto"
+                onClick={() => void handleCreateInvoiceDoc()}
                 title="Спочатку зберегти рахунок у базі, потім завантажити DOCX з номером рахунку з бази"
               >
                 <FiFileText className="size-4 shrink-0" aria-hidden />
-                {docLoading ? "…" : "Рахунок"}
-              </button>
-              <button
-                type="button"
-                disabled={docLoading || actLoading}
-                className="crm-btn-blue w-full md:w-auto"
-                onClick={() => {
-                  setActLoading(true);
-                  void form
-                    .handleSubmit(async (values) => {
-                      try {
-                        const payload = buildSubmitPayload(values);
-                        const { invoiceId } = await onCreateInvoiceReturningId(payload);
-                        toast.success("Рахунок збережено.");
-                        router.push(`/acceptance-acts/new?invoiceId=${invoiceId}`);
-                      } catch (e) {
-                        if (!isNextNavigationError(e)) {
-                          toast.error(getServerActionErrorMessage(e));
-                        }
-                      }
-                    })()
-                    .finally(() => setActLoading(false));
-                }}
+                Рахунок
+              </CrmButton>
+              <CrmButton
+                variant="blue"
+                disabled={saveLoading || docLoading || actLoading}
+                loading={actLoading}
+                loadingText="Збереження…"
+                className="w-full md:w-auto"
+                onClick={() => void handleCreateInvoiceAndAct()}
                 title="Спочатку зберегти рахунок у базі, потім перейти до створення акта"
               >
                 <FiClipboard className="size-4 shrink-0" aria-hidden />
-                {actLoading ? "…" : "Сформувати акт"}
-              </button>
+                Сформувати акт
+              </CrmButton>
             </>
           ) : null}
           {mode === "edit" && invoiceId ? (
             <>
               {!isFromContract ? (
-                <button
-                  type="button"
-                  disabled={analogueLoading}
-                  className="crm-btn-violet w-full md:w-auto"
+                <CrmButton
+                  variant="violet"
+                  disabled={saveLoading || analogueLoading || editInvoiceDocLoading || editAcceptanceActNavLoading}
+                  loading={analogueLoading}
+                  loadingText="Створення…"
+                  className="w-full md:w-auto"
                   onClick={() => void generateAnalogueInvoice()}
                   title="Створити новий рахунок за аналогією з поточним"
                 >
                   <FiCopy className="size-4 shrink-0" aria-hidden />
-                  {analogueLoading ? "Створення…" : "Згенерувати аналог"}
-                </button>
+                  Згенерувати аналог
+                </CrmButton>
               ) : null}
-              <button
-                type="button"
-                disabled={editInvoiceDocLoading || editAcceptanceActNavLoading}
-                className="crm-btn-amber w-full md:w-auto"
+              <CrmButton
+                variant="amber"
+                disabled={saveLoading || editInvoiceDocLoading || editAcceptanceActNavLoading}
+                loading={editInvoiceDocLoading}
+                loadingText="Збереження…"
+                className="w-full md:w-auto"
                 aria-label="Завантажити рахунок (DOCX)"
                 title="Зберегти зміни (якщо є) і завантажити DOCX з номером рахунку з бази"
-                onClick={() => {
-                  setEditInvoiceDocLoading(true);
-                  void (async () => {
-                    try {
-                      if (form.formState.isDirty) {
-                        await form.handleSubmit(async (values) => submitInvoice(values))();
-                      }
-                      if (!invoiceId) return;
-                      await downloadInvoiceDocx(invoiceId);
-                    } catch {
-                      /* submitInvoice already shows toast */
-                    } finally {
-                      setEditInvoiceDocLoading(false);
-                    }
-                  })();
-                }}
+                onClick={() => void handleEditInvoiceDocDownload()}
               >
                 <FiFileText className="size-4 shrink-0" aria-hidden />
-                {editInvoiceDocLoading ? "…" : "Рахунок"}
-              </button>
+                Рахунок
+              </CrmButton>
               {existingAcceptanceActId ? null : (
-                <button
-                  type="button"
-                  disabled={editInvoiceDocLoading || editAcceptanceActNavLoading}
-                  className="crm-btn-blue w-full md:w-auto"
+                <CrmButton
+                  variant="blue"
+                  disabled={saveLoading || editInvoiceDocLoading || editAcceptanceActNavLoading}
+                  loading={editAcceptanceActNavLoading}
+                  loadingText="Збереження…"
+                  className="w-full md:w-auto"
                   title="Зберегти зміни (якщо є), потім створити акт на основі збереженого рахунку"
-                  onClick={() => {
-                    setEditAcceptanceActNavLoading(true);
-                    void (async () => {
-                      try {
-                        if (form.formState.isDirty) {
-                          await form.handleSubmit(async (values) => submitInvoice(values))();
-                        }
-                        if (!invoiceId) return;
-                        router.push(`/acceptance-acts/new?invoiceId=${invoiceId}`);
-                      } catch {
-                        /* submitInvoice already shows toast */
-                      } finally {
-                        setEditAcceptanceActNavLoading(false);
-                      }
-                    })();
-                  }}
+                  onClick={() => void handleEditCreateAcceptanceAct()}
                 >
                   <FiClipboard className="size-4 shrink-0" aria-hidden />
-                  {editAcceptanceActNavLoading ? "…" : "Сформувати акт"}
-                </button>
+                  Сформувати акт
+                </CrmButton>
               )}
             </>
           ) : null}
         </div>
       </form>
+      {mode === "edit" && invoiceId ? (
+        <div className="mt-4">
+          <SignedUpload entityType="INVOICE" entityId={invoiceId} initialScans={signedScansInitial} />
+        </div>
+      ) : null}
       <UnsavedChangesNavigationDialog
         isDirty={shouldWarnOnLeave}
         suppressBeforeUnloadOnce={suppressBeforeUnloadOnce}

@@ -113,8 +113,8 @@ function ResetPasswordForm() {
               autoComplete="new-password"
             />
           </label>
-          <Button type="submit" className="mt-2" disabled={isLoading}>
-            {isLoading ? "Збереження..." : "Оновити пароль"}
+          <Button type="submit" className="mt-2" loading={isLoading} loadingText="Збереження…">
+            Оновити пароль
           </Button>
         </form>
       ) : (
@@ -130,8 +130,8 @@ function ResetPasswordForm() {
               autoComplete="email"
             />
           </label>
-          <Button type="submit" className="mt-2" disabled={isLoading}>
-            {isLoading ? "Надсилання..." : "Надіслати посилання"}
+          <Button type="submit" className="mt-2" loading={isLoading} loadingText="Надсилання…">
+            Надіслати посилання
           </Button>
         </form>
       )}

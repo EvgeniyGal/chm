@@ -14,6 +14,7 @@ import {
 } from "drizzle-orm";
 
 import { AcceptanceActsTable } from "@/components/acceptance-acts/AcceptanceActsTable";
+import { CrmButton } from "@/components/ui/crm-button";
 import { db } from "@/db";
 import { acceptanceActs, companies, invoices, lineItems } from "@/db/schema";
 import { requireRole } from "@/lib/authz";
@@ -210,9 +211,7 @@ export default async function AcceptanceActsPage({
           <h1 className="page-title">Акти</h1>
         </div>
         {canManageActs ? (
-          <a className="crm-btn-primary" href="/acceptance-acts/new">
-            Додати акт
-          </a>
+          <CrmButton href="/acceptance-acts/new">Додати акт</CrmButton>
         ) : null}
       </div>
 

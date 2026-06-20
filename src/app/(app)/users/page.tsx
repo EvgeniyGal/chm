@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { FormWithToastAction } from "@/components/forms/FormWithToastAction";
+import { CrmSubmitButton } from "@/components/ui/crm-submit-button";
 import { listTableHeaderClass } from "@/components/data-table/list-styles";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -149,9 +150,9 @@ export default async function UsersPage() {
                         className="flex items-center justify-center"
                       >
                         <input type="hidden" name="userId" value={u.id} />
-                        <button type="submit" className="crm-btn-primary inline-flex h-10 items-center px-4 text-sm">
+                        <CrmSubmitButton className="inline-flex h-10 items-center px-4 text-sm" loadingText="Збереження…">
                           Зберегти
-                        </button>
+                        </CrmSubmitButton>
                       </FormWithToastAction>
                     </td>
                   </tr>
@@ -208,9 +209,9 @@ export default async function UsersPage() {
                     />
                     <span className="text-foreground/90">Затверджено</span>
                   </label>
-                  <button type="submit" className="crm-btn-primary inline-flex h-10 w-full items-center justify-center px-4 text-sm">
+                  <CrmSubmitButton className="inline-flex h-10 w-full items-center justify-center px-4 text-sm" loadingText="Збереження…">
                     Зберегти
-                  </button>
+                  </CrmSubmitButton>
                 </FormWithToastAction>
               </div>
             );

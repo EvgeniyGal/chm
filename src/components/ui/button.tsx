@@ -1,8 +1,10 @@
 "use client"
 
 import { Button as ButtonPrimitive } from "@base-ui/react/button"
+import { useState, type ReactNode } from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 
+import { Spinner } from "@/components/ui/spinner"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
@@ -42,19 +44,61 @@ const buttonVariants = cva(
   }
 )
 
+export type ButtonProps = ButtonPrimitive.Props &
+  VariantProps<typeof buttonVariants> & {
+    loading?: boolean
+    loadingText?: ReactNode
+  }
+
 function Button({
   className,
   variant = "default",
   size = "default",
+  loading: loadingProp,
+  loadingText,
+  children,
+  disabled,
+  onClick,
   ...props
-}: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
+}: ButtonProps) {
+  const [internalLoading, setInternalLoading] = useState(false)
+  const loading = Boolean(loadingProp) || internalLoading
+  const isDisabled = Boolean(disabled || loading)
+
+  const handleClick: NonNullable<ButtonProps["onClick"]> = (event) => {
+    if (isDisabled) return
+    const result = onClick?.(event)
+    if (result != null && typeof (result as Promise<unknown>).then === "function") {
+      setInternalLoading(true)
+      void (async () => {
+        try {
+          await result
+        } finally {
+          setInternalLoading(false)
+        }
+      })()
+    }
+  }
+
   return (
     <ButtonPrimitive
       data-slot="button"
+      disabled={isDisabled}
+      aria-busy={loading || undefined}
       className={cn(buttonVariants({ variant, size, className }))}
+      onClick={onClick ? handleClick : undefined}
       {...props}
-    />
+    >
+      {loading ? (
+        <>
+          <Spinner />
+          {loadingText ?? children}
+        </>
+      ) : (
+        children
+      )}
+    </ButtonPrimitive>
   )
 }
 
-export { Button }
+export { Button, buttonVariants }

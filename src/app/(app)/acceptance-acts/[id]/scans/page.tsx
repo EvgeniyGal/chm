@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 
 import { SignedUpload } from "@/components/uploads/SignedUpload";
+import { CrmButton } from "@/components/ui/crm-button";
 import { db } from "@/db";
 import { acceptanceActs } from "@/db/schema";
 import { requireRole } from "@/lib/authz";
@@ -22,9 +23,9 @@ export default async function AcceptanceActScansPage({ params }: { params: Promi
     <div className="flex flex-col gap-4">
       <div className="flex items-end justify-between gap-3">
         <h1 className="page-title">Скани акту {act.number}</h1>
-        <a className="crm-btn-neutral" href="/acceptance-acts">
+        <CrmButton variant="neutral" href="/acceptance-acts">
           До списку актів
-        </a>
+        </CrmButton>
       </div>
       <SignedUpload entityType="ACCEPTANCE_ACT" entityId={id} initialScans={signedScansInitial} />
     </div>

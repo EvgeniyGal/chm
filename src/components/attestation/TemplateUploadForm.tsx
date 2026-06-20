@@ -1,11 +1,13 @@
 "use client";
 
-import { CheckCircle2, Loader2, Upload } from "lucide-react";
+import { CheckCircle2, Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { FileDropZone } from "@/components/uploads/FileDropZone";
+import { Button } from "@/components/ui/button";
+import { CrmSubmitButton } from "@/components/ui/crm-submit-button";
 
 const TYPES = [
   { value: "protocol", label: "Протокол засідання" },
@@ -136,14 +138,15 @@ export function TemplateUploadForm() {
         onInputChange={handleTemplateFileChange}
         onClear={clearFile}
       />
-      <button
-        type="submit"
+      <CrmSubmitButton
         disabled={pending}
-        className="crm-btn-primary inline-flex h-10 w-fit items-center justify-center gap-2"
+        loading={pending}
+        loadingText="Завантаження…"
+        className="inline-flex h-10 w-fit items-center justify-center gap-2"
       >
-        {pending ? <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden /> : <Upload className="size-4 shrink-0" aria-hidden />}
-        {pending ? "Завантаження…" : "Завантажити"}
-      </button>
+        <Upload className="size-4 shrink-0" aria-hidden />
+        Завантажити
+      </CrmSubmitButton>
     </form>
   );
 }
@@ -153,32 +156,23 @@ const activateIconBtn =
 
 export function TemplateActivateButton({ templateId }: { templateId: string }) {
   const router = useRouter();
-  const [pending, setPending] = useState(false);
   return (
-    <button
+    <Button
       type="button"
-      disabled={pending}
       className={activateIconBtn}
       title="Активувати"
       aria-label="Активувати"
       onClick={async () => {
-        setPending(true);
-        try {
-          const res = await fetch(`/api/attestation/templates/${templateId}/activate`, { method: "POST" });
-          if (!res.ok) {
-            toast.error("Не вдалося активувати");
-            return;
-          }
-          toast.success("Активний шаблон оновлено");
-          router.refresh();
-        } catch {
-          toast.error("Мережева помилка");
-        } finally {
-          setPending(false);
+        const res = await fetch(`/api/attestation/templates/${templateId}/activate`, { method: "POST" });
+        if (!res.ok) {
+          toast.error("Не вдалося активувати");
+          return;
         }
+        toast.success("Активний шаблон оновлено");
+        router.refresh();
       }}
     >
-      {pending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <CheckCircle2 className="size-4" aria-hidden />}
-    </button>
+      <CheckCircle2 className="size-4" aria-hidden />
+    </Button>
   );
 }

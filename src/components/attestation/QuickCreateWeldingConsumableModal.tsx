@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { CrmButton } from "@/components/ui/crm-button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
   addWeldingConsumableAndReturnId,
@@ -112,9 +113,9 @@ export function QuickCreateWeldingConsumableModal({
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
             Скасувати
           </Button>
-          <Button type="button" onClick={() => void submit()} disabled={submitting}>
-            {submitting ? "Збереження…" : isEdit ? "Зберегти" : "Додати"}
-          </Button>
+          <CrmButton type="button" loading={submitting} loadingText="Збереження…" onClick={() => void submit()}>
+            {isEdit ? "Зберегти" : "Додати"}
+          </CrmButton>
         </div>
       </DialogContent>
     </Dialog>

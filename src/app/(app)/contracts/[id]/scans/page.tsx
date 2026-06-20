@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 
 import { SignedUpload } from "@/components/uploads/SignedUpload";
+import { CrmButton } from "@/components/ui/crm-button";
 import { db } from "@/db";
 import { contracts } from "@/db/schema";
 import { requireRole } from "@/lib/authz";
@@ -25,9 +26,9 @@ export default async function ContractScansPage({ params }: { params: Promise<{ 
     <div className="flex flex-col gap-4">
       <div className="flex items-end justify-between gap-3">
         <h1 className="page-title">Скани договору {contract.number}</h1>
-        <a className="crm-btn-neutral" href="/contracts">
+        <CrmButton variant="neutral" href="/contracts">
           До списку договорів
-        </a>
+        </CrmButton>
       </div>
       <SignedUpload entityType="CONTRACT" entityId={id} initialScans={signedScansInitial} />
     </div>

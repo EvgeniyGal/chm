@@ -9,6 +9,7 @@ import { companies } from "@/db/schema";
 import { ActingUnderField } from "@/components/forms/ActingUnderField";
 import { ContactsField } from "@/components/forms/ContactsField";
 import { GuardedForm } from "@/components/forms/GuardedForm";
+import { CrmSubmitButton } from "@/components/ui/crm-submit-button";
 import { SignerPositionField } from "@/components/forms/SignerPositionField";
 import { TaxStatusField } from "@/components/forms/TaxStatusField";
 import { writeAuditEvent } from "@/lib/audit";
@@ -298,12 +299,7 @@ export default async function EditCompanyPage({ params }: { params: Promise<{ id
         </div>
 
         <div className="mt-2 flex gap-3">
-          <button
-            type="submit"
-            className="crm-btn-primary"
-          >
-            Зберегти
-          </button>
+          <CrmSubmitButton loadingText="Збереження…">Зберегти</CrmSubmitButton>
           <a className="inline-flex h-10 items-center gap-2 rounded-md border px-4 text-sm" href="/companies">
             <List className="size-4 shrink-0" aria-hidden />
             До списку компаній

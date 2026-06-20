@@ -9,6 +9,8 @@ import { toast } from "sonner";
 import { CompanySearchSelect } from "@/components/forms/CompanySearchSelect";
 import { SearchableDropdownOptionField } from "@/components/forms/SearchableDropdownOptionField";
 import { AcceptanceActReadonlyLineItems } from "@/components/acceptance-acts/AcceptanceActReadonlyLineItems";
+import { CrmButton } from "@/components/ui/crm-button";
+import { CrmFormSubmitButton } from "@/components/ui/crm-form-submit-button";
 import { UnsavedChangesNavigationDialog } from "@/components/forms/UnsavedChangesNavigationDialog";
 import { useUnsavedChangesGuard } from "@/components/forms/useUnsavedChangesGuard";
 import { getServerActionErrorMessage } from "@/lib/server-action-error-message";
@@ -160,6 +162,7 @@ export function AcceptanceActForm({
     return { totalWithoutVat, vat20, totalWithVat };
   }, [selectedInvoice]);
   const [docLoading, setDocLoading] = useState(false);
+  const [saveLoading, setSaveLoading] = useState(false);
   const [useCustomNumber, setUseCustomNumber] = useState(false);
   const [previewActNumber, setPreviewActNumber] = useState(initialActNumberPreview);
   const formDate = form.watch("date");
@@ -192,18 +195,26 @@ export function AcceptanceActForm({
   }
 
   async function submitAct(values: AcceptanceActValues, options?: { allowRedirect?: boolean }) {
-    const payload = buildSubmitPayload(values);
-    const allowRedirect = options?.allowRedirect ?? true;
+    setSaveLoading(true);
     try {
-      await onSubmit(payload);
-    } catch (e) {
-      if (isNextNavigationError(e)) {
-        toast.success("Акт створено.");
-        if (allowRedirect) throw e;
-        return;
+      const payload = buildSubmitPayload(values);
+      const allowRedirect = options?.allowRedirect ?? true;
+      try {
+        await onSubmit(payload);
+      } catch (e) {
+        if (isNextNavigationError(e)) {
+          toast.success("Акт створено.");
+          if (allowRedirect) throw e;
+          return;
+        }
+        toast.error(getServerActionErrorMessage(e));
+        throw e;
       }
-      toast.error(getServerActionErrorMessage(e));
+    } catch (e) {
+      if (e instanceof Error && e.message === "VALIDATION_ERROR") return;
       throw e;
+    } finally {
+      setSaveLoading(false);
     }
   }
 
@@ -221,6 +232,26 @@ export function AcceptanceActForm({
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
+  }
+
+  async function handleSubmitAndDownloadActDocx() {
+    setDocLoading(true);
+    try {
+      await form.handleSubmit(async (values) => {
+        const payload = buildSubmitPayload(values);
+        const result = await onSubmitAndDownloadActDocx!(payload);
+        await downloadAcceptanceActDocx(result.acceptanceActId);
+        toast.success("Акт створено та завантажено.");
+        form.reset(values);
+        router.push(`/acceptance-acts/${result.acceptanceActId}`);
+      })();
+    } catch (e) {
+      if (!isNextNavigationError(e)) {
+        toast.error(getServerActionErrorMessage(e));
+      }
+    } finally {
+      setDocLoading(false);
+    }
   }
 
   return (
@@ -393,57 +424,43 @@ export function AcceptanceActForm({
         </div>
 
         <div className="mt-2 flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center">
-          <button
-            type="submit"
-            className="crm-btn-primary inline-flex h-10 w-full items-center justify-center gap-2 md:w-auto"
+          <CrmFormSubmitButton
+            className="inline-flex h-10 w-full items-center justify-center gap-2 md:w-auto"
+            loading={saveLoading}
+            loadingText="Збереження…"
           >
             <FiSave className="size-4 shrink-0" aria-hidden />
             Зберегти
-          </button>
-          <a className="crm-btn-neutral w-full md:w-auto" href="/acceptance-acts">
+          </CrmFormSubmitButton>
+          <CrmButton variant="neutral" href="/acceptance-acts" className="w-full md:w-auto">
             <FiList className="size-4 shrink-0" aria-hidden />
             До списку актів
-          </a>
+          </CrmButton>
           {selectedInvoice ? (
-            <a
-              className="crm-btn-teal w-full md:w-auto"
+            <CrmButton
+              variant="teal"
               href={`/invoices/${selectedInvoice.id}/edit`}
+              className="w-full md:w-auto"
               aria-label={`Перейти до рахунку №${selectedInvoice.number}`}
               title={`Рахунок №${selectedInvoice.number}`}
             >
               <FiArrowRight className="size-4 shrink-0" aria-hidden />
               До рахунку
-            </a>
+            </CrmButton>
           ) : null}
           {onSubmitAndDownloadActDocx ? (
-            <button
-              type="button"
-              disabled={docLoading}
-              className="crm-btn-amber w-full md:w-auto"
-              onClick={() => {
-                setDocLoading(true);
-                void form
-                  .handleSubmit(async (values) => {
-                    try {
-                      const payload = buildSubmitPayload(values);
-                      const result = await onSubmitAndDownloadActDocx(payload);
-                      await downloadAcceptanceActDocx(result.acceptanceActId);
-                      toast.success("Акт створено та завантажено.");
-                      form.reset(values);
-                      router.push(`/acceptance-acts/${result.acceptanceActId}`);
-                    } catch (e) {
-                      if (!isNextNavigationError(e)) {
-                        toast.error(getServerActionErrorMessage(e));
-                      }
-                    }
-                  })()
-                  .finally(() => setDocLoading(false));
-              }}
+            <CrmButton
+              variant="amber"
+              disabled={docLoading || saveLoading}
+              loading={docLoading}
+              loadingText="Збереження…"
+              className="w-full md:w-auto"
+              onClick={() => void handleSubmitAndDownloadActDocx()}
               title="Зберегти акт і завантажити DOCX"
             >
               <FiFileText className="size-4 shrink-0" aria-hidden />
               Акт
-            </button>
+            </CrmButton>
           ) : null}
         </div>
       </form>

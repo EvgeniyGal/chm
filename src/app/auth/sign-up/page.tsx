@@ -15,6 +15,7 @@ const errorMessages: Record<string, string> = {
 export default function SignUpPage() {
   const [error, setError] = useState<string | null>(null);
   const [successEmail, setSuccessEmail] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -28,25 +29,30 @@ export default function SignUpPage() {
       password: String(new FormData(form).get("password") ?? ""),
     };
 
-    const res = await fetch("/api/auth/signup", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(payload),
-      cache: "no-store",
-    });
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(payload),
+        cache: "no-store",
+      });
 
-    const data = (await res.json().catch(() => null)) as { error?: string; confirmUrl?: string } | null;
-    if (!res.ok) {
-      const code = data?.error ?? "SIGNUP_FAILED";
-      const msg = errorMessages[code] ?? errorMessages.SIGNUP_FAILED;
-      setError(msg);
-      toast.error(msg);
-      return;
+      const data = (await res.json().catch(() => null)) as { error?: string; confirmUrl?: string } | null;
+      if (!res.ok) {
+        const code = data?.error ?? "SIGNUP_FAILED";
+        const msg = errorMessages[code] ?? errorMessages.SIGNUP_FAILED;
+        setError(msg);
+        toast.error(msg);
+        return;
+      }
+
+      toast.success("Лист для підтвердження надіслано на вказаний email.");
+      setSuccessEmail(payload.email);
+      form.reset();
+    } finally {
+      setIsLoading(false);
     }
-
-    toast.success("Лист для підтвердження надіслано на вказаний email.");
-    setSuccessEmail(payload.email);
-    form.reset();
   }
 
   return (
@@ -96,7 +102,7 @@ export default function SignUpPage() {
             autoComplete="new-password"
           />
         </label>
-        <Button type="submit" className="mt-2">
+        <Button type="submit" className="mt-2" loading={isLoading} loadingText="Реєстрація…">
           Зареєструватися
         </Button>
       </form>

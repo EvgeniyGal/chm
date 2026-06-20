@@ -8,6 +8,8 @@ import { toast } from "sonner";
 
 import { useUnsavedChangesGuard } from "@/components/forms/useUnsavedChangesGuard";
 import { Button } from "@/components/ui/button";
+import { CrmButton } from "@/components/ui/crm-button";
+import { CrmFormSubmitButton } from "@/components/ui/crm-form-submit-button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { getServerActionErrorMessage } from "@/lib/server-action-error-message";
 import { isNextNavigationError } from "@/lib/is-next-navigation-error";
@@ -161,6 +163,8 @@ export function ContractEditForm({
   const [invoicePickerDesktopView, setInvoicePickerDesktopView] = useState(false);
   const [previewContractNumber, setPreviewContractNumber] = useState(initialContractNumber);
   const [useCustomNumber, setUseCustomNumber] = useState(false);
+  const [saveLoading, setSaveLoading] = useState(false);
+  const [invoiceFlowLoading, setInvoiceFlowLoading] = useState(false);
 
   useEffect(() => {
     if (!selectedContractorCompany) {
@@ -226,45 +230,50 @@ export function ContractEditForm({
     values: ContractFormValues,
     options?: { successToast?: boolean },
   ) {
-    const customNumber = values.number?.trim() ?? "";
-    if (useCustomNumber && customNumber.length === 0) {
-      const msg = "Вкажіть номер договору або вимкніть ручний режим.";
-      setTreatyError(msg);
-      toast.error(msg);
-      return;
-    }
-    const successToast = options?.successToast ?? true;
-    const payload = {
-      ...values,
-      number: useCustomNumber ? customNumber : undefined,
-      items: values.items.map((item) => ({
-        ...item,
-        quantity: toDecimal(item.quantity),
-        price: toDecimal(item.price),
-      })),
-    };
-    const normalizedValues: ContractFormValues = {
-      ...values,
-      items: payload.items.map((it) => ({
-        title: it.title,
-        unit: it.unit,
-        quantity: it.quantity,
-        price: it.price,
-      })),
-    };
+    setSaveLoading(true);
     try {
-      await onSubmit(payload);
-      if (successToast) toast.success("Договір збережено.");
-      // Force route-level re-render so server header with contract number stays in sync.
-      router.replace(`/contracts/${contractId}/edit`);
-      form.reset(normalizedValues);
-    } catch (e) {
-      if (isNextNavigationError(e)) {
+      const customNumber = values.number?.trim() ?? "";
+      if (useCustomNumber && customNumber.length === 0) {
+        const msg = "Вкажіть номер договору або вимкніть ручний режим.";
+        setTreatyError(msg);
+        toast.error(msg);
+        return;
+      }
+      const successToast = options?.successToast ?? true;
+      const payload = {
+        ...values,
+        number: useCustomNumber ? customNumber : undefined,
+        items: values.items.map((item) => ({
+          ...item,
+          quantity: toDecimal(item.quantity),
+          price: toDecimal(item.price),
+        })),
+      };
+      const normalizedValues: ContractFormValues = {
+        ...values,
+        items: payload.items.map((it) => ({
+          title: it.title,
+          unit: it.unit,
+          quantity: it.quantity,
+          price: it.price,
+        })),
+      };
+      try {
+        await onSubmit(payload);
         if (successToast) toast.success("Договір збережено.");
+        // Force route-level re-render so server header with contract number stays in sync.
+        router.replace(`/contracts/${contractId}/edit`);
+        form.reset(normalizedValues);
+      } catch (e) {
+        if (isNextNavigationError(e)) {
+          if (successToast) toast.success("Договір збережено.");
+          throw e;
+        }
+        toast.error(getServerActionErrorMessage(e));
         throw e;
       }
-      toast.error(getServerActionErrorMessage(e));
-      throw e;
+    } finally {
+      setSaveLoading(false);
     }
   }
 
@@ -596,8 +605,6 @@ export function ContractEditForm({
           </div>
         </div>
 
-        <SignedUpload entityType="CONTRACT" entityId={contractId} initialScans={signedScansInitial} />
-
         <div className="flex flex-col gap-2">
           <div className="text-sm font-semibold text-foreground">{workType === "WORKS" ? "Перелік робіт" : "Перелік послуг"}</div>
           <LineItemsTable unitOptionsFromBackend={lineItemUnitOptions} />
@@ -610,90 +617,107 @@ export function ContractEditForm({
         ) : null}
 
         <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-          <button
-            type="submit"
-            className="crm-btn-primary inline-flex h-10 w-full items-center justify-center gap-2 sm:w-auto"
+          <CrmFormSubmitButton
+            className="inline-flex h-10 w-full items-center justify-center gap-2 sm:w-auto"
+            loading={saveLoading}
+            loadingText="Збереження…"
           >
             <Save className="size-4" aria-hidden="true" />
             Зберегти
-          </button>
-          <a className="crm-btn-neutral w-full sm:w-auto" href={cancelHref}>
+          </CrmFormSubmitButton>
+          <CrmButton variant="neutral" href={cancelHref} className="w-full sm:w-auto">
             <List className="size-4 shrink-0" aria-hidden />
             До списку договорів
-          </a>
-          <button
-            type="button"
-            className="crm-btn-blue w-full sm:w-auto"
+          </CrmButton>
+          <CrmButton
+            variant="blue"
+            disabled={invoiceFlowLoading || saveLoading}
+            loading={invoiceFlowLoading}
+            loadingText="Збереження…"
+            className="w-full sm:w-auto"
             onClick={async () => {
-              const ok = await form.trigger();
-              if (!ok) {
-                toast.error("Заповніть усі обов’язкові поля перед формуванням рахунку.");
-                return;
-              }
-              if (form.formState.isDirty) {
-                try {
-                  await form.handleSubmit(async (values) => submitEditedContract(values))();
-                } catch {
+              setInvoiceFlowLoading(true);
+              try {
+                const ok = await form.trigger();
+                if (!ok) {
+                  toast.error("Заповніть усі обов’язкові поля перед формуванням рахунку.");
                   return;
                 }
+                if (form.formState.isDirty) {
+                  await form.handleSubmit(async (values) => submitEditedContract(values))();
+                }
+                setInvoiceDialogOpen(true);
+              } catch {
+                /* submitEditedContract already shows toast */
+              } finally {
+                setInvoiceFlowLoading(false);
               }
-              setInvoiceDialogOpen(true);
             }}
           >
             <Receipt className="size-4" aria-hidden="true" />
             Сформувати рахунок
-          </button>
+          </CrmButton>
           {createdInvoices.length === 1 ? (
-            <a
-              className="crm-btn-teal w-full sm:w-auto"
+            <CrmButton
+              variant="teal"
               href={`/invoices/${createdInvoices[0]!.id}/edit`}
+              className="w-full sm:w-auto"
               title={`Відкрити рахунок ${createdInvoices[0]!.number}`}
             >
               <ExternalLink className="size-4" aria-hidden="true" />
               До рахунку
-            </a>
+            </CrmButton>
           ) : null}
           {createdInvoices.length > 1 ? (
-            <button
-              type="button"
-              className="crm-btn-teal w-full sm:w-auto"
+            <CrmButton
+              variant="teal"
+              className="w-full sm:w-auto"
               onClick={() => setInvoicePickerOpen(true)}
               title="Відкрити вибір рахунку для цього договору"
             >
               <ExternalLink className="size-4" aria-hidden="true" />
               До рахунку
-            </button>
+            </CrmButton>
           ) : null}
-          <button
-            type="button"
+          <CrmButton
+            variant="violet"
             disabled={analogueLoading}
-            className="crm-btn-violet w-full sm:w-auto"
-            onClick={() => void generateAnalogueContract()}
+            loading={analogueLoading}
+            loadingText="Створення…"
+            className="w-full sm:w-auto"
+            onClick={() => generateAnalogueContract()}
             title="Створити новий договір за аналогією з поточним"
           >
             <Copy className="size-4" aria-hidden="true" />
-            {analogueLoading ? "Створення…" : "Згенерувати аналог"}
-          </button>
-          <button
-            type="button"
-            disabled={!!treatyLoading}
-            className="crm-btn-amber w-full sm:w-auto"
-            onClick={() => void saveThenDownloadTreaty("full")}
+            Згенерувати аналог
+          </CrmButton>
+          <CrmButton
+            variant="amber"
+            disabled={!!treatyLoading || invoiceFlowLoading || saveLoading}
+            loading={treatyLoading === "full"}
+            loadingText="Формування…"
+            className="w-full sm:w-auto"
+            onClick={() => saveThenDownloadTreaty("full")}
           >
             <FileText className="size-4" aria-hidden="true" />
-            {treatyLoading === "full" ? "…" : "Повний договір"}
-          </button>
-          <button
-            type="button"
-            disabled={!!treatyLoading}
-            className="crm-btn-sky w-full sm:w-auto"
-            onClick={() => void saveThenDownloadTreaty("short")}
+            Повний договір
+          </CrmButton>
+          <CrmButton
+            variant="sky"
+            disabled={!!treatyLoading || invoiceFlowLoading || saveLoading}
+            loading={treatyLoading === "short"}
+            loadingText="Формування…"
+            className="w-full sm:w-auto"
+            onClick={() => saveThenDownloadTreaty("short")}
           >
             <FileText className="size-4" aria-hidden="true" />
-            {treatyLoading === "short" ? "…" : "Скорочений договір"}
-          </button>
+            Скорочений договір
+          </CrmButton>
         </div>
       </form>
+      <div className="mt-4">
+        <SignedUpload entityType="CONTRACT" entityId={contractId} initialScans={signedScansInitial} />
+      </div>
       <UnsavedChangesNavigationDialog
         isDirty={form.formState.isDirty}
         suppressBeforeUnloadOnce={suppressBeforeUnloadOnce}

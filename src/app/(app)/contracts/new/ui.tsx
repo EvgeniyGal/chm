@@ -18,6 +18,7 @@ import { UnsavedChangesNavigationDialog } from "@/components/forms/UnsavedChange
 import { SearchableDropdownOptionField } from "@/components/forms/SearchableDropdownOptionField";
 import { QuickCreateCompanyModal } from "@/components/forms/QuickCreateCompanyModal";
 import { Button } from "@/components/ui/button";
+import { CrmButton } from "@/components/ui/crm-button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import type { ContractLineInvoiceRemaining } from "@/lib/contract-invoice-remaining";
 
@@ -586,18 +587,22 @@ export function ContractForm({
         ) : null}
 
         <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-          <button
+          <CrmButton
             type="submit"
             disabled={submitLoading !== null}
-            className="crm-btn-primary inline-flex h-10 w-full items-center justify-center gap-2 disabled:opacity-60 sm:w-auto"
+            loading={submitLoading === "save"}
+            loadingText="Збереження…"
+            className="inline-flex h-10 w-full items-center justify-center gap-2 disabled:opacity-60 sm:w-auto"
           >
             <Save className="size-4" aria-hidden="true" />
-            {submitLoading === "save" ? "Збереження…" : "Зберегти"}
-          </button>
-          <button
-            type="button"
+            Зберегти
+          </CrmButton>
+          <CrmButton
+            variant="blue"
             disabled={submitLoading !== null}
-            className="crm-btn-blue w-full disabled:opacity-60 sm:w-auto"
+            loading={submitLoading === "save-and-invoice"}
+            loadingText="Збереження…"
+            className="w-full disabled:opacity-60 sm:w-auto"
             onClick={async () => {
               setTreatyError(null);
               const ok = await form.trigger();
@@ -611,30 +616,34 @@ export function ContractForm({
             }}
           >
             <Receipt className="size-4" aria-hidden="true" />
-            {submitLoading === "save-and-invoice" ? "Збереження…" : "Сформувати рахунок"}
-          </button>
-          <a className="crm-btn-neutral w-full sm:w-auto" href="/contracts">
+            Сформувати рахунок
+          </CrmButton>
+          <CrmButton variant="neutral" href="/contracts" className="w-full sm:w-auto">
             <List className="size-4 shrink-0" aria-hidden />
             До списку договорів
-          </a>
-          <button
-            type="button"
+          </CrmButton>
+          <CrmButton
+            variant="amber"
             disabled={!!treatyLoading || submitLoading !== null}
-            className="crm-btn-amber w-full sm:w-auto"
-            onClick={() => void saveThenDownloadTreaty("full")}
+            loading={treatyLoading === "full"}
+            loadingText="Формування…"
+            className="w-full sm:w-auto"
+            onClick={() => saveThenDownloadTreaty("full")}
           >
             <FileText className="size-4" aria-hidden="true" />
-            {treatyLoading === "full" ? "…" : "Повний договір"}
-          </button>
-          <button
-            type="button"
+            Повний договір
+          </CrmButton>
+          <CrmButton
+            variant="sky"
             disabled={!!treatyLoading || submitLoading !== null}
-            className="crm-btn-sky w-full sm:w-auto"
-            onClick={() => void saveThenDownloadTreaty("short")}
+            loading={treatyLoading === "short"}
+            loadingText="Формування…"
+            className="w-full sm:w-auto"
+            onClick={() => saveThenDownloadTreaty("short")}
           >
             <FileText className="size-4" aria-hidden="true" />
-            {treatyLoading === "short" ? "…" : "Скорочений договір"}
-          </button>
+            Скорочений договір
+          </CrmButton>
         </div>
       </form>
       <Dialog open={createInvoiceConfirmOpen} onOpenChange={setCreateInvoiceConfirmOpen}>
@@ -651,6 +660,8 @@ export function ContractForm({
             <Button
               type="button"
               disabled={submitLoading !== null}
+              loading={submitLoading === "save-and-invoice"}
+              loadingText="Збереження…"
               onClick={() => {
                 void form
                   .handleSubmit(async (values) => {
@@ -662,7 +673,7 @@ export function ContractForm({
                   })();
               }}
             >
-              {submitLoading === "save-and-invoice" ? "Збереження…" : "Підтвердити"}
+              Підтвердити
             </Button>
           </div>
         </DialogContent>
