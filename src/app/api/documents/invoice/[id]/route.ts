@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { companies, contracts, invoices, lineItems } from "@/db/schema";
 import { requireRole } from "@/lib/authz";
+import { attachmentContentDisposition } from "@/lib/http/content-disposition";
 import { buildInvoiceDocxBuffer } from "@/lib/invoice-docx";
 
 export const runtime = "nodejs";
@@ -42,10 +43,11 @@ export async function GET(_req: Request, ctx: RouteContext<"/api/documents/invoi
       price: Number(it.price),
     })),
   });
+  const filename = `invoice-${inv.number.replaceAll("/", "_")}.docx`;
   return new Response(new Uint8Array(buffer), {
     headers: {
       "content-type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      "content-disposition": `attachment; filename="invoice-${inv.number.replaceAll("/", "_")}.docx"`,
+      "content-disposition": attachmentContentDisposition(filename),
     },
   });
 }

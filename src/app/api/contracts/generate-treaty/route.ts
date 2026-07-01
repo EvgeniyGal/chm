@@ -4,6 +4,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { companies } from "@/db/schema";
 import { requireRole } from "@/lib/authz";
+import { attachmentContentDisposition } from "@/lib/http/content-disposition";
 import { buildTreatyDocxBuffer } from "@/lib/treaty-docx";
 
 export const runtime = "nodejs";
@@ -85,13 +86,13 @@ export async function POST(req: Request) {
       contractor,
     });
 
-    const safe = number.replaceAll(/[^\w.\-]+/g, "_").replaceAll(/_+/g, "_");
-    const filename = `treaty-${data.variant}-${data.workType === "WORKS" ? "work" : "service"}-${safe}.docx`;
+    const kind = data.workType === "WORKS" ? "work" : "service";
+    const filename = `treaty-${data.variant}-${kind}-${number.replaceAll("/", "_")}.docx`;
 
     return new Response(new Uint8Array(buffer), {
       headers: {
         "content-type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "content-disposition": `attachment; filename="${filename}"`,
+        "content-disposition": attachmentContentDisposition(filename),
       },
     });
   } catch (e) {

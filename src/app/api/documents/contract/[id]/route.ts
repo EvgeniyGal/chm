@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { companies, contracts, lineItems } from "@/db/schema";
 import { requireRole } from "@/lib/authz";
+import { attachmentContentDisposition } from "@/lib/http/content-disposition";
 import { buildTreatyDocxBuffer } from "@/lib/treaty-docx";
 
 export const runtime = "nodejs";
@@ -47,13 +48,13 @@ export async function GET(req: Request, ctx: RouteContext<"/api/documents/contra
     contractor,
   });
 
-  const safeNumber = contract.number.replaceAll(/[^\w.\-]+/g, "_").replaceAll(/_+/g, "_");
-  const filename = `treaty-${variant}-${contract.workType === "WORKS" ? "work" : "service"}-${safeNumber}.docx`;
+  const kind = contract.workType === "WORKS" ? "work" : "service";
+  const filename = `treaty-${variant}-${kind}-${contract.number.replaceAll("/", "_")}.docx`;
 
   return new Response(new Uint8Array(buffer), {
     headers: {
       "content-type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      "content-disposition": `attachment; filename="${filename}"`,
+      "content-disposition": attachmentContentDisposition(filename),
     },
   });
 }

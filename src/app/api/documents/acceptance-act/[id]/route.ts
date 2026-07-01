@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { acceptanceActs, companies, contracts, invoices, lineItems } from "@/db/schema";
 import { buildAcceptanceActDocxBuffer } from "@/lib/acceptance-act-docx";
 import { requireRole } from "@/lib/authz";
+import { attachmentContentDisposition } from "@/lib/http/content-disposition";
 
 export const runtime = "nodejs";
 
@@ -42,10 +43,11 @@ export async function GET(_req: Request, ctx: RouteContext<"/api/documents/accep
       price: Number(it.price),
     })),
   });
+  const filename = `acceptance-act-${act.number.replaceAll("/", "_")}.docx`;
   return new Response(new Uint8Array(buffer), {
     headers: {
       "content-type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      "content-disposition": `attachment; filename="acceptance-act-${act.number.replaceAll("/", "_")}.docx"`,
+      "content-disposition": attachmentContentDisposition(filename),
     },
   });
 }
