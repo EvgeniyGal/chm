@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Controller, FormProvider, useForm } from "react-hook-form";
-import { Copy, ExternalLink, FileText, List, Plus, Receipt, Save } from "lucide-react";
+import { Copy, ExternalLink, FileText, Plus, Receipt, Save } from "lucide-react";
 import { toast } from "sonner";
 
 import { useUnsavedChangesGuard } from "@/components/forms/useUnsavedChangesGuard";
@@ -331,6 +331,12 @@ export function ContractEditForm({
     <FormProvider {...form}>
       <div className="mb-4">
         <h1 className="page-title">Редагувати договір {useCustomNumber ? (form.watch("number")?.trim() || "—") : previewContractNumber}</h1>
+        <a
+          href={cancelHref}
+          className="mt-1 inline-block text-sm text-muted-foreground hover:text-foreground hover:underline"
+        >
+          ← До списку договорів
+        </a>
       </div>
       <form
         className="flex min-w-0 flex-col gap-4 rounded-xl border bg-white p-4"
@@ -625,9 +631,39 @@ export function ContractEditForm({
             <Save className="size-4" aria-hidden="true" />
             Зберегти
           </CrmFormSubmitButton>
-          <CrmButton variant="neutral" href={cancelHref} className="w-full sm:w-auto">
-            <List className="size-4 shrink-0" aria-hidden />
-            До списку договорів
+          <CrmButton
+            variant="violet"
+            disabled={analogueLoading}
+            loading={analogueLoading}
+            loadingText="Створення…"
+            className="w-full sm:w-auto"
+            onClick={() => generateAnalogueContract()}
+            title="Створити новий договір за аналогією з поточним"
+          >
+            <Copy className="size-4" aria-hidden="true" />
+            Згенерувати аналог
+          </CrmButton>
+          <CrmButton
+            variant="amber"
+            disabled={!!treatyLoading || invoiceFlowLoading || saveLoading}
+            loading={treatyLoading === "full"}
+            loadingText="Формування…"
+            className="w-full sm:w-auto"
+            onClick={() => saveThenDownloadTreaty("full")}
+          >
+            <FileText className="size-4" aria-hidden="true" />
+            Повний договір
+          </CrmButton>
+          <CrmButton
+            variant="sky"
+            disabled={!!treatyLoading || invoiceFlowLoading || saveLoading}
+            loading={treatyLoading === "short"}
+            loadingText="Формування…"
+            className="w-full sm:w-auto"
+            onClick={() => saveThenDownloadTreaty("short")}
+          >
+            <FileText className="size-4" aria-hidden="true" />
+            Скорочений договір
           </CrmButton>
           <CrmButton
             variant="blue"
@@ -679,40 +715,6 @@ export function ContractEditForm({
               До рахунку
             </CrmButton>
           ) : null}
-          <CrmButton
-            variant="violet"
-            disabled={analogueLoading}
-            loading={analogueLoading}
-            loadingText="Створення…"
-            className="w-full sm:w-auto"
-            onClick={() => generateAnalogueContract()}
-            title="Створити новий договір за аналогією з поточним"
-          >
-            <Copy className="size-4" aria-hidden="true" />
-            Згенерувати аналог
-          </CrmButton>
-          <CrmButton
-            variant="amber"
-            disabled={!!treatyLoading || invoiceFlowLoading || saveLoading}
-            loading={treatyLoading === "full"}
-            loadingText="Формування…"
-            className="w-full sm:w-auto"
-            onClick={() => saveThenDownloadTreaty("full")}
-          >
-            <FileText className="size-4" aria-hidden="true" />
-            Повний договір
-          </CrmButton>
-          <CrmButton
-            variant="sky"
-            disabled={!!treatyLoading || invoiceFlowLoading || saveLoading}
-            loading={treatyLoading === "short"}
-            loadingText="Формування…"
-            className="w-full sm:w-auto"
-            onClick={() => saveThenDownloadTreaty("short")}
-          >
-            <FileText className="size-4" aria-hidden="true" />
-            Скорочений договір
-          </CrmButton>
         </div>
       </form>
       <div className="mt-4">

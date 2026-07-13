@@ -5,6 +5,7 @@ import { invoices, lineItems } from "@/db/schema";
 import { nextDocumentNumber } from "@/db/numbering";
 import { writeAuditEvent } from "@/lib/audit";
 import { requireRole } from "@/lib/authz";
+import { revalidateInvoicePages } from "@/lib/revalidate-document-lists";
 
 export const runtime = "nodejs";
 
@@ -69,6 +70,8 @@ export async function POST(_req: Request, ctx: RouteContext<"/api/invoices/[id]/
     diff: { sourceInvoiceId: source.id, after: created },
     note: "Generated analogue",
   });
+
+  revalidateInvoicePages({ invoiceId: created!.id, contractId: created!.contractId });
 
   return Response.json({ data: created }, { status: 201 });
 }

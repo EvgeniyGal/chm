@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Controller, FormProvider, useForm } from "react-hook-form";
 import { Plus } from "lucide-react";
-import { FiClipboard, FiCopy, FiExternalLink, FiFileText, FiList, FiSave } from "react-icons/fi";
+import { FiClipboard, FiCopy, FiExternalLink, FiFileText, FiSave } from "react-icons/fi";
 import { toast } from "sonner";
 
 import { CompanySearchSelect } from "@/components/forms/CompanySearchSelect";
@@ -510,6 +510,12 @@ export function InvoiceForm({
       {mode === "edit" ? (
         <div className="mb-4">
           <h1 className="page-title">Редагувати рахунок {headerInvoiceNumber}</h1>
+          <a
+            href={cancelHref}
+            className="mt-1 inline-block text-sm text-muted-foreground hover:text-foreground hover:underline"
+          >
+            ← До списку рахунків
+          </a>
         </div>
       ) : null}
       <form
@@ -766,10 +772,6 @@ export function InvoiceForm({
             <FiSave className="size-4 shrink-0" aria-hidden />
             Зберегти
           </CrmFormSubmitButton>
-          <CrmButton variant="neutral" href={cancelHref} className="w-full md:w-auto">
-            <FiList className="size-4 shrink-0" aria-hidden />
-            До списку рахунків
-          </CrmButton>
           {isFromContract && contract?.id ? (
             <CrmButton
               variant="teal"

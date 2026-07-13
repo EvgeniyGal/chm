@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Controller, FormProvider, useForm } from "react-hook-form";
-import { FiExternalLink, FiFileText, FiList } from "react-icons/fi";
+import { FiExternalLink, FiFileText } from "react-icons/fi";
 import { toast } from "sonner";
 
 import { CompanySearchSelect } from "@/components/forms/CompanySearchSelect";
@@ -186,6 +186,12 @@ export function AcceptanceActDetailForm({
           {new Date(actDateIso).toLocaleDateString("uk-UA")}
           {workType === "SERVICES" ? " · Послуги" : " · Роботи"}
         </p>
+        <a
+          href="/acceptance-acts"
+          className="mt-1 inline-block text-sm text-muted-foreground hover:text-foreground hover:underline"
+        >
+          ← До списку актів
+        </a>
       </div>
       <form
         className="flex flex-col gap-4 rounded-xl border bg-white p-4"
@@ -414,10 +420,6 @@ export function AcceptanceActDetailForm({
               Зберегти
             </CrmFormSubmitButton>
           ) : null}
-          <CrmButton variant="neutral" href="/acceptance-acts" className="w-full md:w-auto">
-            <FiList className="size-4 shrink-0" aria-hidden />
-            До списку актів
-          </CrmButton>
           <CrmButton
             variant="teal"
             href={`/invoices/${invoice.id}/edit`}

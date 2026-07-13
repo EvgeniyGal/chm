@@ -101,6 +101,12 @@ export default async function NewInvoicePage({
     <div className="w-full min-w-0">
       <div className="mb-4">
         <h1 className="page-title">Новий рахунок</h1>
+        <a
+          href="/invoices"
+          className="mt-1 inline-block text-sm text-muted-foreground hover:text-foreground hover:underline"
+        >
+          ← До списку рахунків
+        </a>
       </div>
 
       <InvoiceForm

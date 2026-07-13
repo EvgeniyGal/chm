@@ -155,6 +155,12 @@ export default async function NewAcceptanceActPage({
     <div className="min-w-0">
       <div className="mb-4">
         <h1 className="page-title">Новий акт</h1>
+        <a
+          href="/acceptance-acts"
+          className="mt-1 inline-block text-sm text-muted-foreground hover:text-foreground hover:underline"
+        >
+          ← До списку актів
+        </a>
       </div>
       <AcceptanceActForm
         invoices={invoiceRows.map((i) => ({

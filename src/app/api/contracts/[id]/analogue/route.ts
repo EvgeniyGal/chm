@@ -5,6 +5,7 @@ import { contracts, lineItems } from "@/db/schema";
 import { nextDocumentNumber } from "@/db/numbering";
 import { writeAuditEvent } from "@/lib/audit";
 import { requireRole } from "@/lib/authz";
+import { revalidateContractPages } from "@/lib/revalidate-document-lists";
 
 export const runtime = "nodejs";
 
@@ -69,6 +70,8 @@ export async function POST(_req: Request, ctx: RouteContext<"/api/contracts/[id]
     diff: { sourceContractId: source.id, after: created },
     note: "Generated analogue",
   });
+
+  revalidateContractPages(created!.id);
 
   return Response.json({ data: created }, { status: 201 });
 }

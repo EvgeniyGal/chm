@@ -6,6 +6,7 @@ import { companies, contracts, lineItems } from "@/db/schema";
 import { nextDocumentNumber } from "@/db/numbering";
 import { writeAuditEvent } from "@/lib/audit";
 import { requireRole } from "@/lib/authz";
+import { revalidateContractPages } from "@/lib/revalidate-document-lists";
 import { calcTotals } from "@/lib/totals";
 import { DROPDOWN_SCOPE, saveDropdownOption } from "@/lib/dropdown-options";
 
@@ -112,6 +113,8 @@ export async function POST(req: Request) {
     actorUserId: userId,
     diff: { after: created, items: parsed.data.items },
   });
+
+  revalidateContractPages(created!.id);
 
   return Response.json({ data: created }, { status: 201 });
 }

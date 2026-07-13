@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Controller, FormProvider, useForm } from "react-hook-form";
-import { FiArrowRight, FiFileText, FiList, FiSave } from "react-icons/fi";
+import { FiArrowRight, FiFileText, FiSave } from "react-icons/fi";
 import { toast } from "sonner";
 
 import { CompanySearchSelect } from "@/components/forms/CompanySearchSelect";
@@ -432,10 +432,6 @@ export function AcceptanceActForm({
             <FiSave className="size-4 shrink-0" aria-hidden />
             Зберегти
           </CrmFormSubmitButton>
-          <CrmButton variant="neutral" href="/acceptance-acts" className="w-full md:w-auto">
-            <FiList className="size-4 shrink-0" aria-hidden />
-            До списку актів
-          </CrmButton>
           {selectedInvoice ? (
             <CrmButton
               variant="teal"

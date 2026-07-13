@@ -6,6 +6,7 @@ import { contracts, invoices, lineItems } from "@/db/schema";
 import { nextDocumentNumber } from "@/db/numbering";
 import { writeAuditEvent } from "@/lib/audit";
 import { requireRole } from "@/lib/authz";
+import { revalidateInvoicePages } from "@/lib/revalidate-document-lists";
 import { calcTotals } from "@/lib/totals";
 import { invoiceApiLineItemSchema } from "@/lib/invoice-api-item-schema";
 
@@ -155,6 +156,8 @@ export async function POST(req: Request) {
     actorUserId: userId,
     diff: { after: created, items: parsed.data.items },
   });
+
+  revalidateInvoicePages({ invoiceId: created!.id, contractId: created!.contractId });
 
   return Response.json({ data: created }, { status: 201 });
 }

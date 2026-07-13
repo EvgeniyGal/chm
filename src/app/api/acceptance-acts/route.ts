@@ -6,6 +6,7 @@ import { acceptanceActs, invoices, lineItems } from "@/db/schema";
 import { nextDocumentNumber } from "@/db/numbering";
 import { writeAuditEvent } from "@/lib/audit";
 import { requireRole } from "@/lib/authz";
+import { revalidateAcceptanceActPages } from "@/lib/revalidate-document-lists";
 
 export const runtime = "nodejs";
 
@@ -125,6 +126,8 @@ export async function POST(req: Request) {
     actorUserId: userId,
     diff: { after: created, fromInvoiceId: invoice.id },
   });
+
+  revalidateAcceptanceActPages({ actId: created!.id, invoiceId: invoice.id });
 
   return Response.json({ data: created }, { status: 201 });
 }
