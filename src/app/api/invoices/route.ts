@@ -6,6 +6,7 @@ import { contracts, invoices, lineItems } from "@/db/schema";
 import { nextDocumentNumber } from "@/db/numbering";
 import { writeAuditEvent } from "@/lib/audit";
 import { requireRole } from "@/lib/authz";
+import { toUtcDateOnly } from "@/lib/document-date";
 import { revalidateInvoicePages } from "@/lib/revalidate-document-lists";
 import { calcTotals } from "@/lib/totals";
 import { invoiceApiLineItemSchema } from "@/lib/invoice-api-item-schema";
@@ -46,7 +47,7 @@ export async function POST(req: Request) {
     return Response.json({ error: "VALIDATION_ERROR", details: parsed.error.flatten() }, { status: 400 });
   }
 
-  const date = new Date(parsed.data.date);
+  const date = toUtcDateOnly(parsed.data.date);
   if (Number.isNaN(date.getTime())) return Response.json({ error: "INVALID_DATE" }, { status: 400 });
 
   if (parsed.data.isExternalContract) {
@@ -109,7 +110,9 @@ export async function POST(req: Request) {
   const number = customNumber ?? (await nextDocumentNumber({ documentType: "INVOICE", at: date }));
   const now = new Date();
 
-  const externalDate = parsed.data.externalContractDate ? new Date(parsed.data.externalContractDate) : null;
+  const externalDate = parsed.data.externalContractDate
+    ? toUtcDateOnly(parsed.data.externalContractDate)
+    : null;
   if (externalDate && Number.isNaN(externalDate.getTime())) {
     return Response.json({ error: "INVALID_EXTERNAL_CONTRACT_DATE" }, { status: 400 });
   }

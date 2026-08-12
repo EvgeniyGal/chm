@@ -127,7 +127,7 @@ export function ContractEditForm({
   contractDurationOptions: string[];
   lineItemUnitOptions: string[];
   initial: ContractFormValues;
-  onSubmit: (payload: ContractFormValues) => Promise<void>;
+  onSubmit: (contractId: string, payload: ContractFormValues) => Promise<void>;
   cancelHref: string;
   contractId: string;
   initialContractNumber: string;
@@ -259,7 +259,7 @@ export function ContractEditForm({
         })),
       };
       try {
-        await onSubmit(payload);
+        await onSubmit(contractId, payload);
         if (successToast) toast.success("Договір збережено.");
         // Force route-level re-render so server header with contract number stays in sync.
         router.replace(`/contracts/${contractId}/edit`);
@@ -319,7 +319,8 @@ export function ContractEditForm({
         return;
       }
       toast.success("Створено договір-аналог.");
-      router.push(`/contracts/${newId}/edit`);
+      // Full navigation remounts the edit page for the new id (avoids soft-nav form reuse).
+      window.location.assign(`/contracts/${newId}/edit`);
     } catch {
       toast.error("Не вдалося створити аналог договору.");
     } finally {

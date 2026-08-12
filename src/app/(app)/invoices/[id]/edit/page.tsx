@@ -24,10 +24,11 @@ function mapLineItem(it: InvoiceFormValues["items"][number]) {
   };
 }
 
-async function saveInvoiceEdit(invoiceId: string, hasContract: boolean, values: InvoiceFormValues) {
+async function saveInvoiceEdit(invoiceId: string, values: InvoiceFormValues) {
   "use server";
   await requireRole("ADMIN");
   const items = values.items.map(mapLineItem);
+  const hasContract = Boolean(values.contractId);
 
   const body: Record<string, unknown> = hasContract
     ? { number: values.number, date: values.date, items }
@@ -118,11 +119,10 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ id
         : [{ title: "", unit: "", quantity: 0, price: 0, sourceContractLineItemId: null }],
   };
 
-  const hasContract = Boolean(inv.contractId);
-
   return (
     <div className="w-full min-w-0">
       <InvoiceForm
+        key={id}
         mode="edit"
         editInitialValues={editInitialValues}
         invoiceId={id}
@@ -165,7 +165,7 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ id
         }}
         previewInvoiceNumberInitial={inv.number}
         existingAcceptanceActId={existingAcceptanceAct?.id ?? null}
-        onSubmit={saveInvoiceEdit.bind(null, id, hasContract)}
+        onEditSubmit={saveInvoiceEdit}
       />
 
       <div className="mt-8">

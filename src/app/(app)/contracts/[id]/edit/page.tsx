@@ -61,10 +61,10 @@ export default async function EditContractPage({ params }: { params: Promise<{ i
     getDropdownOptions(DROPDOWN_SCOPE.LINE_ITEM_UNIT),
   ]);
 
-  async function update(payload: any) {
+  async function update(contractId: string, payload: any) {
     "use server";
     await requireRole("ADMIN");
-    const res = await internalApiFetch(`/api/contracts/${id}`, {
+    const res = await internalApiFetch(`/api/contracts/${contractId}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(payload),
@@ -72,13 +72,14 @@ export default async function EditContractPage({ params }: { params: Promise<{ i
     });
     const data = (await res.json().catch(() => null)) as any;
     if (!res.ok) throw new Error(data?.error ?? "UPDATE_FAILED");
-    revalidatePath(`/contracts/${id}/edit`);
+    revalidatePath(`/contracts/${contractId}/edit`);
     revalidatePath("/contracts");
   }
 
   return (
     <div className="w-full min-w-0">
       <ContractEditForm
+        key={id}
         companies={companyRows.map((c) => ({
           id: c.id,
           label: c.shortName,

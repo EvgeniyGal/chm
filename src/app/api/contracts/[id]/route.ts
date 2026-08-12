@@ -7,6 +7,7 @@ import { nextDocumentNumber } from "@/db/numbering";
 import { writeAuditEvent } from "@/lib/audit";
 import { requireRole } from "@/lib/authz";
 import { deleteContractAndRelatedRecords } from "@/lib/contract-delete-cascade";
+import { sameUtcCalendarDay, toUtcDateOnly } from "@/lib/document-date";
 import { calcTotals } from "@/lib/totals";
 import { DROPDOWN_SCOPE, saveDropdownOption } from "@/lib/dropdown-options";
 
@@ -109,11 +110,11 @@ export async function PATCH(req: Request, ctx: RouteContext<"/api/contracts/[id]
     updates.number = normalizedNumber;
   }
   if (parsed.data.date) {
-    const d = new Date(parsed.data.date);
+    const d = toUtcDateOnly(parsed.data.date);
     if (Number.isNaN(d.getTime())) return Response.json({ error: "INVALID_DATE" }, { status: 400 });
     updates.date = d;
-    // Keep numbering rules consistent with create flow when contract date is changed.
-    if (before.date.getTime() !== d.getTime() && !parsed.data.number) {
+    // Renumber only when the calendar day changes (ignore time-of-day noise).
+    if (!sameUtcCalendarDay(before.date, d) && !parsed.data.number) {
       updates.number = await nextDocumentNumber({ documentType: "CONTRACT", at: d });
     }
   }

@@ -200,7 +200,7 @@ export function InvoicesTable({
           return;
         }
         toast.success("Створено рахунок-аналог.");
-        router.push(`/invoices/${newId}/edit`);
+        window.location.assign(`/invoices/${newId}/edit`);
       } catch {
         toast.error("Не вдалося створити аналог.");
       } finally {
@@ -208,7 +208,7 @@ export function InvoicesTable({
         setDuplicatePendingId(null);
       }
     },
-    [router],
+    [],
   );
 
   const visibleIds = useMemo(() => rows.map((row) => row.id), [rows]);

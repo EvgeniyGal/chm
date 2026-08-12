@@ -6,6 +6,7 @@ import { companies, contracts, lineItems } from "@/db/schema";
 import { nextDocumentNumber } from "@/db/numbering";
 import { writeAuditEvent } from "@/lib/audit";
 import { requireRole } from "@/lib/authz";
+import { toUtcDateOnly } from "@/lib/document-date";
 import { revalidateContractPages } from "@/lib/revalidate-document-lists";
 import { calcTotals } from "@/lib/totals";
 import { DROPDOWN_SCOPE, saveDropdownOption } from "@/lib/dropdown-options";
@@ -55,7 +56,7 @@ export async function POST(req: Request) {
     return Response.json({ error: "VALIDATION_ERROR", details: parsed.error.flatten() }, { status: 400 });
   }
 
-  const date = new Date(parsed.data.date);
+  const date = toUtcDateOnly(parsed.data.date);
   if (Number.isNaN(date.getTime())) return Response.json({ error: "INVALID_DATE" }, { status: 400 });
 
   const totals = calcTotals(parsed.data.items);

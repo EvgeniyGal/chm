@@ -269,14 +269,14 @@ export function ContractsTable({
           return;
         }
         toast.success("Створено договір-аналог.");
-        router.push(`/contracts/${newId}/edit`);
+        window.location.assign(`/contracts/${newId}/edit`);
       } catch {
         toast.error("Не вдалося створити аналог.");
       } finally {
         setDuplicatePendingId(null);
       }
     },
-    [router],
+    [],
   );
 
   const visibleIds = useMemo(() => rows.map((row) => row.id), [rows]);

@@ -5,6 +5,7 @@ import { contracts, lineItems } from "@/db/schema";
 import { nextDocumentNumber } from "@/db/numbering";
 import { writeAuditEvent } from "@/lib/audit";
 import { requireRole } from "@/lib/authz";
+import { toUtcDateOnly } from "@/lib/document-date";
 import { revalidateContractPages } from "@/lib/revalidate-document-lists";
 
 export const runtime = "nodejs";
@@ -22,13 +23,16 @@ export async function POST(_req: Request, ctx: RouteContext<"/api/contracts/[id]
   }
 
   const now = new Date();
-  const number = await nextDocumentNumber({ documentType: "CONTRACT", at: now });
+  // Store date-only (UTC midnight) like the normal create flow, so the first edit save
+  // does not look like a date change and burn another document number.
+  const date = toUtcDateOnly(now);
+  const number = await nextDocumentNumber({ documentType: "CONTRACT", at: date });
 
   const [created] = await db
     .insert(contracts)
     .values({
       number,
-      date: now,
+      date,
       signingLocation: source.signingLocation,
       workType: source.workType,
       customerCompanyId: source.customerCompanyId,

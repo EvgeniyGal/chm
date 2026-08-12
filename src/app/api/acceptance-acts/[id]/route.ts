@@ -6,6 +6,7 @@ import { acceptanceActs } from "@/db/schema";
 import { nextDocumentNumber } from "@/db/numbering";
 import { writeAuditEvent } from "@/lib/audit";
 import { requireRole } from "@/lib/authz";
+import { sameUtcCalendarDay, toUtcDateOnly } from "@/lib/document-date";
 
 export const runtime = "nodejs";
 
@@ -47,10 +48,10 @@ export async function PATCH(req: Request, ctx: RouteContext<"/api/acceptance-act
     updates.number = normalizedNumber;
   }
   if (parsed.data.date) {
-    const d = new Date(parsed.data.date);
+    const d = toUtcDateOnly(parsed.data.date);
     if (Number.isNaN(d.getTime())) return Response.json({ error: "INVALID_DATE" }, { status: 400 });
     updates.date = d;
-    if (before.date.getTime() !== d.getTime() && !parsed.data.number) {
+    if (!sameUtcCalendarDay(before.date, d) && !parsed.data.number) {
       updates.number = await nextDocumentNumber({ documentType: "ACCEPTANCE_ACT", at: d });
     }
   }

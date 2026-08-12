@@ -87,6 +87,7 @@ export function InvoiceForm({
   previewInvoiceNumberInitial,
   existingAcceptanceActId,
   onSubmit,
+  onEditSubmit,
   onCreateInvoiceReturningId,
 }: {
   mode?: "create" | "edit";
@@ -112,7 +113,9 @@ export function InvoiceForm({
   previewInvoiceNumberInitial?: string;
   /** Якщо для рахунку вже є акт — показуємо посилання на нього замість «Сформувати акт». */
   existingAcceptanceActId?: string | null;
-  onSubmit: (payload: InvoiceFormValues) => Promise<void>;
+  onSubmit?: (payload: InvoiceFormValues) => Promise<void>;
+  /** Edit save: client always passes current invoice id (avoids stale soft-nav closures). */
+  onEditSubmit?: (invoiceId: string, payload: InvoiceFormValues) => Promise<void>;
   /** POST new invoice and return id — used for «Рахунок» DOCX and «Сформувати акт» after persist. */
   onCreateInvoiceReturningId?: (payload: InvoiceFormValues) => Promise<{ invoiceId: string }>;
 }) {
@@ -375,11 +378,15 @@ export function InvoiceForm({
       const allowRedirect = options?.allowRedirect ?? true;
 
       try {
-        await onSubmit(payload);
         if (mode === "edit") {
+          if (!invoiceId || !onEditSubmit) throw new Error("EDIT_MISCONFIGURED");
+          await onEditSubmit(invoiceId, payload);
           toast.success("Рахунок збережено.");
           router.refresh();
           form.reset(values);
+        } else {
+          if (!onSubmit) throw new Error("CREATE_MISCONFIGURED");
+          await onSubmit(payload);
         }
       } catch (e) {
         if (isNextNavigationError(e)) {
@@ -414,7 +421,7 @@ export function InvoiceForm({
         return;
       }
       toast.success("Створено рахунок-аналог.");
-      router.push(`/invoices/${newId}/edit`);
+      window.location.assign(`/invoices/${newId}/edit`);
     } catch {
       toast.error("Не вдалося створити аналог рахунку.");
     } finally {

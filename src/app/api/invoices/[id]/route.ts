@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { invoices, lineItems } from "@/db/schema";
 import { writeAuditEvent } from "@/lib/audit";
 import { requireRole } from "@/lib/authz";
+import { sameUtcCalendarDay, toUtcDateOnly } from "@/lib/document-date";
 import { deleteInvoiceAndRelatedRecords } from "@/lib/invoice-delete-cascade";
 import { syncAcceptanceActFromInvoice } from "@/lib/sync-acceptance-act-from-invoice";
 import { calcTotals } from "@/lib/totals";
@@ -128,7 +129,7 @@ export async function PATCH(req: Request, ctx: RouteContext<"/api/invoices/[id]"
 
     let nextDate = before.date;
     if (parsed.data.date) {
-      const d = new Date(parsed.data.date);
+      const d = toUtcDateOnly(parsed.data.date);
       if (Number.isNaN(d.getTime())) return Response.json({ error: "INVALID_DATE" }, { status: 400 });
       nextDate = d;
     }
@@ -166,7 +167,7 @@ export async function PATCH(req: Request, ctx: RouteContext<"/api/invoices/[id]"
         .set({
           ...(customNumber
             ? { number: customNumber }
-            : parsed.data.date && before.date.getTime() !== nextDate.getTime()
+            : parsed.data.date && !sameUtcCalendarDay(before.date, nextDate)
               ? { number: await nextDocumentNumber({ documentType: "INVOICE", at: nextDate }) }
               : {}),
           date: nextDate,
@@ -221,7 +222,7 @@ export async function PATCH(req: Request, ctx: RouteContext<"/api/invoices/[id]"
     if (data.externalContractDate === null || data.externalContractDate === "") {
       nextExternalDate = null;
     } else {
-      const d = new Date(data.externalContractDate);
+      const d = toUtcDateOnly(data.externalContractDate);
       if (Number.isNaN(d.getTime())) return Response.json({ error: "INVALID_EXTERNAL_CONTRACT_DATE" }, { status: 400 });
       nextExternalDate = d;
     }
@@ -229,7 +230,7 @@ export async function PATCH(req: Request, ctx: RouteContext<"/api/invoices/[id]"
 
   let nextDate = before.date;
   if (data.date) {
-    const d = new Date(data.date);
+    const d = toUtcDateOnly(data.date);
     if (Number.isNaN(d.getTime())) return Response.json({ error: "INVALID_DATE" }, { status: 400 });
     nextDate = d;
   }
@@ -269,7 +270,7 @@ export async function PATCH(req: Request, ctx: RouteContext<"/api/invoices/[id]"
       .set({
         ...(customNumber
           ? { number: customNumber }
-          : data.date && before.date.getTime() !== nextDate.getTime()
+          : data.date && !sameUtcCalendarDay(before.date, nextDate)
             ? { number: await nextDocumentNumber({ documentType: "INVOICE", at: nextDate }) }
             : {}),
         ...(data.date ? { date: nextDate } : {}),

@@ -5,6 +5,7 @@ import { invoices, lineItems } from "@/db/schema";
 import { nextDocumentNumber } from "@/db/numbering";
 import { writeAuditEvent } from "@/lib/audit";
 import { requireRole } from "@/lib/authz";
+import { toUtcDateOnly } from "@/lib/document-date";
 import { revalidateInvoicePages } from "@/lib/revalidate-document-lists";
 
 export const runtime = "nodejs";
@@ -25,13 +26,14 @@ export async function POST(_req: Request, ctx: RouteContext<"/api/invoices/[id]/
   }
 
   const now = new Date();
-  const number = await nextDocumentNumber({ documentType: "INVOICE", at: now });
+  const date = toUtcDateOnly(now);
+  const number = await nextDocumentNumber({ documentType: "INVOICE", at: date });
 
   const [created] = await db
     .insert(invoices)
     .values({
       number,
-      date: now,
+      date,
       workType: source.workType,
       customerCompanyId: source.customerCompanyId,
       contractorCompanyId: source.contractorCompanyId,
