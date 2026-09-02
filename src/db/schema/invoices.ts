@@ -4,7 +4,7 @@ import { contracts, workTypeEnum } from "./contracts";
 
 export const invoices = pgTable("invoices", {
   id: uuid("id").defaultRandom().primaryKey(),
-  number: text("number").notNull().unique(), // {seq}/{MM}-{YYYY}
+  number: text("number").notNull().unique(), // {seq}/{MM}-{YYYY}[/n] or custom
   date: timestamp("date", { withTimezone: true }).notNull(),
 
   workType: workTypeEnum("work_type").notNull().default("WORKS"),

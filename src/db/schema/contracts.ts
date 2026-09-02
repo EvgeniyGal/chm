@@ -6,7 +6,7 @@ export const workTypeEnum = pgEnum("work_type", workTypes);
 
 export const contracts = pgTable("contracts", {
   id: uuid("id").defaultRandom().primaryKey(),
-  number: text("number").notNull().unique(), // {seq}/{MM}-{YYYY}
+  number: text("number").notNull().unique(), // {seq}/{MM}-{YYYY} or custom
   date: timestamp("date", { withTimezone: true }).notNull(),
   signingLocation: text("signing_location").notNull(),
   workType: workTypeEnum("work_type").notNull(),

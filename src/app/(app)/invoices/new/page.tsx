@@ -6,7 +6,7 @@ import { companies, contracts } from "@/db/schema";
 import { requireRole } from "@/lib/authz";
 import { getContractLinesWithRemainingForInvoicing } from "@/lib/contract-invoice-remaining";
 import { DROPDOWN_SCOPE, getDropdownOptions } from "@/lib/dropdown-options";
-import { peekNextDocumentNumber } from "@/db/numbering";
+import { peekInvoiceNumber } from "@/db/numbering";
 import { internalApiFetch } from "@/lib/internal-api-fetch";
 import { InvoiceForm } from "./ui";
 
@@ -39,9 +39,9 @@ export default async function NewInvoicePage({
       : null;
 
   const todayIso = new Date().toISOString().slice(0, 10);
-  const previewInvoiceNumberInitial = await peekNextDocumentNumber({
-    documentType: "INVOICE",
+  const previewInvoiceNumberInitial = await peekInvoiceNumber({
     at: new Date(`${todayIso}T00:00:00.000Z`),
+    contractId: contract?.id ?? null,
   });
 
   async function create(payload: any) {

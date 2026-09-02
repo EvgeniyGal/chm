@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { db } from "@/db";
 import { contracts, lineItems } from "@/db/schema";
-import { nextDocumentNumber } from "@/db/numbering";
+import { nextContractNumberOnDateChange } from "@/db/numbering";
 import { writeAuditEvent } from "@/lib/audit";
 import { requireRole } from "@/lib/authz";
 import { deleteContractAndRelatedRecords } from "@/lib/contract-delete-cascade";
@@ -113,9 +113,17 @@ export async function PATCH(req: Request, ctx: RouteContext<"/api/contracts/[id]
     const d = toUtcDateOnly(parsed.data.date);
     if (Number.isNaN(d.getTime())) return Response.json({ error: "INVALID_DATE" }, { status: 400 });
     updates.date = d;
-    // Renumber only when the calendar day changes (ignore time-of-day noise).
+    // Keep seq; rewrite month/year when the calendar day changes (ignore time-of-day noise).
     if (!sameUtcCalendarDay(before.date, d) && !parsed.data.number) {
-      updates.number = await nextDocumentNumber({ documentType: "CONTRACT", at: d });
+      const rewritten = await nextContractNumberOnDateChange({
+        existingNumber: before.number,
+        at: d,
+        excludeContractId: id,
+      });
+      if (rewritten?.error === "NUMBER_ALREADY_EXISTS") {
+        return Response.json({ error: "NUMBER_ALREADY_EXISTS" }, { status: 409 });
+      }
+      if (rewritten?.number) updates.number = rewritten.number;
     }
   }
 

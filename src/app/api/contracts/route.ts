@@ -65,7 +65,7 @@ export async function POST(req: Request) {
     const existing = await db.query.contracts.findFirst({ where: eq(contracts.number, customNumber) });
     if (existing) return Response.json({ error: "NUMBER_ALREADY_EXISTS" }, { status: 409 });
   }
-  const number = customNumber ?? (await nextDocumentNumber({ documentType: "CONTRACT", at: date }));
+  const number = customNumber ?? (await nextDocumentNumber({ at: date }));
 
   const now = new Date();
   const [created] = await db

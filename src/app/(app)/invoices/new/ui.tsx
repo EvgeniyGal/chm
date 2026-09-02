@@ -195,7 +195,9 @@ export function InvoiceForm({
     let cancelled = false;
     void (async () => {
       try {
-        const res = await fetch(`/api/invoices/preview-number?date=${encodeURIComponent(formDate)}`);
+        const params = new URLSearchParams({ date: formDate });
+        if (contract?.id) params.set("contractId", contract.id);
+        const res = await fetch(`/api/invoices/preview-number?${params.toString()}`);
         if (!res.ok || cancelled) return;
         const json = (await res.json()) as { data?: { number: string } };
         if (json.data?.number && !cancelled) setInvoicePreviewNumber(json.data.number);
@@ -206,7 +208,7 @@ export function InvoiceForm({
     return () => {
       cancelled = true;
     };
-  }, [formDate, mode]);
+  }, [formDate, mode, contract?.id]);
 
   const [companiesState, setCompaniesState] = useState(companies);
   const [companyModalFor, setCompanyModalFor] = useState<"customer" | "contractor" | null>(null);

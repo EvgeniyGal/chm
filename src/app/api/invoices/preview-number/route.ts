@@ -1,11 +1,12 @@
-import { peekNextDocumentNumber } from "@/db/numbering";
+import { peekInvoiceNumber } from "@/db/numbering";
 import { requireRole } from "@/lib/authz";
 
 export const runtime = "nodejs";
 
 export async function GET(req: Request) {
   await requireRole("ADMIN");
-  const dateStr = new URL(req.url).searchParams.get("date");
+  const url = new URL(req.url);
+  const dateStr = url.searchParams.get("date");
   if (!dateStr?.trim()) {
     return Response.json({ error: "MISSING_DATE" }, { status: 400 });
   }
@@ -13,6 +14,7 @@ export async function GET(req: Request) {
   if (Number.isNaN(at.getTime())) {
     return Response.json({ error: "INVALID_DATE" }, { status: 400 });
   }
-  const number = await peekNextDocumentNumber({ documentType: "INVOICE", at });
+  const contractId = url.searchParams.get("contractId")?.trim() || null;
+  const number = await peekInvoiceNumber({ at, contractId });
   return Response.json({ data: { number } });
 }

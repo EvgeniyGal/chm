@@ -26,7 +26,7 @@ export async function POST(_req: Request, ctx: RouteContext<"/api/contracts/[id]
   // Store date-only (UTC midnight) like the normal create flow, so the first edit save
   // does not look like a date change and burn another document number.
   const date = toUtcDateOnly(now);
-  const number = await nextDocumentNumber({ documentType: "CONTRACT", at: date });
+  const number = await nextDocumentNumber({ at: date });
 
   const [created] = await db
     .insert(contracts)

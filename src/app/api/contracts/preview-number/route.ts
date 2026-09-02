@@ -13,6 +13,6 @@ export async function GET(req: Request) {
   if (Number.isNaN(at.getTime())) {
     return Response.json({ error: "INVALID_DATE" }, { status: 400 });
   }
-  const number = await peekNextDocumentNumber({ documentType: "CONTRACT", at });
+  const number = await peekNextDocumentNumber({ at });
   return Response.json({ data: { number } });
 }

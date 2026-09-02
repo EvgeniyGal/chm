@@ -3,7 +3,6 @@ import { z } from "zod";
 
 import { db } from "@/db";
 import { acceptanceActs, invoices, lineItems } from "@/db/schema";
-import { nextDocumentNumber } from "@/db/numbering";
 import { writeAuditEvent } from "@/lib/audit";
 import { requireRole } from "@/lib/authz";
 import { revalidateAcceptanceActPages } from "@/lib/revalidate-document-lists";
@@ -78,8 +77,13 @@ export async function POST(req: Request) {
     });
     if (existing) return Response.json({ error: "NUMBER_ALREADY_EXISTS" }, { status: 409 });
   }
-  const number =
-    customNumber ?? (await nextDocumentNumber({ documentType: "ACCEPTANCE_ACT", at: date }));
+  const number = customNumber ?? invoice.number;
+  if (!customNumber) {
+    const existingActNumber = await db.query.acceptanceActs.findFirst({
+      where: eq(acceptanceActs.number, number),
+    });
+    if (existingActNumber) return Response.json({ error: "NUMBER_ALREADY_EXISTS" }, { status: 409 });
+  }
   const now = new Date();
 
   const [created] = await db

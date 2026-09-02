@@ -164,26 +164,7 @@ export function AcceptanceActForm({
   const [docLoading, setDocLoading] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
   const [useCustomNumber, setUseCustomNumber] = useState(false);
-  const [previewActNumber, setPreviewActNumber] = useState(initialActNumberPreview);
-  const formDate = form.watch("date");
-
-  useEffect(() => {
-    if (useCustomNumber) return;
-    let cancelled = false;
-    void (async () => {
-      try {
-        const res = await fetch(`/api/acceptance-acts/preview-number?date=${encodeURIComponent(formDate)}`);
-        if (!res.ok || cancelled) return;
-        const json = (await res.json()) as { data?: { number: string } };
-        if (!cancelled && json.data?.number) setPreviewActNumber(json.data.number);
-      } catch {
-        /* ignore preview failures */
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [formDate, useCustomNumber]);
+  const previewActNumber = selectedInvoice?.number ?? initialActNumberPreview;
 
   function buildSubmitPayload(values: AcceptanceActValues): AcceptanceActValues {
     const customNumber = values.number?.trim() ?? "";

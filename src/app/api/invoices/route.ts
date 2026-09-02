@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { db } from "@/db";
 import { contracts, invoices, lineItems } from "@/db/schema";
-import { nextDocumentNumber } from "@/db/numbering";
+import { nextInvoiceNumberOn } from "@/db/numbering";
 import { writeAuditEvent } from "@/lib/audit";
 import { requireRole } from "@/lib/authz";
 import { toUtcDateOnly } from "@/lib/document-date";
@@ -107,7 +107,6 @@ export async function POST(req: Request) {
     const existing = await db.query.invoices.findFirst({ where: eq(invoices.number, customNumber) });
     if (existing) return Response.json({ error: "NUMBER_ALREADY_EXISTS" }, { status: 409 });
   }
-  const number = customNumber ?? (await nextDocumentNumber({ documentType: "INVOICE", at: date }));
   const now = new Date();
 
   const externalDate = parsed.data.externalContractDate
@@ -117,40 +116,52 @@ export async function POST(req: Request) {
     return Response.json({ error: "INVALID_EXTERNAL_CONTRACT_DATE" }, { status: 400 });
   }
 
-  const [created] = await db
-    .insert(invoices)
-    .values({
-      number,
-      date,
-      workType,
-      customerCompanyId: parsed.data.customerCompanyId,
-      contractorCompanyId: parsed.data.contractorCompanyId,
-      contractId: parsed.data.contractId ?? null,
-      isExternalContract: parsed.data.isExternalContract,
-      externalContractNumber: parsed.data.externalContractNumber ?? null,
-      externalContractDate: externalDate,
-      signerFullNameNom: parsed.data.signerFullNameNom,
-      signerPositionNom: parsed.data.signerPositionNom,
-      totalWithoutVat: String(totals.totalWithoutVat),
-      vat20: String(totals.vat20),
-      totalWithVat: String(totals.totalWithVat),
-      createdAt: now,
-      updatedAt: now,
-    })
-    .returning();
+  const inheritContractId = parsed.data.isExternalContract ? null : parsed.data.contractId ?? null;
 
-  await db.insert(lineItems).values(
-    parsed.data.items.map((it) => ({
-      invoiceId: created!.id,
-      title: it.title,
-      unit: it.unit,
-      quantity: String(it.quantity),
-      price: String(it.price),
-      sourceContractLineItemId: it.sourceContractLineItemId ?? null,
-      createdAt: now,
-      updatedAt: now,
-    })),
-  );
+  const created = await db.transaction(async (tx) => {
+    const number =
+      customNumber ??
+      (await nextInvoiceNumberOn(tx, {
+        at: date,
+        contractId: inheritContractId,
+      }));
+    const [row] = await tx
+      .insert(invoices)
+      .values({
+        number,
+        date,
+        workType,
+        customerCompanyId: parsed.data.customerCompanyId,
+        contractorCompanyId: parsed.data.contractorCompanyId,
+        contractId: parsed.data.contractId ?? null,
+        isExternalContract: parsed.data.isExternalContract,
+        externalContractNumber: parsed.data.externalContractNumber ?? null,
+        externalContractDate: externalDate,
+        signerFullNameNom: parsed.data.signerFullNameNom,
+        signerPositionNom: parsed.data.signerPositionNom,
+        totalWithoutVat: String(totals.totalWithoutVat),
+        vat20: String(totals.vat20),
+        totalWithVat: String(totals.totalWithVat),
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning();
+
+    await tx.insert(lineItems).values(
+      parsed.data.items.map((it) => ({
+        invoiceId: row!.id,
+        title: it.title,
+        unit: it.unit,
+        quantity: String(it.quantity),
+        price: String(it.price),
+        sourceContractLineItemId: it.sourceContractLineItemId ?? null,
+        createdAt: now,
+        updatedAt: now,
+      })),
+    );
+
+    return row;
+  });
 
   await writeAuditEvent({
     entityType: "INVOICE",

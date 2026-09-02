@@ -27,7 +27,7 @@ export async function POST(_req: Request, ctx: RouteContext<"/api/invoices/[id]/
 
   const now = new Date();
   const date = toUtcDateOnly(now);
-  const number = await nextDocumentNumber({ documentType: "INVOICE", at: date });
+  const number = await nextDocumentNumber({ at: date });
 
   const [created] = await db
     .insert(invoices)

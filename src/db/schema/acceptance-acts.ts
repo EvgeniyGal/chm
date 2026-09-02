@@ -5,7 +5,7 @@ import { contracts } from "./contracts";
 
 export const acceptanceActs = pgTable("acceptance_acts", {
   id: uuid("id").defaultRandom().primaryKey(),
-  number: text("number").notNull().unique(), // {seq}/{MM}-{YYYY}
+  number: text("number").notNull().unique(), // copies invoice number unless custom
   date: timestamp("date", { withTimezone: true }).notNull(),
   signingLocation: text("signing_location").notNull(),
   /** When null, generated DOCX uses a handwritten-date placeholder. */

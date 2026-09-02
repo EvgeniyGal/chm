@@ -35,7 +35,6 @@ export default async function NewContractPage() {
 
   const todayIso = new Date().toISOString().slice(0, 10);
   const initialContractNumber = await peekNextDocumentNumber({
-    documentType: "CONTRACT",
     at: new Date(`${todayIso}T00:00:00.000Z`),
   });
 

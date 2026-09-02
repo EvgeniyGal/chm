@@ -1,18 +1,20 @@
-import { peekNextDocumentNumber } from "@/db/numbering";
+import { eq } from "drizzle-orm";
+
+import { db } from "@/db";
+import { invoices } from "@/db/schema";
 import { requireRole } from "@/lib/authz";
 
 export const runtime = "nodejs";
 
 export async function GET(req: Request) {
   await requireRole("ADMIN");
-  const dateStr = new URL(req.url).searchParams.get("date");
-  if (!dateStr?.trim()) {
-    return Response.json({ error: "MISSING_DATE" }, { status: 400 });
+  const invoiceId = new URL(req.url).searchParams.get("invoiceId")?.trim();
+  if (!invoiceId) {
+    return Response.json({ data: { number: null } });
   }
-  const at = new Date(`${dateStr.trim()}T00:00:00.000Z`);
-  if (Number.isNaN(at.getTime())) {
-    return Response.json({ error: "INVALID_DATE" }, { status: 400 });
+  const invoice = await db.query.invoices.findFirst({ where: eq(invoices.id, invoiceId) });
+  if (!invoice) {
+    return Response.json({ error: "INVOICE_NOT_FOUND" }, { status: 404 });
   }
-  const number = await peekNextDocumentNumber({ documentType: "ACCEPTANCE_ACT", at });
-  return Response.json({ data: { number } });
+  return Response.json({ data: { number: invoice.number } });
 }

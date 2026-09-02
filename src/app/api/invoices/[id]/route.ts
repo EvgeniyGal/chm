@@ -1,5 +1,5 @@
 import { and, eq, ne, sql } from "drizzle-orm";
-import { nextDocumentNumber } from "@/db/numbering";
+import { copyInvoiceNumberToActIfUnchanged, nextInvoiceNumberOn, nextStandaloneInvoiceNumberOnDateChange } from "@/db/numbering";
 import { z } from "zod";
 
 import { db } from "@/db";
@@ -143,6 +143,7 @@ export async function PATCH(req: Request, ctx: RouteContext<"/api/invoices/[id]"
       });
       if (existing) return Response.json({ error: "NUMBER_ALREADY_EXISTS" }, { status: 409 });
     }
+
     const now = new Date();
 
     const [after] = await db.transaction(async (tx) => {
@@ -162,14 +163,19 @@ export async function PATCH(req: Request, ctx: RouteContext<"/api/invoices/[id]"
         );
       }
 
+      const autoNumber =
+        !customNumber && parsed.data.date && !sameUtcCalendarDay(before.date, nextDate)
+          ? await nextInvoiceNumberOn(tx, {
+              at: nextDate,
+              contractId: before.contractId,
+              excludeInvoiceId: id,
+            })
+          : undefined;
+      const nextNumber = customNumber ?? autoNumber;
       const [row] = await tx
         .update(invoices)
         .set({
-          ...(customNumber
-            ? { number: customNumber }
-            : parsed.data.date && !sameUtcCalendarDay(before.date, nextDate)
-              ? { number: await nextDocumentNumber({ documentType: "INVOICE", at: nextDate }) }
-              : {}),
+          ...(nextNumber ? { number: nextNumber } : {}),
           date: nextDate,
           ...(totals
             ? {
@@ -182,6 +188,14 @@ export async function PATCH(req: Request, ctx: RouteContext<"/api/invoices/[id]"
         })
         .where(eq(invoices.id, id))
         .returning();
+
+      if (nextNumber) {
+        await copyInvoiceNumberToActIfUnchanged(tx, {
+          invoiceId: id,
+          previousNumber: before.number,
+          nextNumber,
+        });
+      }
 
       await syncAcceptanceActFromInvoice(tx, id);
 
@@ -244,6 +258,19 @@ export async function PATCH(req: Request, ctx: RouteContext<"/api/invoices/[id]"
     });
     if (existing) return Response.json({ error: "NUMBER_ALREADY_EXISTS" }, { status: 409 });
   }
+
+  let autoNumber: string | undefined;
+  if (!customNumber && data.date && !sameUtcCalendarDay(before.date, nextDate)) {
+    const rewritten = await nextStandaloneInvoiceNumberOnDateChange({
+      existingNumber: before.number,
+      at: nextDate,
+      excludeInvoiceId: id,
+    });
+    if (rewritten?.error === "NUMBER_ALREADY_EXISTS") {
+      return Response.json({ error: "NUMBER_ALREADY_EXISTS" }, { status: 409 });
+    }
+    if (rewritten?.number) autoNumber = rewritten.number;
+  }
   const now = new Date();
 
   const [after] = await db.transaction(async (tx) => {
@@ -265,14 +292,11 @@ export async function PATCH(req: Request, ctx: RouteContext<"/api/invoices/[id]"
 
     const clearExternal = data.isExternalContract === false;
 
+    const nextNumber = customNumber ?? autoNumber;
     const [row] = await tx
       .update(invoices)
       .set({
-        ...(customNumber
-          ? { number: customNumber }
-          : data.date && !sameUtcCalendarDay(before.date, nextDate)
-            ? { number: await nextDocumentNumber({ documentType: "INVOICE", at: nextDate }) }
-            : {}),
+        ...(nextNumber ? { number: nextNumber } : {}),
         ...(data.date ? { date: nextDate } : {}),
         ...(data.workType !== undefined ? { workType: data.workType } : {}),
         ...(data.customerCompanyId !== undefined ? { customerCompanyId: data.customerCompanyId } : {}),
@@ -299,6 +323,14 @@ export async function PATCH(req: Request, ctx: RouteContext<"/api/invoices/[id]"
       })
       .where(eq(invoices.id, id))
       .returning();
+
+    if (nextNumber) {
+      await copyInvoiceNumberToActIfUnchanged(tx, {
+        invoiceId: id,
+        previousNumber: before.number,
+        nextNumber,
+      });
+    }
 
     await syncAcceptanceActFromInvoice(tx, id);
 
